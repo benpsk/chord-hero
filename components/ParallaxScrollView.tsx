@@ -1,66 +1,45 @@
-import type { PropsWithChildren, ReactElement } from 'react';
-import { StyleSheet } from 'react-native';
-import Animated, {
-  interpolate,
-  useAnimatedRef,
-  useAnimatedStyle,
-  useScrollViewOffset,
-} from 'react-native-reanimated';
+import { useRef } from 'react';
+import { useAnimatedRef, useScrollViewOffset } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, interpolateColor, Extrapolation } from 'react-native-reanimated';
+import { Platform, StyleSheet } from 'react-native';
 
 import { ThemedView } from '@/components/ThemedView';
-import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 const HEADER_HEIGHT = 250;
 
-type Props = PropsWithChildren<{
-  headerImage: ReactElement;
+type Props = {
+  headerImage: React.ReactNode;
   headerBackgroundColor: { dark: string; light: string };
-}>;
+  children: React.ReactNode;
+};
 
-export default function ParallaxScrollView({
-  children,
-  headerImage,
-  headerBackgroundColor,
-}: Props) {
-  const colorScheme = useColorScheme() ?? 'light';
+export default function ParallaxScrollView({ children, headerImage, headerBackgroundColor }: Props) {
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollViewOffset(scrollRef);
-  const bottom = useBottomTabOverflow();
   const headerAnimatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [
-        {
-          translateY: interpolate(
-            scrollOffset.value,
-            [-HEADER_HEIGHT, 0, HEADER_HEIGHT],
-            [-HEADER_HEIGHT / 2, 0, HEADER_HEIGHT * 0.75]
-          ),
-        },
-        {
-          scale: interpolate(scrollOffset.value, [-HEADER_HEIGHT, 0, HEADER_HEIGHT], [2, 1, 1]),
-        },
-      ],
+      backgroundColor: interpolateColor(
+        scrollOffset.value,
+        [0, HEADER_HEIGHT / 2, HEADER_HEIGHT],
+        [headerBackgroundColor.light, headerBackgroundColor.light, 'transparent']
+      ),
     };
   });
 
+  const headerTitleAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: scrollOffset.value > HEADER_HEIGHT ? 1 : 0,
+    };
+  }, [scrollOffset.value]);
+
   return (
     <ThemedView style={styles.container}>
-      <Animated.ScrollView
-        ref={scrollRef}
-        scrollEventThrottle={16}
-        scrollIndicatorInsets={{ bottom }}
-        contentContainerStyle={{ paddingBottom: bottom }}>
-        <Animated.View
-          style={[
-            styles.header,
-            { backgroundColor: headerBackgroundColor[colorScheme] },
-            headerAnimatedStyle,
-          ]}>
-          {headerImage}
-        </Animated.View>
-        <ThemedView style={styles.content}>{children}</ThemedView>
+      <Animated.ScrollView ref={scrollRef} scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: HEADER_HEIGHT }}>
+        {children}
       </Animated.ScrollView>
+      <Animated.View style={[styles.header, headerAnimatedStyle]}> {headerImage} </Animated.View>
+      <Animated.View style={[styles.headerTitle, headerTitleAnimatedStyle]} />
     </ThemedView>
   );
 }
@@ -70,13 +49,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     height: HEADER_HEIGHT,
     overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  content: {
-    flex: 1,
-    padding: 32,
-    gap: 16,
-    overflow: 'hidden',
+  headerTitle: {
+    position: 'absolute',
+    top: Platform.select({ ios: 44, android: 48, default: 64 }),
+    left: 16,
   },
 });
+

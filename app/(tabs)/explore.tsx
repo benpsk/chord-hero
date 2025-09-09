@@ -70,7 +70,7 @@ export default function TabTwoScreen() {
         <ThemedText>
           This template has light and dark mode support. The{' '}
           <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
+          what the user's current color scheme is, and so you can adjust UI colors accordingly.
         </ThemedText>
         <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
           <ThemedText type="link">Learn more</ThemedText>
@@ -79,7 +79,8 @@ export default function TabTwoScreen() {
       <Collapsible title="Animations">
         <ThemedText>
           This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
+          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText>{' '}
+          component uses
           the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
           library to create a waving hand animation.
         </ThemedText>
@@ -108,3 +109,4 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 });
+

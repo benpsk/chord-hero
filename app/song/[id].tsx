@@ -1,29 +1,30 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { IconButton, Text, useTheme, SegmentedButtons, Chip, FAB, Portal, Surface, Divider } from 'react-native-paper';
+import React, { useMemo, useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import {
+  Animated,
+  GestureResponderEvent,
+  PanResponder,
+  PanResponderGestureState,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { IconButton, Text, useTheme, SegmentedButtons, Chip, Portal, Surface, Divider } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
-import { PanResponder, GestureResponderEvent, PanResponderGestureState, Pressable, Animated } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 
 import { getSongById } from '@/constants/songs';
 import { ChordProView } from '@/components/ChordProView';
 import { extractMeta, toDisplayLines, transposeChordPro, transposeChordToken } from '@/lib/chord';
+import SongHeaderTitle from '@/components/SongHeaderTitle';
 
 export default function SongDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const song = getSongById(String(id));
   const theme = useTheme();
   const nav = useNavigation();
-  const modalTheme = useMemo(() => ({
-    ...theme,
-    colors: {
-      ...theme.colors,
-      backdrop: 'rgba(0,0,0,0.2)',
-    },
-  }), [theme]);
-
   const [transpose, setTranspose] = useState(0);
-  const [mode, setMode] = useState<'inline' | 'over' | 'lyrics'>('inline');
+  const [mode, setMode] = useState<'inline' | 'over' | 'lyrics'>('over');
   const [fontSize, setFontSize] = useState(16);
   const [overGap, setOverGap] = useState(2);
   const [lineGap, setLineGap] = useState(0);
@@ -33,8 +34,6 @@ export default function SongDetailScreen() {
   const sheetAnim = useRef(new Animated.Value(0)).current; // 0 hidden, 1 shown
   const dragY = useRef(new Animated.Value(0)).current; // gesture-driven translate
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  
 
   const hidePeek = useCallback(() => {
     Animated.timing(peekOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start(({ finished }) => {
@@ -52,7 +51,7 @@ export default function SongDetailScreen() {
     hideTimer.current = setTimeout(() => hidePeek(), delay);
   }, [hidePeek]);
 
-  const openControls = () => {
+  const openControls = useCallback(() => {
     Haptics.selectionAsync();
     setControlsOpen(true);
     // Keep peek hidden when controls are open
@@ -60,8 +59,8 @@ export default function SongDetailScreen() {
     peekOpacity.setValue(0);
     dragY.setValue(0);
     Animated.timing(sheetAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
-  };
-  const closeControls = () => {
+  }, [dragY, peekOpacity, sheetAnim]);
+  const closeControls = useCallback(() => {
     Haptics.selectionAsync();
     Animated.timing(sheetAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
       dragY.setValue(0);
@@ -70,7 +69,7 @@ export default function SongDetailScreen() {
       showPeek();
       scheduleHide();
     });
-  };
+  }, [dragY, scheduleHide, sheetAnim, showPeek]);
 
   const peekPan = React.useMemo(
     () =>
@@ -83,7 +82,7 @@ export default function SongDetailScreen() {
           }
         },
       }),
-    []
+    [openControls]
   );
 
   const sheetPan = React.useMemo(
@@ -131,12 +130,32 @@ export default function SongDetailScreen() {
 
   const lines = useMemo(() => toDisplayLines(transposedBody), [transposedBody]);
   const meta = useMemo(() => (song ? extractMeta(song.body) : {}), [song]);
-  const baseKey = (meta as any).key as string | undefined;
+  const metaKeyRaw = (meta as any).key as string | undefined;
+  const bodyKey = useMemo(() => extractKeyFromBody(song?.body), [song?.body]);
+  const songKey = useMemo(() => normalizeKeyValue(song?.key), [song?.key]);
+  const metaKey = useMemo(() => normalizeKeyValue(metaKeyRaw), [metaKeyRaw]);
+  const baseKey = songKey ?? metaKey ?? bodyKey;
   const effectiveKey = useMemo(() => (baseKey ? transposeChordToken(baseKey, transpose) : undefined), [baseKey, transpose]);
-
-  React.useEffect(() => {
-    nav.setOptions({ title: song?.title ?? 'Song' });
-  }, [nav, song]);
+  const singer = song?.artist || (meta as any).artist;
+  const composer = song?.composer || ((meta as any).composer as string | undefined);
+  useLayoutEffect(() => {
+    if (!song) return;
+    nav.setOptions({
+      headerTitle: () => (
+        <SongHeaderTitle title={song.title} singer={singer} composer={composer} />
+      ),
+      headerRight: () => (
+        <IconButton
+          icon="tune"
+          size={22}
+          onPress={openControls}
+          accessibilityLabel="Open display and transpose controls"
+          iconColor={theme.colors.onSurface}
+          style={{ marginRight: 12 }}
+        />
+      ),
+    });
+  }, [nav, song, singer, composer, openControls, theme]);
 
   if (!song) {
     return (
@@ -172,19 +191,16 @@ export default function SongDetailScreen() {
             };
           })()}
         >
-          <ChordProView lines={lines} chordColor={theme.colors.primary} mode={mode} fontSize={fontSize} overGap={overGap} lineGap={lineGap} />
+          <ChordProView
+            lines={lines}
+            chordColor={theme.colors.primary}
+            mode={mode}
+            fontSize={fontSize}
+            overGap={overGap}
+            lineGap={lineGap}
+          />
         </Pressable>
       </ScrollView>
-
-      {!controlsOpen && (
-        <FAB
-        icon="tune"
-        style={styles.fab}
-        onPress={openControls}
-        variant="surface"
-        accessibilityLabel="Show display and transpose controls"
-      />
-      )}
 
       {/* Peek handle for swipe-up to open controls without occupying space */}
       {peekVisible && !controlsOpen ? (
@@ -234,19 +250,23 @@ export default function SongDetailScreen() {
 
             <View style={styles.row}>
               <Text style={styles.rowLabel}>Mode</Text>
-              <SegmentedButtons
-                density="small"
-                value={mode}
-                onValueChange={(v) => {
-                  Haptics.selectionAsync();
-                  setMode(v as any);
-                }}
-                buttons={[
-                  { value: 'inline', label: 'Inline' },
-                  { value: 'over', label: 'Over' },
-                  { value: 'lyrics', label: 'Lyrics' },
-                ]}
-              />
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ alignSelf: 'flex-end' }}>
+                  <SegmentedButtons
+                    density="small"
+                    value={mode}
+                    onValueChange={(v) => {
+                      Haptics.selectionAsync();
+                      setMode(v as any);
+                    }}
+                    buttons={[
+                      { value: 'inline', label: 'Inline' },
+                      { value: 'over', label: 'Over' },
+                      { value: 'lyrics', label: 'Lyrics' },
+                    ]}
+                  />
+                </ScrollView>
+              </View>
             </View>
 
             <View style={styles.row}>
@@ -301,7 +321,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 12, paddingBottom: 96, gap: 8 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  fab: { position: 'absolute', right: 16, bottom: 24 },
   group: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -366,3 +385,23 @@ const styles = StyleSheet.create({
     width: 120,
   },
 });
+
+function normalizeKeyValue(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const cleaned = value.replace(/\[|\]/g, '').trim();
+  if (!cleaned) return undefined;
+  const token = cleaned.split(/\s+/)[0];
+  return token || undefined;
+}
+
+function extractKeyFromBody(body?: string | null): string | undefined {
+  if (!body) return undefined;
+  const lines = body.split(/\r?\n/);
+  for (const raw of lines) {
+    if (/^\s*key\s*:/i.test(raw)) {
+      const value = raw.split(':').slice(1).join(':');
+      return normalizeKeyValue(value);
+    }
+  }
+  return undefined;
+}

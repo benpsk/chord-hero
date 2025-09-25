@@ -13,7 +13,7 @@ type Props = {
   lineGap?: number; // extra px added to line height in all modes
 };
 
-export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', mode = 'inline', fontSize = 16, overGap = 2, lineGap = 0 }) => {
+export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', mode = 'over', fontSize = 16, overGap = 2, lineGap = 0 }) => {
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
   const onLayout = useCallback((e: LayoutChangeEvent) => {
     setContainerWidth(e.nativeEvent.layout.width);
@@ -26,58 +26,89 @@ export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', m
   }, [containerWidth, charWidth]);
 
   const dynamicLine = { fontSize, lineHeight: Math.round(fontSize * 1.3) + lineGap } as const;
-  return (
-    <View style={styles.container} onLayout={onLayout}>
-      {lines.map((line, idx) => {
-        if (mode === 'lyrics') {
-          const { lyric } = parseInline(line);
-          return (
-            <Text key={idx} style={[styles.line, dynamicLine]}>
-              {lyric || '\u200B'}
-            </Text>
-          );
-        }
-        if (mode === 'chords') {
-          const { chordLine } = toOverLine(line);
-          return (
-            <Text key={idx} style={[styles.line, styles.mono, dynamicLine, { color: chordColor }]}>
-              {chordLine || '\u200B'}
-            </Text>
-          );
-        }
-        if (mode === 'over') {
-          const { chordLine, lyric } = toOverLine(line);
-          if (!cols || !isFinite(cols)) {
-            // Fallback: no measured width yet
-            return (
-              <View key={idx} style={{ marginBottom: 2 }}>
-                <Text style={[styles.line, styles.mono, dynamicLine, { color: chordColor, marginBottom: overGap }]}>{chordLine || '\u200B'}</Text>
-                <Text style={[styles.line, styles.mono, dynamicLine]}>{lyric || '\u200B'}</Text>
-              </View>
-            );
-          }
-          // Soft-wrap by columns so chord/lyric segments align when wrapped
-          const segs = sliceByColumns(chordLine, lyric, cols);
-          return (
-            <View key={idx}>
-              {segs.map((seg, i) => (
-                <View key={i} style={{ marginBottom: 2 }}>
-                  <Text style={[styles.line, styles.mono, dynamicLine, { color: chordColor, marginBottom: overGap }]}>
-                    {seg.chords || '\u200B'}
-                  </Text>
-                  <Text style={[styles.line, styles.mono, dynamicLine]}>{seg.lyric || '\u200B'}</Text>
-                </View>
-              ))}
-            </View>
-          );
-        }
-        // inline
-        return (
-          <Text key={idx} style={[styles.line, dynamicLine]}>
-            {renderInline(line, chordColor)}
+  const hasModeMarker = useMemo(() => lines.some((line) => line.trim() === '||'), [lines]);
+  const rendered: React.ReactNode[] = [];
+  let modeActive = !hasModeMarker;
+
+  lines.forEach((line, idx) => {
+    if (line.trim() === '||') {
+      modeActive = true;
+      return;
+    }
+    if (!modeActive) {
+      rendered.push(
+        <Text key={`premode-${idx}`} style={[styles.line, dynamicLine]}>
+          {renderInlineWithoutBrackets(line, chordColor)}
+        </Text>
+      );
+      return;
+    }
+    const lineMode = mode;
+
+    if (lineMode === 'lyrics') {
+      const { lyric } = parseInline(line);
+      rendered.push(
+        <Text key={`lyrics-${idx}`} style={[styles.line, dynamicLine]}>
+          {lyric || '\u200B'}
+        </Text>
+      );
+      return;
+    }
+    if (lineMode === 'chords') {
+      const { chordLine } = toOverLine(line);
+      rendered.push(
+        <Text key={`chords-${idx}`} style={[styles.line, styles.mono, dynamicLine, { color: chordColor }]}>
+          {chordLine || '\u200B'}
+        </Text>
+      );
+      return;
+    }
+    if (lineMode === 'over') {
+      const { chordLine, lyric } = toOverLine(line);
+      const trimmedChord = chordLine.trim();
+      if (!trimmedChord) {
+        rendered.push(
+          <Text key={`over-plain-${idx}`} style={[styles.line, dynamicLine]}>
+            {lyric || '\u200B'}
           </Text>
         );
-      })}
+        return;
+      }
+      if (!cols || !isFinite(cols)) {
+        rendered.push(
+          <View key={`over-fallback-${idx}`} style={{ marginBottom: overGap }}>
+            <Text style={[styles.line, styles.mono, dynamicLine, { color: chordColor, marginBottom: overGap }]}>{chordLine || '\u200B'}</Text>
+            <Text style={[styles.line, styles.mono, dynamicLine]}>{lyric || '\u200B'}</Text>
+          </View>
+        );
+        return;
+      }
+      const segs = sliceByColumns(chordLine, lyric, cols);
+      rendered.push(
+        <View key={`over-${idx}`}>
+          {segs.map((seg, i) => (
+            <View key={`over-${idx}-${i}`} style={{ marginBottom: overGap }}>
+              <Text style={[styles.line, styles.mono, dynamicLine, { color: chordColor, marginBottom: overGap }]}>
+                {seg.chords || '\u200B'}
+              </Text>
+              <Text style={[styles.line, styles.mono, dynamicLine]}>{seg.lyric || '\u200B'}</Text>
+            </View>
+          ))}
+        </View>
+      );
+      return;
+    }
+
+    rendered.push(
+      <Text key={`inline-${idx}`} style={[styles.line, dynamicLine]}>
+        {renderInline(line, chordColor)}
+      </Text>
+    );
+  });
+
+  return (
+    <View style={[styles.container, mode === 'over' && { gap: 0 }]} onLayout={onLayout}>
+      {rendered}
     </View>
   );
 };
@@ -101,8 +132,8 @@ function renderInline(line: string, chordColor: string) {
   return parts;
 }
 
-function parseInline(line: string): { lyric: string; chords: Array<{ name: string; pos: number }> } {
-  const chords: Array<{ name: string; pos: number }> = [];
+function parseInline(line: string): { lyric: string; chords: { name: string; pos: number }[] } {
+  const chords: { name: string; pos: number }[] = [];
   let lyric = '';
   const re = /\[([^\]]+)\]/g;
   let lastIndex = 0;
@@ -115,6 +146,30 @@ function parseInline(line: string): { lyric: string; chords: Array<{ name: strin
   }
   lyric += line.slice(lastIndex);
   return { lyric, chords };
+}
+
+function renderInlineWithoutBrackets(line: string, chordColor: string) {
+  if (line.trim().length === 0) return '\u200B';
+  const parts: React.ReactNode[] = [];
+  const re = /\[([^\]]+)\]/g;
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(line))) {
+    const textPart = line.slice(lastIndex, m.index);
+    if (textPart) parts.push(textPart);
+    const chordText = m[1];
+    if (chordText) {
+      parts.push(
+        <Text key={`inline-chord-${m.index}`} style={[styles.chord, { color: chordColor }]}>
+          {chordText}
+        </Text>
+      );
+    }
+    lastIndex = re.lastIndex;
+  }
+  const tail = line.slice(lastIndex);
+  if (tail) parts.push(tail);
+  return parts.length ? parts : '\u200B';
 }
 
 function toOverLine(line: string): { chordLine: string; lyric: string } {
@@ -133,8 +188,8 @@ function toOverLine(line: string): { chordLine: string; lyric: string } {
   return { chordLine, lyric };
 }
 
-function sliceByColumns(chords: string, lyric: string, cols: number): Array<{ chords: string; lyric: string }> {
-  const out: Array<{ chords: string; lyric: string }> = [];
+function sliceByColumns(chords: string, lyric: string, cols: number): { chords: string; lyric: string }[] {
+  const out: { chords: string; lyric: string }[] = [];
   const maxLen = Math.max(chords.length, lyric.length);
   for (let i = 0; i < maxLen; i += cols) {
     const c = chords.slice(i, i + cols);
@@ -145,9 +200,7 @@ function sliceByColumns(chords: string, lyric: string, cols: number): Array<{ ch
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 8,
-  },
+  container: {},
   line: {
     fontSize: 16,
     lineHeight: 24,

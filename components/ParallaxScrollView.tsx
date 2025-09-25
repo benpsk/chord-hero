@@ -1,6 +1,9 @@
-import { useRef } from 'react';
-import { useAnimatedRef, useScrollViewOffset } from 'react-native-reanimated';
-import Animated, { useAnimatedStyle, interpolateColor, Extrapolation } from 'react-native-reanimated';
+import Animated, {
+  interpolateColor,
+  useAnimatedRef,
+  useAnimatedStyle,
+  useScrollViewOffset,
+} from 'react-native-reanimated';
 import { Platform, StyleSheet } from 'react-native';
 
 import { ThemedView } from '@/components/ThemedView';
@@ -64,4 +67,3 @@ const styles = StyleSheet.create({
     left: 16,
   },
 });
-

@@ -16,4 +16,25 @@
 - use chordpro => so that the song can be show in multiple format
 - dont add backend yet, just static data
 
+### Song Detail Page Sample 
+Key: C 
+Intro: C G Am F
+
+Cho 
+Swing low, sweet chariot, coming for to carry me home;
+swing low, sweet chariot, coming for to carry me home.
+V1  
+I looked over Jordan, and what did I see,
+coming for to carry me home?
+A band of angels coming after me,
+coming for to carry me home.
+V2
+If you get there before I do,
+coming for to carry me home?
+tell all my friends I'm coming too,
+coming for to carry me home.
+Cho, V1, V2, Cho
+
+
+
 

@@ -45,7 +45,14 @@ export function stripChordProDirectives(text: string): string {
   // Remove or keep metadata lines like {key:C}, {title:...}
   return text
     .split(/\r?\n/)
-    .filter((l) => !l.trim().startsWith('{'))
+    .filter((l) => {
+      const t = l.trim();
+      if (!t) return true; // keep blank lines for stanza splitting
+      if (t.startsWith('{')) return false; // directives
+      if (t.startsWith('#')) return false; // comments / in-body title lines
+      if (t.startsWith('%')) return false; // ChordPro comments
+      return true;
+    })
     .join('\n');
 }
 
@@ -67,4 +74,3 @@ export function toDisplayLines(text: string): string[] {
   // Remove directives but keep chord inline style.
   return splitLines(stripChordProDirectives(text));
 }
-

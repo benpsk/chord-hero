@@ -2,6 +2,9 @@ import React, { useMemo, useState, useEffect, useRef, useCallback, useLayoutEffe
 import {
   Animated as RNAnimated,
   GestureResponderEvent,
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   PanResponder,
   PanResponderGestureState,
   Pressable,
@@ -10,7 +13,19 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconButton, Text, useTheme, SegmentedButtons, Chip, Portal, Surface, Divider } from 'react-native-paper';
+import {
+  Button,
+  IconButton,
+  Modal,
+  Text,
+  useTheme,
+  SegmentedButtons,
+  Chip,
+  Portal,
+  Surface,
+  Divider,
+  Switch,
+} from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -34,12 +49,24 @@ export default function SongDetailScreen() {
   const [fontSize, setFontSize] = useState(16);
   const [overGap, setOverGap] = useState(2);
   const [lineGap, setLineGap] = useState(0);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(false);
+  const [autoScrollSpeed, setAutoScrollSpeed] = useState(30);
+  const [guideVisible, setGuideVisible] = useState(false);
+  const [guideDifficulty, setGuideDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
   const [controlsOpen, setControlsOpen] = useState(false);
   const [peekVisible, setPeekVisible] = useState(true);
   const peekOpacity = useRef(new RNAnimated.Value(0)).current;
   const sheetAnim = useRef(new RNAnimated.Value(0)).current; // 0 hidden, 1 shown
   const dragY = useRef(new RNAnimated.Value(0)).current; // gesture-driven translate
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const contentHeightRef = useRef(0);
+  const containerHeightRef = useRef(0);
+  const scrollOffsetRef = useRef(0);
+  const autoScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoScrollEnabledRef = useRef(autoScrollEnabled);
+  const autoScrollSpeedRef = useRef(autoScrollSpeed);
+  const userInteractingRef = useRef(false);
 
   const hidePeek = useCallback(() => {
     RNAnimated.timing(peekOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start(({ finished }) => {
@@ -56,6 +83,152 @@ export default function SongDetailScreen() {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => hidePeek(), delay);
   }, [hidePeek]);
+
+  const openGuide = useCallback(() => {
+    setGuideVisible(true);
+  }, []);
+
+  const closeGuide = useCallback(() => {
+    setGuideVisible(false);
+  }, []);
+
+  const handleGuideDifficultyChange = useCallback((value: string) => {
+    if (value === 'easy' || value === 'medium' || value === 'hard') {
+      setGuideDifficulty(value);
+    }
+  }, []);
+
+  const handleGuideSubmit = useCallback(() => {
+    setGuideVisible(false);
+  }, []);
+
+  const clearAutoScrollTimer = useCallback(() => {
+    if (autoScrollTimerRef.current) {
+      clearTimeout(autoScrollTimerRef.current);
+      autoScrollTimerRef.current = null;
+    }
+  }, []);
+
+  const computeAutoScrollDelay = useCallback(
+    (speed: number) => {
+      const clamped = Math.min(MAX_SCROLL_SPEED, Math.max(MIN_SCROLL_SPEED, speed));
+      const ratio = (clamped - MIN_SCROLL_SPEED) / (MAX_SCROLL_SPEED - MIN_SCROLL_SPEED);
+      const delay =
+        AUTOSCROLL_MAX_DELAY_MS - ratio * (AUTOSCROLL_MAX_DELAY_MS - AUTOSCROLL_MIN_DELAY_MS);
+      return Math.max(AUTOSCROLL_MIN_DELAY_MS, Math.round(delay));
+    },
+    []
+  );
+
+  const runAutoScrollTick = useCallback(() => {
+    clearAutoScrollTimer();
+
+    if (!autoScrollEnabledRef.current) {
+      return;
+    }
+
+    const scheduleNext = () => {
+      const delay = computeAutoScrollDelay(autoScrollSpeedRef.current);
+      autoScrollTimerRef.current = setTimeout(() => {
+        runAutoScrollTick();
+      }, delay);
+    };
+
+    if (userInteractingRef.current) {
+      scheduleNext();
+      return;
+    }
+
+    const maxOffset = Math.max(0, contentHeightRef.current - containerHeightRef.current);
+    if (maxOffset <= 0) {
+      scheduleNext();
+      return;
+    }
+
+    const nextOffset = Math.min(maxOffset, scrollOffsetRef.current + AUTOSCROLL_STEP_PX);
+    scrollViewRef.current?.scrollTo({ y: nextOffset, animated: true });
+    scrollOffsetRef.current = nextOffset;
+
+    if (nextOffset >= maxOffset) {
+      autoScrollTimerRef.current = null;
+      return;
+    }
+
+    scheduleNext();
+  }, [clearAutoScrollTimer, computeAutoScrollDelay]);
+
+  const ensureAutoScrollTimer = useCallback(() => {
+    if (!autoScrollEnabledRef.current || autoScrollTimerRef.current) {
+      return;
+    }
+    const delay = computeAutoScrollDelay(autoScrollSpeedRef.current);
+    autoScrollTimerRef.current = setTimeout(() => {
+      runAutoScrollTick();
+    }, delay);
+  }, [computeAutoScrollDelay, runAutoScrollTick]);
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+      if (!controlsOpen && !autoScrollEnabledRef.current) {
+        showPeek();
+        scheduleHide();
+      }
+    },
+    [controlsOpen, scheduleHide, showPeek]
+  );
+
+  const handleContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      contentHeightRef.current = height;
+      ensureAutoScrollTimer();
+    },
+    [ensureAutoScrollTimer]
+  );
+
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      containerHeightRef.current = event.nativeEvent.layout.height;
+      ensureAutoScrollTimer();
+    },
+    [ensureAutoScrollTimer]
+  );
+
+  const handleScrollBeginDrag = useCallback(() => {
+    userInteractingRef.current = true;
+    clearAutoScrollTimer();
+  }, [clearAutoScrollTimer]);
+
+  const handleScrollEndDrag = useCallback(() => {
+    userInteractingRef.current = false;
+    ensureAutoScrollTimer();
+  }, [ensureAutoScrollTimer]);
+
+  const handleMomentumScrollEnd = useCallback(() => {
+    userInteractingRef.current = false;
+    ensureAutoScrollTimer();
+  }, [ensureAutoScrollTimer]);
+
+  useEffect(() => {
+    autoScrollSpeedRef.current = autoScrollSpeed;
+    if (autoScrollEnabledRef.current) {
+      clearAutoScrollTimer();
+      ensureAutoScrollTimer();
+    }
+  }, [autoScrollSpeed, clearAutoScrollTimer, ensureAutoScrollTimer]);
+
+  useEffect(() => {
+    autoScrollEnabledRef.current = autoScrollEnabled;
+    if (autoScrollEnabled) {
+      ensureAutoScrollTimer();
+    } else {
+      clearAutoScrollTimer();
+    }
+  }, [autoScrollEnabled, clearAutoScrollTimer, ensureAutoScrollTimer]);
+
+  useEffect(() => () => {
+    clearAutoScrollTimer();
+  }, [clearAutoScrollTimer]);
 
   const openControls = useCallback(() => {
     Haptics.selectionAsync();
@@ -129,6 +302,11 @@ export default function SongDetailScreen() {
   const MAX_LINE_GAP = 24;
   const MIN_OVER_GAP = -8;
   const MAX_OVER_GAP = 16;
+  const MIN_SCROLL_SPEED = 1;
+  const MAX_SCROLL_SPEED = 100;
+  const AUTOSCROLL_STEP_PX = 48;
+  const AUTOSCROLL_MIN_DELAY_MS = 400;
+  const AUTOSCROLL_MAX_DELAY_MS = 4000;
 
   const transposedBody = useMemo(() => {
     return song ? transposeChordPro(song.body, transpose) : '';
@@ -151,21 +329,34 @@ export default function SongDetailScreen() {
         <SongHeaderTitle title={song.title} singer={singer} composer={composer} />
       ),
       headerRight: () => (
-        <IconButton
-          icon="tune"
-          size={22}
-          onPress={openControls}
-          accessibilityLabel="Open display and transpose controls"
-          iconColor={theme.colors.onSurface}
-          style={{ marginRight: 12 }}
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <IconButton
+            icon="help-circle-outline"
+            size={22}
+            onPress={openGuide}
+            accessibilityLabel="Open guide"
+            iconColor={theme.colors.onSurface}
+          />
+          <IconButton
+            icon="tune"
+            size={22}
+            onPress={openControls}
+            accessibilityLabel="Open display and transpose controls"
+            iconColor={theme.colors.onSurface}
+            style={{ marginRight: 12 }}
+          />
+        </View>
       ),
+      headerBackTitleVisible: false,
+      headerTitleAlign: 'left',
+      headerTitleContainerStyle: { marginLeft: -12 },
+      headerLeftContainerStyle: { marginLeft: 0 },
     });
-  }, [nav, song, singer, composer, openControls, theme]);
+  }, [nav, song, singer, composer, openControls, openGuide, theme]);
 
   if (!song) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
         <View style={[styles.center, { backgroundColor: palette.background }]}> 
           <Text style={{ color: palette.text }}>Song not found.</Text>
         </View>
@@ -174,19 +365,22 @@ export default function SongDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
       <View style={[styles.container, { backgroundColor: palette.background }]}> 
         <Animated.ScrollView
+          ref={(ref) => {
+            scrollViewRef.current = ref as unknown as ScrollView | null;
+          }}
           entering={FadeInUp.duration(360)}
           style={{ flex: 1 }}
           contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
-          onScroll={() => {
-            if (!controlsOpen) {
-              showPeek();
-              scheduleHide();
-            }
-          }}
-          scrollEventThrottle={32}
+          onLayout={handleLayout}
+          onContentSizeChange={handleContentSizeChange}
+          onScroll={handleScroll}
+          onScrollBeginDrag={handleScrollBeginDrag}
+          onScrollEndDrag={handleScrollEndDrag}
+          onMomentumScrollEnd={handleMomentumScrollEnd}
+          scrollEventThrottle={16}
         >
           <Animated.View entering={FadeInDown.delay(80).duration(340)}>
             <Pressable
@@ -231,6 +425,50 @@ export default function SongDetailScreen() {
         ) : null}
 
       <Portal>
+        <Modal
+          visible={guideVisible}
+          onDismiss={closeGuide}
+          contentContainerStyle={styles.guideModalContainer}
+        >
+          <Surface style={[styles.guideSurface, { backgroundColor: theme.colors.elevation.level2 }]}
+            elevation={2}
+          >
+            <View style={styles.guideHeader}>
+              <Text variant="titleMedium">Performance Tips</Text>
+              <IconButton icon="close" onPress={closeGuide} accessibilityLabel="Close guide" />
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.guideCarousel}
+            >
+              {[...Array(6).keys()].map((index) => (
+                <View
+                  key={`guide-card-${index}`}
+                  style={[styles.guidePlaceholder, { backgroundColor: theme.colors.secondaryContainer }]} 
+                />
+              ))}
+            </ScrollView>
+            <View style={styles.guideDifficultySection}>
+              <Text variant="titleSmall">Difficulty Level</Text>
+              <SegmentedButtons
+                value={guideDifficulty}
+                onValueChange={handleGuideDifficultyChange}
+                buttons={[
+                  { value: 'easy', label: 'Easy' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'hard', label: 'Hard' },
+                ]}
+              />
+            </View>
+            <View style={styles.guideActions}>
+              <Button mode="contained" onPress={handleGuideSubmit} accessibilityLabel="Submit difficulty">
+                Submit
+              </Button>
+            </View>
+          </Surface>
+        </Modal>
+
         {controlsOpen ? (
           <>
             <RNAnimated.View
@@ -301,6 +539,45 @@ export default function SongDetailScreen() {
             </View>
           </View>
 
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Auto Scroll</Text>
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                <View style={styles.autoScrollControls}>
+                  <Switch
+                    value={autoScrollEnabled}
+                    onValueChange={(value) => {
+                      Haptics.selectionAsync();
+                      setAutoScrollEnabled(value);
+                    }}
+                    accessibilityLabel="Toggle auto scroll"
+                  />
+                  <IconButton
+                    icon="minus"
+                    mode="contained-tonal"
+                    size={20}
+                    disabled={autoScrollEnabled || autoScrollSpeed <= MIN_SCROLL_SPEED}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setAutoScrollSpeed((speed) => Math.max(MIN_SCROLL_SPEED, speed - 1));
+                    }}
+                    accessibilityLabel="Decrease auto scroll speed"
+                  />
+                  <Chip compact elevated>{`${autoScrollSpeed}%`}</Chip>
+                  <IconButton
+                    icon="plus"
+                    mode="contained-tonal"
+                    size={20}
+                    disabled={autoScrollEnabled || autoScrollSpeed >= MAX_SCROLL_SPEED}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setAutoScrollSpeed((speed) => Math.min(MAX_SCROLL_SPEED, speed + 1));
+                    }}
+                    accessibilityLabel="Increase auto scroll speed"
+                  />
+                </View>
+              </View>
+            </View>
+
             {mode === 'inline' ? (
               <View style={styles.row}>
                 <Text style={styles.rowLabel}>Line Spacing</Text>
@@ -343,6 +620,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  autoScrollControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  guideModalContainer: {
+    marginHorizontal: 24,
+  },
+  guideSurface: {
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 20,
+  },
+  guideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  guideCarousel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 4,
+  },
+  guidePlaceholder: {
+    width: 40,
+    height: 60,
+    borderRadius: 12,
+  },
+  guideDifficultySection: {
+    gap: 12,
+  },
+  guideActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   backdrop: {
     position: 'absolute',

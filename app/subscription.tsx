@@ -151,10 +151,11 @@ export default function SubscriptionScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}> 
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <Animated.ScrollView
         entering={FadeInUp.duration(400)}
         contentContainerStyle={styles.scrollContainer}
+        contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}>
         <Surface style={styles.heroSurface} elevation={3}>
           <Text style={styles.heroTitle}>Subscription Plans</Text>

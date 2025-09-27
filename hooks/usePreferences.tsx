@@ -1,10 +1,14 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ColorSchemeName } from 'react-native';
 
 import { useSystemColorScheme } from '@/hooks/useSystemColorScheme';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 type ThemePreference = 'system' | 'light' | 'dark';
 type LanguagePreference = 'en' | 'mm';
+
+const THEME_PREFERENCE_STORAGE_KEY = '@mm-song/theme-preference';
 
 type PreferencesContextValue = {
   themePreference: ThemePreference;
@@ -19,8 +23,37 @@ const PreferencesContext = createContext<PreferencesContextValue | undefined>(un
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const systemColorScheme = useSystemColorScheme();
-  const [themePreference, setThemePreference] = useState<ThemePreference>('system');
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>('system');
   const [language, setLanguage] = useState<LanguagePreference>('en');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadThemePreference = async () => {
+      try {
+        const storedPreference = await AsyncStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
+
+        if (storedPreference === 'light' || storedPreference === 'dark' || storedPreference === 'system') {
+          if (isMounted) {
+            setThemePreferenceState(storedPreference);
+          }
+        }
+      } catch (error) {
+        // Silently ignore persistence errors to avoid blocking UI rendering.
+      }
+    };
+
+    void loadThemePreference();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const setThemePreference = useCallback((preference: ThemePreference) => {
+    setThemePreferenceState(preference);
+    void AsyncStorage.setItem(THEME_PREFERENCE_STORAGE_KEY, preference);
+  }, []);
 
   const resolvedColorScheme: 'light' | 'dark' = useMemo(() => {
     if (themePreference === 'light') {
@@ -43,7 +76,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       resolvedColorScheme,
       systemColorScheme,
     }),
-    [language, resolvedColorScheme, systemColorScheme, themePreference]
+    [language, resolvedColorScheme, setThemePreference, systemColorScheme, themePreference]
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

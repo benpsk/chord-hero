@@ -42,8 +42,10 @@ export default function ProfileScreen() {
           flex: 1,
           backgroundColor: palette.background,
         },
-        container: {
+        scrollView: {
           flex: 1,
+        },
+        contentContainer: {
           paddingHorizontal: 24,
           paddingTop: 16,
           paddingBottom: 32,
@@ -165,7 +167,8 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Animated.ScrollView
         entering={FadeInUp.duration(340)}
-        contentContainerStyle={styles.container}
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}>
         <Animated.View style={styles.profileHeader} entering={FadeInDown.duration(320)}>
           <Avatar.Text

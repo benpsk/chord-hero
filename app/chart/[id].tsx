@@ -1,10 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { Chip, IconButton, Menu, Surface, TextInput, useTheme } from 'react-native-paper';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import { Colors } from '@/constants/Colors';
 import { FILTER_LANGUAGES, HOME_DETAILS, type FilterLanguage } from '@/constants/home';
@@ -12,7 +11,6 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function ChartDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const theme = useTheme();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -71,14 +69,6 @@ export default function ChartDetailScreen() {
           paddingBottom: 48,
           paddingTop: 16,
           gap: 24,
-        },
-        topBar: {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        },
-        topIcon: {
-          padding: 4,
         },
         headerRow: {
           flexDirection: 'row',
@@ -210,20 +200,23 @@ export default function ChartDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen
+        options={{
+          title: detail?.heading ?? 'Chart',
+          headerRight: () => (
+            <IconButton
+              icon="share-variant"
+              size={22}
+              onPress={() => {}}
+              accessibilityLabel="Share chart"
+            />
+          ),
+        }}
+      />
       <Animated.ScrollView
         entering={FadeInUp.duration(360)}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
-        <Animated.View style={styles.topBar} entering={FadeInDown.duration(300)}>
-          <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.topIcon}>
-            <MaterialIcons name="arrow-back" size={24} color={palette.text} />
-          </Pressable>
-          <Pressable accessibilityRole="button" style={styles.topIcon}>
-            <MaterialIcons name="share" size={20} color={palette.icon} />
-          </Pressable>
-        </Animated.View>
-
         <Animated.View style={styles.headerRow} entering={FadeInUp.delay(80).duration(320)}>
           <Surface style={styles.coverCard} elevation={colorScheme === 'dark' ? 1 : 2}>
             <Text style={styles.coverTitle}>{detail?.cardTitle ?? 'Top 50'}</Text>

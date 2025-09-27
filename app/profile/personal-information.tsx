@@ -97,6 +97,7 @@ export default function PersonalInformationScreen() {
         <Animated.ScrollView
           entering={FadeInUp.duration(320)}
           contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <Animated.View style={styles.headerStack} entering={FadeInDown.delay(60).duration(300)}>

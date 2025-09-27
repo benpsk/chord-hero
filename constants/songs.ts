@@ -18,7 +18,7 @@ export const SONGS: Song[] = [
     level: 'Easy',
     key: 'G',
     language: 'English',
-    body: `Key:[G]\nIntro: [A] [G] [C] [A] [D]\n||\nVerse 1\n [C]Amazing [G]grace, how [C]sweet the [G]sound\nThat [G]saved a [C]wretch like [D]me\n[G]I once was [C]lost, but [G]now am [C]found\nWas [G]blind, but [D]now I [G]see`,
+    body: `Key:[G]\nIntro: [A] [G] [C] [A] [D]\n||\nVerse 1\n [C]Amazing [G]grace, how [C]sweet the [G]sound\nThat [G]saved a [C]wretch like [D]me\n[G]I once was [C]lost, but [G]now am [C]found\nWas [G]blind, but [D]now I [G]see\nVerse 2\n [C]Amazing [G]grace, how [C]sweet the [G]sound\nThat [G]saved a [C]wretch like [D]me\n[G]I once was [C]lost, but [G]now am [C]found\nWas [G]blind, but [D]now I [G]see \nVerse 3\n [C]Amazing [G]grace, how [C]sweet the [G]sound\nThat [G]saved a [C]wretch like [D]me\n[G]I once was [C]lost, but [G]now am [C]found\nWas [G]blind, but [D]now I [G]see \nVerse 4\n [C]Amazing [G]grace, how [C]sweet the [G]sound\nThat [G]saved a [C]wretch like [D]me\n[G]I once was [C]lost, but [G]now am [C]found\nWas [G]blind, but [D]now I [G]see \nVerse 4\n [C]Amazing [G]grace, how [C]sweet the [G]sound\nThat [G]saved a [C]wretch like [D]me\n[G]I once was [C]lost, but [G]now am [C]found\nWas [G]blind, but [D]now I [G]see`,
   },
   {
     id: 'auld-lang-syne',

@@ -24,8 +24,11 @@ function RootLayoutContent() {
       <ThemeProvider value={navTheme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="chart/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="profile/personal-information" options={{ title: 'Personal Information' }} />
           <Stack.Screen name="song/[id]" options={{ title: 'Song' }} />
+          <Stack.Screen name="subscription" options={{ title: 'Subscription' }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style={statusBarStyle} />
@@ -49,4 +52,3 @@ export default function RootLayout() {
     </PreferencesProvider>
   );
 }
-

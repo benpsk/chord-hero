@@ -1,9 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Chip, IconButton, Menu, TextInput } from 'react-native-paper';
+import { Chip, IconButton, Menu, Surface, TextInput, useTheme } from 'react-native-paper';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { Colors } from '@/constants/Colors';
 import { FILTER_LANGUAGES, HOME_DETAILS, type FilterLanguage } from '@/constants/home';
@@ -12,6 +13,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 export default function ChartDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const theme = useTheme();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const detail = id ? HOME_DETAILS[id] : undefined;
@@ -84,12 +86,13 @@ export default function ChartDetailScreen() {
           alignItems: 'center',
         },
         coverCard: {
-          width: 120,
-          height: 120,
-          borderRadius: 20,
-          backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(10,126,164,0.12)',
-          borderWidth: 1,
-          borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(10,126,164,0.25)',
+          width: 128,
+          height: 128,
+          borderRadius: 24,
+          padding: 16,
+          backgroundColor: colorScheme === 'dark' ? theme.colors.surfaceVariant : '#EFE7FF',
+          borderWidth: colorScheme === 'dark' ? 1 : 0,
+          borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.2)' : '#DBCFF5',
           justifyContent: 'center',
           alignItems: 'center',
           gap: 6,
@@ -202,34 +205,37 @@ export default function ChartDetailScreen() {
           fontSize: 16,
         },
       }),
-    [colorScheme, palette]
+    [colorScheme, palette, theme.colors.surfaceVariant]
   );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.topBar}>
+      <Animated.ScrollView
+        entering={FadeInUp.duration(360)}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
+        <Animated.View style={styles.topBar} entering={FadeInDown.duration(300)}>
           <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.topIcon}>
             <MaterialIcons name="arrow-back" size={24} color={palette.text} />
           </Pressable>
           <Pressable accessibilityRole="button" style={styles.topIcon}>
             <MaterialIcons name="share" size={20} color={palette.icon} />
           </Pressable>
-        </View>
+        </Animated.View>
 
-        <View style={styles.headerRow}>
-          <View style={styles.coverCard}>
+        <Animated.View style={styles.headerRow} entering={FadeInUp.delay(80).duration(320)}>
+          <Surface style={styles.coverCard} elevation={colorScheme === 'dark' ? 1 : 2}>
             <Text style={styles.coverTitle}>{detail?.cardTitle ?? 'Top 50'}</Text>
             <Text style={styles.coverSubtitle}>{detail?.cardSubtitle ?? ''}</Text>
-          </View>
+          </Surface>
           <View style={{ flex: 1 }}>
             <Text style={styles.headingText}>{detail?.heading ?? 'Chart'}</Text>
             <Text style={styles.descriptionText}>{detail?.description ?? 'Weekly highlights'}</Text>
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.filterRow}>
+        <Animated.View style={styles.filterRow} entering={FadeInUp.delay(120).duration(320)}>
           <View style={styles.menuAnchor}>
             <Menu
               visible={menuVisible}
@@ -270,10 +276,10 @@ export default function ChartDetailScreen() {
               <Menu.Item onPress={() => { clearFilters(); closeMenu(); }} title="Clear languages" leadingIcon="close" />
             </Menu>
           </View>
-        </View>
+        </Animated.View>
 
         {selectedLanguages.length > 0 && (
-          <View style={styles.filtersRow}>
+          <Animated.View style={styles.filtersRow} entering={FadeInUp.delay(160).duration(300)}>
             {selectedLanguages.map((lang) => (
               <Chip
                 key={lang}
@@ -283,47 +289,49 @@ export default function ChartDetailScreen() {
                 {lang}
               </Chip>
             ))}
-          </View>
+          </Animated.View>
         )}
 
-        <View style={styles.section}>
-          {filteredTracks.map((track) => (
-            <View key={track.id} style={styles.trackCard}>
-              <View style={styles.trackRow}>
-                <View style={styles.trackInfo}>
-                  <Text style={styles.trackTitle} numberOfLines={1}>
-                    {track.title}
-                  </Text>
-                  <Text style={styles.trackDescription} numberOfLines={1}>
-                    {track.artists}
-                  </Text>
-                </View>
-                <View style={styles.trackActions}>
-                  <View style={styles.metaPill}>
-                    <Text style={styles.metaText}>{track.key}</Text>
+        <Animated.View style={styles.section} entering={FadeInUp.delay(200).duration(340)}>
+          {filteredTracks.map((track, index) => (
+            <Animated.View key={track.id} entering={FadeInUp.delay(220 + index * 40).duration(300)}>
+              <View style={styles.trackCard}>
+                <View style={styles.trackRow}>
+                  <View style={styles.trackInfo}>
+                    <Text style={styles.trackTitle} numberOfLines={1}>
+                      {track.title}
+                    </Text>
+                    <Text style={styles.trackDescription} numberOfLines={1}>
+                      {track.artists}
+                    </Text>
                   </View>
-                  <View style={styles.metaPill}>
-                    <Text style={styles.metaText}>{track.difficulty}</Text>
+                  <View style={styles.trackActions}>
+                    <View style={styles.metaPill}>
+                      <Text style={styles.metaText}>{track.key}</Text>
+                    </View>
+                    <View style={styles.metaPill}>
+                      <Text style={styles.metaText}>{track.difficulty}</Text>
+                    </View>
+                    <IconButton
+                      icon={bookmarkedTracks.has(track.id) ? 'bookmark' : 'bookmark-outline'}
+                      size={22}
+                      iconColor={bookmarkedTracks.has(track.id) ? palette.tint : palette.icon}
+                      onPress={() => toggleBookmark(track.id)}
+                      accessibilityLabel={bookmarkedTracks.has(track.id) ? 'Remove bookmark' : 'Add bookmark'}
+                      style={styles.bookmarkButton}
+                    />
                   </View>
-                  <IconButton
-                    icon={bookmarkedTracks.has(track.id) ? 'bookmark' : 'bookmark-outline'}
-                    size={22}
-                    iconColor={bookmarkedTracks.has(track.id) ? palette.tint : palette.icon}
-                    onPress={() => toggleBookmark(track.id)}
-                    accessibilityLabel={bookmarkedTracks.has(track.id) ? 'Remove bookmark' : 'Add bookmark'}
-                    style={styles.bookmarkButton}
-                  />
                 </View>
               </View>
-            </View>
+            </Animated.View>
           ))}
           {filteredTracks.length === 0 && (
-            <View style={styles.emptyState}>
+            <Animated.View style={styles.emptyState} entering={FadeInUp.delay(220).duration(320)}>
               <Text style={styles.emptyText}>No tracks available yet.</Text>
-            </View>
+            </Animated.View>
           )}
-        </View>
-      </ScrollView>
+        </Animated.View>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

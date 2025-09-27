@@ -11,9 +11,18 @@ type Props = {
   fontSize?: number;
   overGap?: number; // vertical spacing between chord and lyric in 'over' mode (px)
   lineGap?: number; // extra px added to line height in all modes
+  lyricColor?: string;
 };
 
-export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', mode = 'over', fontSize = 16, overGap = 2, lineGap = 0 }) => {
+export const ChordProView: React.FC<Props> = ({
+  lines,
+  chordColor = '#0a7ea4',
+  mode = 'over',
+  fontSize = 16,
+  overGap = 2,
+  lineGap = 0,
+  lyricColor = '#111111',
+}) => {
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
   const onLayout = useCallback((e: LayoutChangeEvent) => {
     setContainerWidth(e.nativeEvent.layout.width);
@@ -37,7 +46,7 @@ export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', m
     }
     if (!modeActive) {
       rendered.push(
-        <Text key={`premode-${idx}`} style={[styles.line, dynamicLine]}>
+        <Text key={`premode-${idx}`} style={[styles.line, dynamicLine, { color: lyricColor }]}>
           {renderInlineWithoutBrackets(line, chordColor)}
         </Text>
       );
@@ -48,7 +57,7 @@ export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', m
     if (lineMode === 'lyrics') {
       const { lyric } = parseInline(line);
       rendered.push(
-        <Text key={`lyrics-${idx}`} style={[styles.line, dynamicLine]}>
+        <Text key={`lyrics-${idx}`} style={[styles.line, dynamicLine, { color: lyricColor }]}>
           {lyric || '\u200B'}
         </Text>
       );
@@ -68,7 +77,7 @@ export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', m
       const trimmedChord = chordLine.trim();
       if (!trimmedChord) {
         rendered.push(
-          <Text key={`over-plain-${idx}`} style={[styles.line, dynamicLine]}>
+          <Text key={`over-plain-${idx}`} style={[styles.line, dynamicLine, { color: lyricColor }]}>
             {lyric || '\u200B'}
           </Text>
         );
@@ -78,7 +87,7 @@ export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', m
         rendered.push(
           <View key={`over-fallback-${idx}`} style={{ marginBottom: overGap }}>
             <Text style={[styles.line, styles.mono, dynamicLine, { color: chordColor, marginBottom: overGap }]}>{chordLine || '\u200B'}</Text>
-            <Text style={[styles.line, styles.mono, dynamicLine]}>{lyric || '\u200B'}</Text>
+            <Text style={[styles.line, styles.mono, dynamicLine, { color: lyricColor }]}>{lyric || '\u200B'}</Text>
           </View>
         );
         return;
@@ -91,7 +100,7 @@ export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', m
               <Text style={[styles.line, styles.mono, dynamicLine, { color: chordColor, marginBottom: overGap }]}>
                 {seg.chords || '\u200B'}
               </Text>
-              <Text style={[styles.line, styles.mono, dynamicLine]}>{seg.lyric || '\u200B'}</Text>
+              <Text style={[styles.line, styles.mono, dynamicLine, { color: lyricColor }]}>{seg.lyric || '\u200B'}</Text>
             </View>
           ))}
         </View>
@@ -100,7 +109,7 @@ export const ChordProView: React.FC<Props> = ({ lines, chordColor = '#0a7ea4', m
     }
 
     rendered.push(
-      <Text key={`inline-${idx}`} style={[styles.line, dynamicLine]}>
+      <Text key={`inline-${idx}`} style={[styles.line, dynamicLine, { color: lyricColor }]}>
         {renderInline(line, chordColor)}
       </Text>
     );

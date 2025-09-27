@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import {
-  Animated,
+  Animated as RNAnimated,
   GestureResponderEvent,
   PanResponder,
   PanResponderGestureState,
@@ -9,19 +9,25 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconButton, Text, useTheme, SegmentedButtons, Chip, Portal, Surface, Divider } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { getSongById } from '@/constants/songs';
 import { ChordProView } from '@/components/ChordProView';
 import { extractMeta, toDisplayLines, transposeChordPro, transposeChordToken } from '@/lib/chord';
 import SongHeaderTitle from '@/components/SongHeaderTitle';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function SongDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const song = getSongById(String(id));
   const theme = useTheme();
+  const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme];
   const nav = useNavigation();
   const [transpose, setTranspose] = useState(0);
   const [mode, setMode] = useState<'inline' | 'over' | 'lyrics'>('over');
@@ -30,20 +36,20 @@ export default function SongDetailScreen() {
   const [lineGap, setLineGap] = useState(0);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [peekVisible, setPeekVisible] = useState(true);
-  const peekOpacity = useRef(new Animated.Value(0)).current;
-  const sheetAnim = useRef(new Animated.Value(0)).current; // 0 hidden, 1 shown
-  const dragY = useRef(new Animated.Value(0)).current; // gesture-driven translate
+  const peekOpacity = useRef(new RNAnimated.Value(0)).current;
+  const sheetAnim = useRef(new RNAnimated.Value(0)).current; // 0 hidden, 1 shown
+  const dragY = useRef(new RNAnimated.Value(0)).current; // gesture-driven translate
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hidePeek = useCallback(() => {
-    Animated.timing(peekOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start(({ finished }) => {
+    RNAnimated.timing(peekOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start(({ finished }) => {
       if (finished) setPeekVisible(false);
     });
   }, [peekOpacity]);
 
   const showPeek = useCallback(() => {
     if (!peekVisible) setPeekVisible(true);
-    Animated.timing(peekOpacity, { toValue: 1, duration: 160, useNativeDriver: true }).start();
+    RNAnimated.timing(peekOpacity, { toValue: 1, duration: 160, useNativeDriver: true }).start();
   }, [peekOpacity, peekVisible]);
 
   const scheduleHide = useCallback((delay = 2500) => {
@@ -58,11 +64,11 @@ export default function SongDetailScreen() {
     setPeekVisible(false);
     peekOpacity.setValue(0);
     dragY.setValue(0);
-    Animated.timing(sheetAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+    RNAnimated.timing(sheetAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
   }, [dragY, peekOpacity, sheetAnim]);
   const closeControls = useCallback(() => {
     Haptics.selectionAsync();
-    Animated.timing(sheetAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+    RNAnimated.timing(sheetAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
       dragY.setValue(0);
       setControlsOpen(false);
       // Briefly show peek after closing, then hide
@@ -99,7 +105,7 @@ export default function SongDetailScreen() {
           if (shouldClose) {
             closeControls();
           } else {
-            Animated.spring(dragY, { toValue: 0, useNativeDriver: true, speed: 18, bounciness: 6 }).start();
+            RNAnimated.spring(dragY, { toValue: 0, useNativeDriver: true, speed: 18, bounciness: 6 }).start();
           }
         },
       }),
@@ -159,82 +165,90 @@ export default function SongDetailScreen() {
 
   if (!song) {
     return (
-      <View style={styles.center}> 
-        <Text>Song not found.</Text>
-      </View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['bottom']}>
+        <View style={[styles.center, { backgroundColor: palette.background }]}> 
+          <Text style={{ color: palette.text }}>Song not found.</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        onScroll={() => {
-          if (!controlsOpen) {
-            showPeek();
-            scheduleHide();
-          }
-        }}
-        scrollEventThrottle={32}
-      >
-        <Pressable
-          onPress={(() => {
-            let last = 0;
-            return () => {
-              const now = Date.now();
-              if (now - last < 300) {
-                openControls();
-                last = 0;
-              } else {
-                last = now;
-              }
-            };
-          })()}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['bottom']}>
+      <View style={[styles.container, { backgroundColor: palette.background }]}> 
+        <Animated.ScrollView
+          entering={FadeInUp.duration(360)}
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
+          onScroll={() => {
+            if (!controlsOpen) {
+              showPeek();
+              scheduleHide();
+            }
+          }}
+          scrollEventThrottle={32}
         >
-          <ChordProView
-            lines={lines}
-            chordColor={theme.colors.primary}
-            mode={mode}
-            fontSize={fontSize}
-            overGap={overGap}
-            lineGap={lineGap}
-          />
-        </Pressable>
-      </ScrollView>
+          <Animated.View entering={FadeInDown.delay(80).duration(340)}>
+            <Pressable
+              onPress={(() => {
+                let last = 0;
+                return () => {
+                  const now = Date.now();
+                  if (now - last < 300) {
+                    openControls();
+                    last = 0;
+                  } else {
+                    last = now;
+                  }
+                };
+              })()}
+            >
+              <ChordProView
+                lines={lines}
+                chordColor={theme.colors.primary}
+                lyricColor={palette.text}
+                mode={mode}
+                fontSize={fontSize}
+                overGap={overGap}
+                lineGap={lineGap}
+              />
+            </Pressable>
+          </Animated.View>
+        </Animated.ScrollView>
 
-      {/* Peek handle for swipe-up to open controls without occupying space */}
-      {peekVisible && !controlsOpen ? (
-      <Pressable
-        accessibilityLabel="Show controls"
-        onPress={openControls}
-        style={styles.peekTouchable}
-        {...peekPan.panHandlers}
-      >
-        <Animated.View style={{ opacity: peekOpacity }}>
-          <View style={[styles.peekHandle, { backgroundColor: theme.colors.outline }]} />
-        </Animated.View>
-      </Pressable>
-      ) : null}
+        {/* Peek handle for swipe-up to open controls without occupying space */}
+        {peekVisible && !controlsOpen ? (
+          <Pressable
+            accessibilityLabel="Show controls"
+            onPress={openControls}
+            style={styles.peekTouchable}
+            {...peekPan.panHandlers}
+          >
+            <RNAnimated.View style={{ opacity: peekOpacity }}>
+              <View style={[styles.peekHandle, { backgroundColor: theme.colors.outline }]} />
+            </RNAnimated.View>
+          </Pressable>
+        ) : null}
 
       <Portal>
         {controlsOpen ? (
           <>
-            <Animated.View
+            <RNAnimated.View
               style={[
                 styles.backdrop,
                 { opacity: sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.18] }) },
               ]}
             >
               <Pressable style={{ flex: 1 }} onPress={closeControls} accessibilityLabel="Dismiss controls" />
-            </Animated.View>
-            <Animated.View
+            </RNAnimated.View>
+            <RNAnimated.View
               style={[
                 styles.bottomSheet,
-                { transform: [{ translateY: Animated.add(sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [320, 0] }), dragY) }] },
+                { transform: [{ translateY: RNAnimated.add(sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [320, 0] }), dragY) }] },
               ]}
               {...sheetPan.panHandlers}
             >
-          <Surface style={[styles.sheet, { backgroundColor: theme.colors.elevation.level3 }] } elevation={2}>
+              <Surface style={[styles.sheet, { backgroundColor: theme.colors.elevation.level3 }]} elevation={2}>
             <View style={{ alignItems: 'center', paddingTop: 4, paddingBottom: 2 }}>
               <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: theme.colors.outlineVariant }} />
             </View>
@@ -308,16 +322,20 @@ export default function SongDetailScreen() {
                 </View>
               </View>
             ) : null}
-          </Surface>
-            </Animated.View>
+              </Surface>
+            </RNAnimated.View>
           </>
         ) : null}
       </Portal>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: { flex: 1 },
   content: { padding: 12, paddingBottom: 96, gap: 8 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -353,7 +371,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(127,127,127,0.5)',
   },
   modalRoot: {
     justifyContent: 'flex-end',

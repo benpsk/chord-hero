@@ -16,6 +16,7 @@ import {
   TouchableRipple,
   useTheme,
 } from 'react-native-paper';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { Colors } from '@/constants/Colors';
 import { SONGS } from '@/constants/songs';
@@ -251,7 +252,7 @@ export default function LibraryScreen() {
   const libraryContent = useMemo(() => {
     if (libraries.length === 0) {
       return (
-        <View style={styles.emptyState}>
+        <Animated.View style={styles.emptyState} entering={FadeInUp.delay(120).duration(360)}>
           <Text style={styles.emptyTitle}>No libraries yet</Text>
           <Text style={styles.emptySubtitle}>
             Create a custom library to organize songs for your next performance or study session.
@@ -259,12 +260,12 @@ export default function LibraryScreen() {
           <Button mode="contained" icon="plus" onPress={openAddModal}>
             Create a library
           </Button>
-        </View>
+        </Animated.View>
       );
     }
 
     return (
-      <View>
+      <Animated.View entering={FadeInUp.delay(140).duration(360)}>
         {libraries.map((library, index) => {
           const songs = library.songIds
             .map((id) => songMap.get(id))
@@ -273,7 +274,7 @@ export default function LibraryScreen() {
 
           return (
             <TouchableRipple key={library.id} onPress={() => {}} borderless={false}>
-              <View>
+              <Animated.View entering={FadeInUp.delay(160 + index * 40).duration(320)}>
                 {index > 0 && <View style={styles.rowSpacing} />}
                 <View style={styles.libraryRow}>
                   <View style={styles.artwork} />
@@ -295,11 +296,11 @@ export default function LibraryScreen() {
                   />
                 </View>
                 {index < libraries.length - 1 && <Divider style={styles.inlineDivider} />}
-              </View>
+              </Animated.View>
             </TouchableRipple>
           );
         })}
-      </View>
+      </Animated.View>
     );
   }, [libraries, openAddModal, songMap, styles]);
 
@@ -307,11 +308,12 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
+      <Animated.ScrollView
+        entering={FadeInUp.duration(360)}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerRow}>
+        <Animated.View style={styles.headerRow} entering={FadeInDown.duration(320)}>
           <Text style={styles.headingTitle}>Your Library</Text>
           <IconButton
             icon="magnify"
@@ -319,10 +321,10 @@ export default function LibraryScreen() {
             onPress={() => {}}
             style={styles.searchButton}
           />
-        </View>
+        </Animated.View>
 
         {libraryContent}
-      </ScrollView>
+      </Animated.ScrollView>
 
       <FAB
         icon="plus"

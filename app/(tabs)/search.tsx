@@ -1,13 +1,24 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Chip, IconButton, Menu, Surface, Text, TextInput } from 'react-native-paper';
+import { Chip, IconButton, Menu, Surface, Text, TextInput, TouchableRipple } from 'react-native-paper';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { Colors } from '@/constants/Colors';
-import { FILTER_LANGUAGES, HOME_DETAILS, type ChartTrack, type FilterLanguage } from '@/constants/home';
+import { FILTER_LANGUAGES, type FilterLanguage } from '@/constants/home';
+import { SONGS } from '@/constants/songs';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-type SearchTrack = ChartTrack & { sourceId: string };
+type SearchTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  composer?: string;
+  key?: string;
+  level?: string;
+  language?: FilterLanguage;
+};
 type SearchTabKey = 'tracks' | 'albums' | 'artists';
 
 type SearchAlbum = {
@@ -23,12 +34,15 @@ type SearchArtist = {
   songCount: number;
 };
 
-const SEARCH_TRACKS: SearchTrack[] = Object.values(HOME_DETAILS).flatMap((detail) =>
-  detail.tracks.map((track) => ({
-    ...track,
-    sourceId: detail.id,
-  }))
-);
+const SEARCH_TRACKS: SearchTrack[] = SONGS.map((song) => ({
+  id: song.id,
+  title: song.title,
+  artist: song.artist ?? 'Unknown artist',
+  composer: song.composer,
+  key: song.key,
+  level: song.level,
+  language: song.language as FilterLanguage | undefined,
+}));
 
 const SEARCH_ALBUMS: SearchAlbum[] = [
   { id: 'album-01', title: 'Album 01', artist: 'Jessica Gonzalez', trackCount: 12 },
@@ -51,6 +65,7 @@ const SEARCH_TABS: { key: SearchTabKey; label: string }[] = [
 ];
 
 export default function SearchScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedLanguages, setSelectedLanguages] = useState<FilterLanguage[]>([]);
@@ -151,9 +166,11 @@ export default function SearchScreen() {
           gap: 8,
         },
         trackCard: {
-          paddingVertical: 16,
           borderBottomWidth: 1,
           borderBottomColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
+        },
+        trackRipple: {
+          paddingVertical: 16,
         },
         trackRow: {
           flexDirection: 'row',
@@ -170,7 +187,7 @@ export default function SearchScreen() {
           fontSize: 16,
           fontWeight: '700',
         },
-        trackArtist: {
+        trackMetaLine: {
           color: palette.icon,
           fontSize: 13,
         },
@@ -263,8 +280,9 @@ export default function SearchScreen() {
     return SEARCH_TRACKS.filter((track) => {
       const matchesQuery = normalizedQuery.length === 0
         || track.title.toLowerCase().includes(normalizedQuery)
-        || track.artists.toLowerCase().includes(normalizedQuery)
-        || track.difficulty.toLowerCase().includes(normalizedQuery);
+        || track.artist.toLowerCase().includes(normalizedQuery)
+        || (track.composer ? track.composer.toLowerCase().includes(normalizedQuery) : false)
+        || (track.level ? track.level.toLowerCase().includes(normalizedQuery) : false);
 
       const matchesLanguage = selectedLanguages.length === 0
         || (track.language ? selectedLanguages.includes(track.language) : true);
@@ -313,22 +331,30 @@ export default function SearchScreen() {
     }
   }, [activeTab, filteredAlbums.length, filteredArtists.length, filteredTracks.length]);
 
+  const handleTrackPress = useCallback(
+    (trackId: string) => {
+      router.push({ pathname: '/song/[id]', params: { id: trackId } });
+    },
+    [router]
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
+      <Animated.ScrollView
+        entering={FadeInUp.duration(340)}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.headingGroup}>
+        <Animated.View style={styles.headingGroup} entering={FadeInDown.duration(300)}>
           <Text variant="headlineSmall" style={styles.headingTitle}>
             Search
           </Text>
           <Text variant="bodyMedium" style={styles.headingSubtitle}>
             Find tracks, artists, and albums.
           </Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.searchWrapper}>
+        <Animated.View style={styles.searchWrapper} entering={FadeInUp.delay(60).duration(320)}>
           <Menu
             visible={menuVisible}
             onDismiss={closeMenu}
@@ -359,9 +385,9 @@ export default function SearchScreen() {
             })}
             <Menu.Item onPress={clearLanguages} title="Clear languages" leadingIcon="close" />
           </Menu>
-        </View>
+        </Animated.View>
 
-        <View style={styles.tabBar}>
+        <Animated.View style={styles.tabBar} entering={FadeInUp.delay(100).duration(320)}>
           {SEARCH_TABS.map((tab) => {
             const isActive = tab.key === activeTab;
             return (
@@ -378,10 +404,10 @@ export default function SearchScreen() {
               </Pressable>
             );
           })}
-        </View>
+        </Animated.View>
 
         {selectedLanguages.length > 0 && (
-          <View style={styles.filtersRow}>
+          <Animated.View style={styles.filtersRow} entering={FadeInUp.delay(140).duration(320)}>
             {selectedLanguages.map((lang) => (
               <Chip
                 key={lang}
@@ -391,71 +417,81 @@ export default function SearchScreen() {
                 {lang}
               </Chip>
             ))}
-          </View>
+          </Animated.View>
         )}
 
-        <View style={styles.sectionHeader}>
+        <Animated.View style={styles.sectionHeader} entering={FadeInUp.delay(160).duration(320)}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
             {SEARCH_TABS.find((tab) => tab.key === activeTab)?.label}
           </Text>
           <Text variant="bodySmall" style={styles.sectionSubtitle}>
             {activeResultsCount} result{activeResultsCount === 1 ? '' : 's'}
           </Text>
-        </View>
+        </Animated.View>
 
         {activeTab === 'tracks' && filteredTracks.length > 0 ? (
-          <View style={styles.trackList}>
-            {filteredTracks.map((track) => (
-              <Surface key={`${track.sourceId}-${track.id}`} style={styles.trackCard} elevation={0}>
-                <View style={styles.trackRow}>
-                  <View style={styles.trackInfo}>
-                    <Text variant="titleSmall" style={styles.trackTitle} numberOfLines={1}>
-                      {track.title}
-                    </Text>
-                    <Text variant="bodySmall" style={styles.trackArtist} numberOfLines={1}>
-                      {track.artists}
-                    </Text>
+          <Animated.View style={styles.trackList} entering={FadeInUp.delay(200).duration(340)}>
+            {filteredTracks.map((track, index) => (
+              <Animated.View key={track.id} entering={FadeInUp.delay(200 + index * 30).duration(300)}>
+              <Surface style={styles.trackCard} elevation={0}>
+                <TouchableRipple
+                  style={styles.trackRipple}
+                  borderless
+                  onPress={() => handleTrackPress(track.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View details for ${track.title}`}>
+                  <View style={styles.trackRow}>
+                    <View style={styles.trackInfo}>
+                      <Text variant="titleSmall" style={styles.trackTitle} numberOfLines={1}>
+                        {track.title}
+                      </Text>
+                      <Text variant="bodySmall" style={styles.trackMetaLine} numberOfLines={1}>
+                        {track.artist}
+                        {track.composer ? ` | ${track.composer}` : ''}
+                      </Text>
+                    </View>
+                    <View style={styles.metaGroup}>
+                      <Chip compact style={styles.metaChip} textStyle={styles.metaText}>
+                        {track.key ?? '—'}
+                      </Chip>
+                      <Chip compact style={styles.metaChip} textStyle={styles.metaText}>
+                        {track.level ?? '—'}
+                      </Chip>
+                      {(() => {
+                        const trackKey = `track-${track.id}`;
+                        const isBookmarked = bookmarkedItems.has(trackKey);
+                        return (
+                          <IconButton
+                            icon={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                            size={20}
+                            iconColor={isBookmarked ? palette.tint : palette.icon}
+                            style={styles.iconButton}
+                            onPress={() => toggleBookmark(trackKey)}
+                            accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                          />
+                        );
+                      })()}
+                    </View>
                   </View>
-                  <View style={styles.metaGroup}>
-                    <Chip compact style={styles.metaChip} textStyle={styles.metaText}>
-                      {track.key}
-                    </Chip>
-                    <Chip compact style={styles.metaChip} textStyle={styles.metaText}>
-                      {track.difficulty}
-                    </Chip>
-                    {(() => {
-                      const trackKey = `track-${track.sourceId}-${track.id}`;
-                      const isBookmarked = bookmarkedItems.has(trackKey);
-                      return (
-                        <IconButton
-                          icon={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-                          size={20}
-                          iconColor={isBookmarked ? palette.tint : palette.icon}
-                          style={styles.iconButton}
-                          onPress={() => toggleBookmark(trackKey)}
-                          accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-                        />
-                      );
-                    })()}
-                  </View>
-                </View>
+                </TouchableRipple>
               </Surface>
+              </Animated.View>
             ))}
-          </View>
+          </Animated.View>
         ) : null}
 
         {activeTab === 'albums' && filteredAlbums.length > 0 ? (
-          <View style={styles.trackList}>
-            {filteredAlbums.map((album) => {
+          <Animated.View style={styles.trackList} entering={FadeInUp.delay(200).duration(340)}>
+            {filteredAlbums.map((album, index) => {
               const albumKey = `album-${album.id}`;
               const isBookmarked = bookmarkedItems.has(albumKey);
               return (
-                <View key={album.id} style={styles.albumRow}>
+                <Animated.View key={album.id} style={styles.albumRow} entering={FadeInUp.delay(220 + index * 40).duration(300)}>
                   <View style={styles.trackInfo}>
                     <Text variant="titleSmall" style={styles.trackTitle} numberOfLines={1}>
                       {album.title}
                     </Text>
-                    <Text variant="bodySmall" style={styles.trackArtist} numberOfLines={1}>
+                    <Text variant="bodySmall" style={styles.trackMetaLine} numberOfLines={1}>
                       {album.artist}
                     </Text>
                   </View>
@@ -472,40 +508,40 @@ export default function SearchScreen() {
                       accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
                     />
                   </View>
-                </View>
+                </Animated.View>
               );
             })}
-          </View>
+          </Animated.View>
         ) : null}
 
         {activeTab === 'artists' && filteredArtists.length > 0 ? (
-          <View style={styles.trackList}>
-            {filteredArtists.map((artist) => (
-              <View key={artist.id} style={styles.artistRow}>
+          <Animated.View style={styles.trackList} entering={FadeInUp.delay(200).duration(340)}>
+            {filteredArtists.map((artist, index) => (
+              <Animated.View key={artist.id} style={styles.artistRow} entering={FadeInUp.delay(220 + index * 40).duration(300)}>
                 <Text variant="titleSmall" style={styles.trackTitle} numberOfLines={1}>
                   {artist.name}
                 </Text>
                 <Text variant="bodySmall" style={styles.artistMeta}>
                   {artist.songCount} song{artist.songCount === 1 ? '' : 's'}
                 </Text>
-              </View>
+              </Animated.View>
             ))}
-          </View>
+          </Animated.View>
         ) : null}
 
         {((activeTab === 'tracks' && filteredTracks.length === 0)
           || (activeTab === 'albums' && filteredAlbums.length === 0)
           || (activeTab === 'artists' && filteredArtists.length === 0)) && (
-          <View style={styles.emptyState}>
+          <Animated.View style={styles.emptyState} entering={FadeInUp.delay(200).duration(320)}>
             <Text variant="titleSmall" style={styles.emptyTitle}>
               No matches yet
             </Text>
             <Text variant="bodyMedium" style={styles.emptySubtitle}>
               Try adjusting your search or removing filters to see more songs.
             </Text>
-          </View>
+          </Animated.View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

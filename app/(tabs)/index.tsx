@@ -1,208 +1,327 @@
 import React, { useMemo } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { Button, Card, IconButton, Surface, Text, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { POPULAR_ARTISTS, TRENDING_ALBUMS, WEEKLY_CHARTS } from '@/constants/home';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-const CARD_GAP = 16;
-const ARTIST_GAP = 20;
-const HORIZONTAL_PADDING = 24;
+import { Colors } from '@/constants/Colors';
+import { POPULAR_ARTISTS, TRENDING_ALBUMS, WEEKLY_CHARTS } from '@/constants/home';
+import { useColorScheme } from '@/hooks/useColorScheme';
+
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const AVAILABLE_WIDTH = SCREEN_WIDTH - HORIZONTAL_PADDING * 2;
-const CARD_WIDTH = (AVAILABLE_WIDTH - CARD_GAP) / 2.5;
-const ARTIST_WIDTH = SCREEN_WIDTH * 0.32;
+const HORIZONTAL_CARD_WIDTH = Math.min(240, SCREEN_WIDTH * 0.7);
+const ALBUM_ACCENTS = ['#E6DCFF', '#DDF4FF', '#FFE6F1'];
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export default function HomeScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
   const router = useRouter();
+  const theme = useTheme();
+  const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme];
 
-  const styles = useMemo(() =>
-    StyleSheet.create({
-      safeArea: {
-        flex: 1,
-        backgroundColor: palette.background,
-      },
-      content: {
-        paddingHorizontal: HORIZONTAL_PADDING,
-        paddingBottom: 110,
-        paddingTop: 12,
-      },
-      greetingLabel: {
-        color: palette.icon,
-        fontSize: 16,
-        marginBottom: 4,
-      },
-      greetingName: {
-        color: palette.text,
-        fontSize: 28,
-        fontWeight: '700',
-        marginBottom: 24,
-      },
-      sectionTitle: {
-        color: palette.text,
-        fontSize: 18,
-        fontWeight: '700',
-      },
-      sectionSpacing: {
-        marginTop: 32,
-      },
-      horizontalList: {
-        paddingTop: 16,
-        paddingBottom: 8,
-        paddingRight: HORIZONTAL_PADDING,
-      },
-      chartCard: {
-        width: CARD_WIDTH,
-        aspectRatio: 1,
-        borderRadius: 20,
-        padding: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(10,126,164,0.12)',
-        borderWidth: 1,
-        borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(10,126,164,0.25)',
-      },
-      cardSpacing: {
-        marginRight: CARD_GAP,
-      },
-      cardPressed: {
-        transform: [{ scale: 0.97 }],
-      },
-      cardHeading: {
-        color: palette.text,
-        fontSize: 20,
-        fontWeight: '700',
-        textAlign: 'center',
-      },
-      cardSubheading: {
-        color: palette.icon,
-        fontSize: 16,
-        fontWeight: '500',
-        textAlign: 'center',
-      },
-      artistList: {
-        paddingTop: 16,
-        paddingBottom: 24,
-        paddingRight: HORIZONTAL_PADDING,
-      },
-      artistContainer: {
-        width: ARTIST_WIDTH,
-        alignItems: 'center',
-      },
-      artistSpacing: {
-        marginRight: ARTIST_GAP,
-      },
-      avatarPlaceholder: {
-        width: 96,
-        height: 96,
-        borderRadius: 48,
-        backgroundColor: colorScheme === 'dark' ? '#111827' : '#D1D5DB',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 12,
-      },
-      avatarInner: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#9CA3AF',
-      },
-      artistName: {
-        textAlign: 'center',
-        color: palette.text,
-        fontSize: 14,
-        fontWeight: '500',
-      },
-    }),
-  [colorScheme, palette]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        safeArea: {
+          flex: 1,
+          backgroundColor: palette.background,
+        },
+        scrollContent: {
+          paddingHorizontal: 24,
+          paddingBottom: 120,
+          paddingTop: 16,
+          gap: 32,
+        },
+        greetingBlock: {
+          gap: 6,
+        },
+        greetingText: {
+          color: palette.icon,
+          fontSize: 16,
+          fontWeight: '500',
+        },
+        greetingName: {
+          color: palette.text,
+          fontSize: 32,
+          fontWeight: '800',
+        },
+        sectionHeader: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        },
+        sectionTitle: {
+          color: palette.text,
+          fontSize: 20,
+          fontWeight: '700',
+        },
+        horizontalList: {
+          flexDirection: 'row',
+          gap: 16,
+        },
+        chartCard: {
+          width: HORIZONTAL_CARD_WIDTH,
+          borderRadius: 24,
+        },
+        cardContent: {
+          gap: 12,
+        },
+        cardFooter: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        },
+        cardFooterText: {
+          color: palette.icon,
+          fontSize: 13,
+          fontWeight: '600',
+        },
+        cardFooterIcon: {
+          margin: -12,
+        },
+        insightsSurface: {
+          borderRadius: 28,
+          padding: 24,
+          backgroundColor: theme.colors.surface,
+          gap: 20,
+        },
+        insightRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        },
+        insightLabel: {
+          color: palette.icon,
+          fontSize: 14,
+        },
+        insightValue: {
+          color: palette.text,
+          fontSize: 18,
+          fontWeight: '700',
+        },
+        albumCard: {
+          width: Math.min(280, SCREEN_WIDTH * 0.75),
+          borderRadius: 24,
+          overflow: 'hidden',
+        },
+        albumCover: {
+          height: 120,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        albumInitials: {
+          color: colorScheme === 'dark' ? '#160730' : '#30124E',
+          fontSize: 32,
+          fontWeight: '800',
+        },
+        albumContent: {
+          gap: 8,
+        },
+        albumHeader: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        },
+        albumTitle: {
+          color: palette.text,
+          fontSize: 18,
+          fontWeight: '700',
+        },
+        albumSubtitle: {
+          color: palette.icon,
+          fontSize: 14,
+          fontWeight: '500',
+        },
+        albumDescription: {
+          color: palette.icon,
+          fontSize: 14,
+        },
+        artistCard: {
+          borderRadius: 24,
+          backgroundColor: theme.colors.surface,
+          padding: 20,
+          gap: 16,
+        },
+        artistRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 16,
+        },
+        artistAvatar: {
+          width: 54,
+          height: 54,
+          borderRadius: 27,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colorScheme === 'dark' ? '#2F1A4A' : '#E8DEF8',
+        },
+        artistName: {
+          color: palette.text,
+          fontSize: 16,
+          fontWeight: '600',
+        },
+        mutedSubtitle: {
+          color: palette.icon,
+          fontSize: 13,
+        },
+      }),
+    [colorScheme, palette.background, palette.icon, palette.text, theme.colors.surface]
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        bounces>
-        <Text style={styles.greetingLabel}>Good morning,</Text>
-        <Text style={styles.greetingName}>Ashley Scott</Text>
+      <Animated.ScrollView
+        entering={FadeInUp.duration(360)}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        <Animated.View style={styles.greetingBlock} entering={FadeInDown.duration(320)}>
+          <Text style={styles.greetingText}>{getGreeting()},</Text>
+          <Text style={styles.greetingName}>Ashley Scott</Text>
+        </Animated.View>
 
-        <Text style={styles.sectionTitle}>Weekly charts by levels</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalList}
-          snapToAlignment="start"
-          decelerationRate="fast"
-          snapToInterval={CARD_WIDTH + CARD_GAP}>
-          {WEEKLY_CHARTS.map((item, index) => {
-            const isLast = index === WEEKLY_CHARTS.length - 1;
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => router.push({ pathname: '/chart/[id]', params: { id: item.id } })}
-                style={({ pressed }) => [
-                  styles.chartCard,
-                  !isLast && styles.cardSpacing,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <Text style={styles.cardHeading}>{item.title}</Text>
-                <Text style={styles.cardSubheading}>{item.subtitle}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <Animated.View entering={FadeInUp.delay(80).duration(360)}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Weekly charts</Text>
+            <Button compact mode="text" onPress={() => router.push('/(tabs)/library')}>
+              View saved
+            </Button>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+            {WEEKLY_CHARTS.map((item, index) => (
+              <Animated.View key={item.id} entering={FadeInUp.delay(120 + index * 40).duration(320)}>
+                <Card
+                  style={styles.chartCard}
+                  mode="elevated"
+                  onPress={() => router.push({ pathname: '/chart/[id]', params: { id: item.id } })}>
+                  <Card.Content style={styles.cardContent}>
+                    <Text variant="labelLarge" style={{ color: palette.icon }}>
+                      {item.subtitle}
+                    </Text>
+                    <Text variant="headlineSmall" style={{ color: palette.text }} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text variant="bodyMedium" style={{ color: palette.icon }} numberOfLines={2}>
+                      Curated for your team • Updated weekly
+                    </Text>
+                    <View style={styles.cardFooter}>
+                      <Text style={styles.cardFooterText}>Tap to view details</Text>
+                      <IconButton
+                        icon="chevron-right"
+                        size={20}
+                        onPress={() => router.push({ pathname: '/chart/[id]', params: { id: item.id } })}
+                        iconColor={palette.icon}
+                        style={styles.cardFooterIcon}
+                      />
+                    </View>
+                  </Card.Content>
+                </Card>
+              </Animated.View>
+            ))}
+          </ScrollView>
+        </Animated.View>
 
-        <Text style={[styles.sectionTitle, styles.sectionSpacing]}>Trending albums</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalList}
-          snapToAlignment="start"
-          decelerationRate="fast"
-          snapToInterval={CARD_WIDTH + CARD_GAP}>
-          {TRENDING_ALBUMS.map((item, index) => {
-            const isLast = index === TRENDING_ALBUMS.length - 1;
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => router.push({ pathname: '/chart/[id]', params: { id: item.id } })}
-                style={({ pressed }) => [
-                  styles.chartCard,
-                  !isLast && styles.cardSpacing,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <Text style={styles.cardHeading}>{item.title}</Text>
-                <Text style={styles.cardSubheading}>{item.subtitle}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <Animated.View entering={FadeInUp.delay(160).duration(360)}>
+        <Surface style={styles.insightsSurface} elevation={1}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>This week&apos;s insights</Text>
+            <IconButton
+              icon="dots-horizontal"
+              onPress={() => {}}
+              size={22}
+              iconColor={palette.icon}
+            />
+          </View>
+          <View style={styles.insightRow}>
+            <View>
+              <Text style={styles.insightLabel}>Hours rehearsed</Text>
+              <Text style={styles.insightValue}>12h 45m</Text>
+            </View>
+            <Button icon="arrow-up-bold" mode="text" textColor={palette.icon} compact>
+              +8% vs last week
+            </Button>
+          </View>
+          <View style={styles.insightRow}>
+            <View>
+              <Text style={styles.insightLabel}>Most requested key</Text>
+              <Text style={styles.insightValue}>G Major</Text>
+            </View>
+            <Button icon="music-clef-treble" mode="text" textColor={palette.icon} compact>
+              Worship Team
+            </Button>
+          </View>
+        </Surface>
+        </Animated.View>
 
-        <Text style={[styles.sectionTitle, styles.sectionSpacing]}>Popular artists</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.artistList}>
-          {POPULAR_ARTISTS.map((artist, index) => {
-            const isLast = index === POPULAR_ARTISTS.length - 1;
-            return (
-              <View
-                key={artist.id}
-                style={[styles.artistContainer, !isLast && styles.artistSpacing]}
-              >
-                <View style={styles.avatarPlaceholder}>
-                  <View style={styles.avatarInner} />
-                </View>
-                <Text style={styles.artistName}>{artist.name}</Text>
+        <Animated.View entering={FadeInUp.delay(220).duration(360)}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Trending albums</Text>
+            <Button compact mode="text" onPress={() => router.push('/subscription')}>
+              Try premium
+            </Button>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+            {TRENDING_ALBUMS.map((album, index) => (
+              <Animated.View key={album.id} entering={FadeInUp.delay(240 + index * 40).duration(320)}>
+                <Card
+                  style={styles.albumCard}
+                  mode="elevated"
+                  onPress={() => router.push({ pathname: '/chart/[id]', params: { id: album.id } })}>
+                  <View style={[styles.albumCover, { backgroundColor: ALBUM_ACCENTS[index % ALBUM_ACCENTS.length] }]}>
+                    <Text style={styles.albumInitials}>{album.title.slice(0, 2).toUpperCase()}</Text>
+                  </View>
+                  <Card.Content style={styles.albumContent}>
+                    <View style={styles.albumHeader}>
+                      <Text style={styles.albumTitle}>{album.title}</Text>
+                      <IconButton
+                        icon="chevron-right"
+                        size={20}
+                        onPress={() => router.push({ pathname: '/chart/[id]', params: { id: album.id } })}
+                        iconColor={palette.icon}
+                        style={styles.cardFooterIcon}
+                      />
+                    </View>
+                    <Text style={styles.albumSubtitle}>by {album.subtitle}</Text>
+                    <Text style={styles.albumDescription} numberOfLines={2}>
+                      Layered synth textures with rhythmic guitar lines ideal for opening sets.
+                    </Text>
+                  </Card.Content>
+                </Card>
+              </Animated.View>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(280).duration(360)}>
+        <Surface style={styles.artistCard} elevation={1}>
+          <Text style={styles.sectionTitle}>Popular artists</Text>
+          {POPULAR_ARTISTS.map((artist, index) => (
+            <Animated.View key={artist.id} style={styles.artistRow} entering={FadeInUp.delay(300 + index * 50).duration(320)}>
+              <View style={styles.artistAvatar}>
+                <Text style={{ color: colorScheme === 'dark' ? '#F3E9FF' : '#2D1152', fontWeight: '700' }}>
+                  {artist.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
+                </Text>
               </View>
-            );
-          })}
-        </ScrollView>
-      </ScrollView>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.artistName}>{artist.name}</Text>
+                <Text style={styles.mutedSubtitle}>Tap to explore arrangements and harmonies</Text>
+              </View>
+              <IconButton
+                icon="chevron-right"
+                onPress={() => router.push('/(tabs)/search')}
+                iconColor={palette.icon}
+              />
+            </Animated.View>
+          ))}
+        </Surface>
+        </Animated.View>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

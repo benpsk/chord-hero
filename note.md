@@ -35,17 +35,27 @@
 - Large developers (>$1M/year): Apple takes $0.30 (first year) or $0.15 (after 12 months), you keep $0.70 or $0.85.
 
 ## Mobile Pages
-- Home => all songs
-- Artists
-- Albums
-- Playlists [auth]
-- Subscription => explain benefits
-    - login
-    - register
-    - dark/white theme toggle
-    - language settings => en/mm
-- profile => the top right
-
+- Home 
+  - top played by level [beginner, intermediate, difficult], week
+    - top played by language [mm, zomi, falam, rakhine], week
+  - trending albums , week
+  - popular artist, week
+- Search
+  - search => filter by [language => mm, zomi, mizo, china]
+  - Tracks => all songs
+  - Artists => filter by author
+  - Albums 
+- Library [auth]
+- Profile
+  - Personal Information
+    - Name 
+    - Email
+    - Password
+  - subscription => explain benefits
+  - dark/white theme toggle
+  - language settings => en/mm
+  - login / register  => logout
+  - delete account
 
 
 

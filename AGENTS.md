@@ -39,3 +39,7 @@
 - Do not commit secrets; prefer runtime config and secure storage.
 - Keep `app.json` non-sensitive; type env with `expo-env.d.ts` when applicable.
 - Remove debug logs before merging; validate permissions in `app.json`.
+
+## Dependency 
+- use React Native Paper for every ui components if possible. [colors, components, icons, ...]
+- i put the mobile mockup png files inside ./design. it's a mobile screen mockup white background on top of transparent, only focus on the white background.

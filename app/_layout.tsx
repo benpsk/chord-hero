@@ -5,32 +5,48 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { MD3DarkTheme as PaperDarkTheme, MD3LightTheme as PaperLightTheme, Provider as PaperProvider } from 'react-native-paper';
+import { PreferencesProvider } from '@/hooks/usePreferences';
+import {
+  MD3DarkTheme as PaperDarkTheme,
+  MD3LightTheme as PaperLightTheme,
+  Provider as PaperProvider,
+} from 'react-native-paper';
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
 
   const navTheme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
   const paperTheme = colorScheme === 'dark' ? PaperDarkTheme : PaperLightTheme;
+  const statusBarStyle = colorScheme === 'dark' ? 'light' : 'dark';
 
   return (
     <PaperProvider theme={paperTheme}>
       <ThemeProvider value={navTheme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="chart/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="song/[id]" options={{ title: 'Song' }} />
           <Stack.Screen name="+not-found" />
         </Stack>
-        <StatusBar style="auto" />
+        <StatusBar style={statusBarStyle} />
       </ThemeProvider>
     </PaperProvider>
   );
 }
+
+export default function RootLayout() {
+  const [loaded] = useFonts({
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
+
+  if (!loaded) {
+    return null;
+  }
+
+  return (
+    <PreferencesProvider>
+      <RootLayoutContent />
+    </PreferencesProvider>
+  );
+}
+

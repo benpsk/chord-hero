@@ -11,24 +11,38 @@ import (
 func Home() templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light" class="h-full">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Lyric API</title>
-    <style>
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 3rem; background: #f5f5f5; }
-      main { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 2.5rem; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08); }
-      h1 { margin-top: 0; font-size: 2rem; color: #111827; }
-      p { color: #4b5563; line-height: 1.6; }
-      code { background: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 6px; }
-    </style>
+    <link rel="stylesheet" href="/static/app.css" />
   </head>
-  <body>
-    <main>
-      <h1>Lyric API</h1>
-      <p>The web service is running. Check <code>/health</code> for status or extend this page via templ components.</p>
-    </main>
+  <body class="min-h-full bg-base-200">
+    <div class="hero min-h-screen px-6">
+      <div class="hero-content text-center">
+        <div class="max-w-xl space-y-6">
+          <span class="badge badge-outline">Welcome</span>
+          <h1 class="text-4xl font-semibold">Lyric API</h1>
+          <p class="text-base-content/70 text-lg leading-relaxed">
+            The web service is running. Check
+            <code class="badge badge-neutral px-3 py-2 font-mono text-sm">/health</code>
+            for status or extend this page via templ components.
+          </p>
+          <div class="join join-vertical gap-3 sm:join-horizontal sm:gap-0">
+            <a class="btn btn-primary join-item" href="/health">View Health Check</a>
+            <a class="btn btn-outline join-item" href="https://github.com/lyricapp/lyric" target="_blank" rel="noreferrer">View Repository</a>
+          </div>
+          <div class="alert alert-info">
+            <span class="font-medium">Tailwind + DaisyUI</span>
+            <span class="text-sm text-base-content/80">
+              Styles compile to <span class="font-mono">/static/app.css</span>. Update
+              <span class="font-mono">internal/web/assets/input.css</span> to customize themes.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>`)
 		return err

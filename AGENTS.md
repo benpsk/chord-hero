@@ -86,4 +86,8 @@
 - Use middleware for request logging, panic recovery, and authentication once endpoints require it.
 - Confirm CORS settings match the mobile client before release.
 
+### Dependency
+- Use go templ for templating language.
+- Use DaisyUI for every ui components, icons, themes, everything.
+- If there's no built-in in DaisyUI you can use tailwindcss.
 

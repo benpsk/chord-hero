@@ -12,6 +12,7 @@ type Props = {
   overGap?: number; // vertical spacing between chord and lyric in 'over' mode (px)
   lineGap?: number; // extra px added to line height in all modes
   lyricColor?: string;
+  onChordPress?: (chordName: string) => void;
 };
 
 export const ChordProView: React.FC<Props> = ({
@@ -22,6 +23,7 @@ export const ChordProView: React.FC<Props> = ({
   overGap = 2,
   lineGap = 0,
   lyricColor = '#111111',
+  onChordPress,
 }) => {
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -47,7 +49,7 @@ export const ChordProView: React.FC<Props> = ({
     if (!modeActive) {
       rendered.push(
         <Text key={`premode-${idx}`} style={[styles.line, dynamicLine, { color: lyricColor }]}>
-          {renderInlineWithoutBrackets(line, chordColor)}
+          {renderInlineWithoutBrackets(line, chordColor, onChordPress)}
         </Text>
       );
       return;
@@ -67,7 +69,7 @@ export const ChordProView: React.FC<Props> = ({
       const { chordLine } = toOverLine(line);
       rendered.push(
         <Text key={`chords-${idx}`} style={[styles.line, styles.mono, dynamicLine, { color: chordColor }]}>
-          {chordLine || '\u200B'}
+          {renderChordLine(chordLine, chordColor, onChordPress)}
         </Text>
       );
       return;
@@ -86,7 +88,9 @@ export const ChordProView: React.FC<Props> = ({
       if (!cols || !isFinite(cols)) {
         rendered.push(
           <View key={`over-fallback-${idx}`} style={{ marginBottom: overGap }}>
-            <Text style={[styles.line, styles.mono, dynamicLine, { color: chordColor, marginBottom: overGap }]}>{chordLine || '\u200B'}</Text>
+            <Text style={[styles.line, styles.mono, dynamicLine, { color: chordColor, marginBottom: overGap }]}>
+              {renderChordLine(chordLine, chordColor, onChordPress)}
+            </Text>
             <Text style={[styles.line, styles.mono, dynamicLine, { color: lyricColor }]}>{lyric || '\u200B'}</Text>
           </View>
         );
@@ -98,7 +102,7 @@ export const ChordProView: React.FC<Props> = ({
           {segs.map((seg, i) => (
             <View key={`over-${idx}-${i}`} style={{ marginBottom: overGap }}>
               <Text style={[styles.line, styles.mono, dynamicLine, { color: chordColor, marginBottom: overGap }]}>
-                {seg.chords || '\u200B'}
+                {renderChordLine(seg.chords, chordColor, onChordPress)}
               </Text>
               <Text style={[styles.line, styles.mono, dynamicLine, { color: lyricColor }]}>{seg.lyric || '\u200B'}</Text>
             </View>
@@ -110,7 +114,7 @@ export const ChordProView: React.FC<Props> = ({
 
     rendered.push(
       <Text key={`inline-${idx}`} style={[styles.line, dynamicLine, { color: lyricColor }]}>
-        {renderInline(line, chordColor)}
+        {renderInline(line, chordColor, onChordPress)}
       </Text>
     );
   });
@@ -122,7 +126,7 @@ export const ChordProView: React.FC<Props> = ({
   );
 };
 
-function renderInline(line: string, chordColor: string) {
+function renderInline(line: string, chordColor: string, onChordPress?: (chord: string) => void) {
   if (line.trim().length === 0) return '\u200B';
   const parts: React.ReactNode[] = [];
   const re = /\[([^\]]+)\]/g;
@@ -131,9 +135,7 @@ function renderInline(line: string, chordColor: string) {
   while ((m = re.exec(line))) {
     const textPart = line.slice(lastIndex, m.index);
     if (textPart) parts.push(textPart);
-    parts.push(
-      <Text key={m.index} style={[styles.chord, { color: chordColor }]}>[{m[1]}]</Text>
-    );
+    parts.push(createInlineChordNode(m[1], m.index, chordColor, onChordPress, true));
     lastIndex = re.lastIndex;
   }
   const tail = line.slice(lastIndex);
@@ -157,7 +159,7 @@ function parseInline(line: string): { lyric: string; chords: { name: string; pos
   return { lyric, chords };
 }
 
-function renderInlineWithoutBrackets(line: string, chordColor: string) {
+function renderInlineWithoutBrackets(line: string, chordColor: string, onChordPress?: (chord: string) => void) {
   if (line.trim().length === 0) return '\u200B';
   const parts: React.ReactNode[] = [];
   const re = /\[([^\]]+)\]/g;
@@ -168,17 +170,34 @@ function renderInlineWithoutBrackets(line: string, chordColor: string) {
     if (textPart) parts.push(textPart);
     const chordText = m[1];
     if (chordText) {
-      parts.push(
-        <Text key={`inline-chord-${m.index}`} style={[styles.chord, { color: chordColor }]}>
-          {chordText}
-        </Text>
-      );
+      parts.push(createInlineChordNode(chordText, `inline-${m.index}`, chordColor, onChordPress, false));
     }
     lastIndex = re.lastIndex;
   }
   const tail = line.slice(lastIndex);
   if (tail) parts.push(tail);
   return parts.length ? parts : '\u200B';
+}
+
+function createInlineChordNode(
+  chordName: string,
+  key: string | number,
+  chordColor: string,
+  onChordPress?: (chord: string) => void,
+  showBrackets = true
+) {
+  const content = showBrackets ? `[${chordName}]` : chordName;
+  const handlePress = onChordPress ? () => onChordPress(chordName) : undefined;
+  return (
+    <Text
+      key={key}
+      style={[styles.chord, { color: chordColor }]}
+      onPress={handlePress}
+      suppressHighlighting
+    >
+      {content}
+    </Text>
+  );
 }
 
 function toOverLine(line: string): { chordLine: string; lyric: string } {
@@ -206,6 +225,43 @@ function sliceByColumns(chords: string, lyric: string, cols: number): { chords: 
     out.push({ chords: c, lyric: l });
   }
   return out.length ? out : [{ chords, lyric }];
+}
+
+function renderChordLine(chordLine: string, chordColor: string, onChordPress?: (chord: string) => void) {
+  if (!chordLine.trim()) return chordLine || '\u200B';
+  const nodes: React.ReactNode[] = [];
+  let buffer = '';
+  for (let i = 0; i < chordLine.length; i += 1) {
+    const char = chordLine[i];
+    if (char === ' ') {
+      buffer += ' ';
+      continue;
+    }
+    if (buffer) {
+      nodes.push(buffer);
+      buffer = '';
+    }
+    let j = i;
+    let chord = '';
+    while (j < chordLine.length && chordLine[j] !== ' ') {
+      chord += chordLine[j];
+      j += 1;
+    }
+    const key = `over-chord-${i}-${chord}`;
+    nodes.push(
+      <Text
+        key={key}
+        style={[styles.chord, { color: chordColor }]}
+        onPress={onChordPress ? () => onChordPress(chord) : undefined}
+        suppressHighlighting
+      >
+        {chord}
+      </Text>
+    );
+    i = j - 1;
+  }
+  if (buffer) nodes.push(buffer);
+  return nodes.length ? nodes : chordLine || '\u200B';
 }
 
 const styles = StyleSheet.create({

@@ -32,6 +32,8 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { getSongById } from '@/constants/songs';
 import { ChordProView } from '@/components/ChordProView';
+import { ChordDiagramCarousel } from '@/components/ChordDiagramCarousel';
+import { getChordByName, type GuitarChord } from '@/constants/chords';
 import { extractMeta, toDisplayLines, transposeChordPro, transposeChordToken } from '@/lib/chord';
 import SongHeaderTitle from '@/components/SongHeaderTitle';
 import { Colors } from '@/constants/Colors';
@@ -55,6 +57,7 @@ export default function SongDetailScreen() {
   const [guideDifficulty, setGuideDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
   const [controlsOpen, setControlsOpen] = useState(false);
   const [peekVisible, setPeekVisible] = useState(true);
+  const [chordModal, setChordModal] = useState<{ name: string; chord?: GuitarChord } | null>(null);
   const peekOpacity = useRef(new RNAnimated.Value(0)).current;
   const sheetAnim = useRef(new RNAnimated.Value(0)).current; // 0 hidden, 1 shown
   const dragY = useRef(new RNAnimated.Value(0)).current; // gesture-driven translate
@@ -100,6 +103,20 @@ export default function SongDetailScreen() {
 
   const handleGuideSubmit = useCallback(() => {
     setGuideVisible(false);
+  }, []);
+
+  const handleChordPress = useCallback(
+    (rawName: string) => {
+      const normalized = rawName.trim();
+      if (!normalized) return;
+      const chord = getChordByName(normalized) ?? getChordByName(normalized.toUpperCase());
+      setChordModal({ name: normalized, chord });
+    },
+    []
+  );
+
+  const closeChordModal = useCallback(() => {
+    setChordModal(null);
   }, []);
 
   const clearAutoScrollTimer = useCallback(() => {
@@ -405,6 +422,7 @@ export default function SongDetailScreen() {
                 fontSize={fontSize}
                 overGap={overGap}
                 lineGap={lineGap}
+                onChordPress={handleChordPress}
               />
             </Pressable>
           </Animated.View>
@@ -424,53 +442,83 @@ export default function SongDetailScreen() {
           </Pressable>
         ) : null}
 
-      <Portal>
-        <Modal
-          visible={guideVisible}
-          onDismiss={closeGuide}
-          contentContainerStyle={styles.guideModalContainer}
-        >
-          <Surface style={[styles.guideSurface, { backgroundColor: theme.colors.elevation.level2 }]}
-            elevation={2}
+        <Portal>
+          <Modal
+            visible={Boolean(chordModal)}
+            onDismiss={closeChordModal}
+            contentContainerStyle={styles.chordModalContainer}
           >
-            <View style={styles.guideHeader}>
-              <Text variant="titleMedium">Performance Tips</Text>
-              <IconButton icon="close" onPress={closeGuide} accessibilityLabel="Close guide" />
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.guideCarousel}
-            >
-              {[...Array(6).keys()].map((index) => (
-                <View
-                  key={`guide-card-${index}`}
-                  style={[styles.guidePlaceholder, { backgroundColor: theme.colors.secondaryContainer }]} 
-                />
-              ))}
-            </ScrollView>
-            <View style={styles.guideDifficultySection}>
-              <Text variant="titleSmall">Difficulty Level</Text>
-              <SegmentedButtons
-                value={guideDifficulty}
-                onValueChange={handleGuideDifficultyChange}
-                buttons={[
-                  { value: 'easy', label: 'Easy' },
-                  { value: 'medium', label: 'Medium' },
-                  { value: 'hard', label: 'Hard' },
-                ]}
-              />
-            </View>
-            <View style={styles.guideActions}>
-              <Button mode="contained" onPress={handleGuideSubmit} accessibilityLabel="Submit difficulty">
-                Submit
-              </Button>
-            </View>
-          </Surface>
-        </Modal>
+            <Surface style={[styles.chordSurface, { backgroundColor: theme.colors.elevation.level2 }]} elevation={3}>
+              <View style={styles.chordHeader}>
+                <View style={styles.chordTitleBlock}>
+                  <Text variant="titleMedium">{chordModal?.chord?.name ?? chordModal?.name}</Text>
+                  {chordModal?.chord?.positions?.length ? (
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      Swipe to explore fingerings
+                    </Text>
+                  ) : null}
+                </View>
+                <IconButton icon="close" onPress={closeChordModal} accessibilityLabel="Close chord diagrams" />
+              </View>
+              {chordModal?.chord?.positions?.length ? (
+                <ChordDiagramCarousel positions={chordModal.chord.positions} />
+              ) : (
+                <View style={styles.chordEmptyState}>
+                  <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}>
+                    No diagrams available yet for {chordModal?.name}.
+                  </Text>
+                </View>
+              )}
+            </Surface>
+          </Modal>
 
-        {controlsOpen ? (
-          <>
+          <Modal
+            visible={guideVisible}
+            onDismiss={closeGuide}
+            contentContainerStyle={styles.guideModalContainer}
+          >
+            <Surface
+              style={[styles.guideSurface, { backgroundColor: theme.colors.elevation.level2 }]}
+              elevation={2}
+            >
+              <View style={styles.guideHeader}>
+                <Text variant="titleMedium">Performance Tips</Text>
+                <IconButton icon="close" onPress={closeGuide} accessibilityLabel="Close guide" />
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.guideCarousel}
+              >
+                {[...Array(6).keys()].map((index) => (
+                  <View
+                    key={`guide-card-${index}`}
+                    style={[styles.guidePlaceholder, { backgroundColor: theme.colors.secondaryContainer }]}
+                  />
+                ))}
+              </ScrollView>
+              <View style={styles.guideDifficultySection}>
+                <Text variant="titleSmall">Difficulty Level</Text>
+                <SegmentedButtons
+                  value={guideDifficulty}
+                  onValueChange={handleGuideDifficultyChange}
+                  buttons={[
+                    { value: 'easy', label: 'Easy' },
+                    { value: 'medium', label: 'Medium' },
+                    { value: 'hard', label: 'Hard' },
+                  ]}
+                />
+              </View>
+              <View style={styles.guideActions}>
+                <Button mode="contained" onPress={handleGuideSubmit} accessibilityLabel="Submit difficulty">
+                  Submit
+                </Button>
+              </View>
+            </Surface>
+          </Modal>
+
+          {controlsOpen ? (
+            <>
             <RNAnimated.View
               style={[
                 styles.backdrop,
@@ -650,6 +698,31 @@ const styles = StyleSheet.create({
     width: 40,
     height: 60,
     borderRadius: 12,
+  },
+  chordModalContainer: {
+    marginHorizontal: 24,
+  },
+  chordSurface: {
+    borderRadius: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    gap: 16,
+  },
+  chordHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chordTitleBlock: {
+    flex: 1,
+    paddingRight: 12,
+    gap: 4,
+  },
+  chordEmptyState: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   guideDifficultySection: {
     gap: 12,

@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Chip, IconButton, Menu, Surface, Text, TextInput, TouchableRipple } from 'react-native-paper';
+import { Chip, IconButton, Menu, Surface, Text, TextInput } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { Colors } from '@/constants/Colors';
@@ -196,13 +196,16 @@ export default function SearchScreen() {
           alignItems: 'center',
           gap: 8,
         },
-        metaChip: {
-          backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : '#F3F4F6',
-        },
         metaText: {
           fontSize: 12,
           fontWeight: '600',
           color: palette.text,
+        },
+        metaBadge: {
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: 999,
+          backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : '#F3F4F6',
         },
         iconButton: {
           margin: -8,
@@ -434,9 +437,8 @@ export default function SearchScreen() {
             {filteredTracks.map((track, index) => (
               <Animated.View key={track.id} entering={FadeInUp.delay(200 + index * 30).duration(300)}>
               <Surface style={styles.trackCard} elevation={0}>
-                <TouchableRipple
+                <Pressable
                   style={styles.trackRipple}
-                  borderless
                   onPress={() => handleTrackPress(track.id)}
                   accessibilityRole="button"
                   accessibilityLabel={`View details for ${track.title}`}>
@@ -451,12 +453,12 @@ export default function SearchScreen() {
                       </Text>
                     </View>
                     <View style={styles.metaGroup}>
-                      <Chip compact style={styles.metaChip} textStyle={styles.metaText}>
-                        {track.key ?? '—'}
-                      </Chip>
-                      <Chip compact style={styles.metaChip} textStyle={styles.metaText}>
-                        {track.level ?? '—'}
-                      </Chip>
+                      <View style={styles.metaBadge}>
+                        <Text style={styles.metaText}>{track.key ?? '—'}</Text>
+                      </View>
+                      <View style={styles.metaBadge}>
+                        <Text style={styles.metaText}>{track.level ?? '—'}</Text>
+                      </View>
                       {(() => {
                         const trackKey = `track-${track.id}`;
                         const isBookmarked = bookmarkedItems.has(trackKey);
@@ -473,7 +475,7 @@ export default function SearchScreen() {
                       })()}
                     </View>
                   </View>
-                </TouchableRipple>
+                </Pressable>
               </Surface>
               </Animated.View>
             ))}

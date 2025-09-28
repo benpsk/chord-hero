@@ -26,9 +26,9 @@ function RootLayoutContent() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="chart/[id]" options={{ title: "Chart"}} />
-          <Stack.Screen name="profile/personal-information" options={{ title: 'Personal Information' }} />
+          <Stack.Screen name="profile/chord-library" options={{ title: 'Chord Library' }} />
+          <Stack.Screen name="profile/request-chord" options={{ title: 'Request Chord' }} />
           <Stack.Screen name="song/[id]" options={{ title: 'Song' }} />
-          <Stack.Screen name="subscription" options={{ title: 'Subscription' }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar

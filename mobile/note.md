@@ -61,4 +61,7 @@
 - Small developers (<$1M/year): Apple takes $0.15, you keep $0.85.
 - Large developers (>$1M/year): Apple takes $0.30 (first year) or $0.15 (after 12 months), you keep $0.70 or $0.85.
 
+## Google & Apple Approval requirements 
+- add privacy policy url => should be live url
+- support page => developer info [apple only]
 

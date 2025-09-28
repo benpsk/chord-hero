@@ -85,3 +85,5 @@
 - Load runtime configuration (ports, DSNs, secrets) from environment variables; avoid hardcoding sensitive data.
 - Use middleware for request logging, panic recovery, and authentication once endpoints require it.
 - Confirm CORS settings match the mobile client before release.
+
+

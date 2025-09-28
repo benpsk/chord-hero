@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Avatar,
@@ -22,7 +23,6 @@ import {
   ThemePreference,
   usePreferences,
 } from '@/hooks/usePreferences';
-
 export default function ProfileScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -41,6 +41,9 @@ export default function ProfileScreen() {
         safeArea: {
           flex: 1,
           backgroundColor: palette.background,
+        },
+        container: {
+          flex: 1,
         },
         scrollView: {
           flex: 1,
@@ -91,6 +94,11 @@ export default function ProfileScreen() {
           fontSize: 16,
           fontWeight: '600',
         },
+        rowMeta: {
+          color: palette.icon,
+          fontSize: 14,
+          fontWeight: '600',
+        },
         chevron: {
           margin: 0,
         },
@@ -128,9 +136,14 @@ export default function ProfileScreen() {
         segmentButton: {
           flex: 1,
         },
+        logoutContainer: {
+          paddingHorizontal: 24,
+          paddingBottom: 24,
+          paddingTop: 12,
+        },
         logoutButton: {
-          marginTop: 'auto',
           borderRadius: 16,
+          width: '100%',
         },
         deleteCard: {
           borderRadius: 24,
@@ -150,6 +163,11 @@ export default function ProfileScreen() {
 
   const accentColor = theme.colors.primary;
   const mutedIconBackground = colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#F4F4F6';
+  const appVersion =
+    Constants.expoConfig?.version ??
+    // @ts-expect-error: legacy manifest support
+    Constants.manifest?.version ??
+    '0.0.0';
 
   const handleThemeChange = (value: string) => {
     if (value === 'light' || value === 'dark' || value === 'system') {
@@ -164,120 +182,132 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Animated.ScrollView
-        entering={FadeInUp.duration(340)}
-        style={styles.scrollView}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}>
-        <Animated.View style={styles.profileHeader} entering={FadeInDown.duration(320)}>
-          <Avatar.Text
-            label="JC"
-            size={72}
-            style={{ backgroundColor: accentColor }}
-            color={theme.colors.onPrimary}
-          />
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>Jeff Clay</Text>
-            <Text style={styles.userEmail}>jeffclay@gmail.com</Text>
-          </View>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.delay(80).duration(320)}>
-          <Surface style={styles.card} elevation={1}>
-            <TouchableRipple
-              onPress={() => {
-                router.push('/profile/personal-information');
-              }}
-              style={styles.rowRipple}>
-              <View style={styles.row}>
-                <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
-                  <Icon source="map-marker-account" color={accentColor} size={22} />
-                </View>
-                <Text style={styles.rowText}>Personal Information</Text>
-                <Icon source="chevron-right" color={palette.icon} size={20} style={styles.chevron} />
-              </View>
-            </TouchableRipple>
-            <Divider />
-            <TouchableRipple
-              onPress={() => {
-                router.push('/subscription');
-              }}
-              style={styles.rowRipple}>
-              <View style={styles.row}>
-                <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
-                  <Icon source="wallet-membership" color={accentColor} size={22} />
-                </View>
-                <Text style={styles.rowText}>Subscription</Text>
-                <Icon source="chevron-right" color={palette.icon} size={20} style={styles.chevron} />
-              </View>
-            </TouchableRipple>
-          </Surface>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.delay(140).duration(320)}>
-          <Surface style={styles.preferenceCard} elevation={1}>
-            <View style={styles.preferenceRow}>
-              <View style={styles.preferenceHeader}>
-                <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
-                  <Icon source="white-balance-sunny" color={accentColor} size={22} />
-                </View>
-                <Text style={styles.preferenceTitle}>Theme</Text>
-              </View>
-              <SegmentedButtons
-                value={themePreference}
-                onValueChange={handleThemeChange}
-                style={styles.segmentedGroup}
-                buttons={[
-                  { value: 'system', label: 'System', style: styles.segmentButton },
-                  { value: 'light', label: 'Light', style: styles.segmentButton },
-                  { value: 'dark', label: 'Dark', style: styles.segmentButton },
-                ]}
-              />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <View style={styles.container}>
+        <Animated.ScrollView
+          entering={FadeInUp.duration(340)}
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}>
+          <Animated.View style={styles.profileHeader} entering={FadeInDown.duration(320)}>
+            <Avatar.Text
+              label="JC"
+              size={72}
+              style={{ backgroundColor: accentColor }}
+              color={theme.colors.onPrimary}
+            />
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>Jeff Clay</Text>
+              <Text style={styles.userEmail}>jeffclay@gmail.com</Text>
             </View>
+          </Animated.View>
 
-            <Divider />
-
-            <View style={styles.preferenceRow}>
-              <View style={styles.preferenceHeader}>
-                <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
-                  <Icon source="translate" color={accentColor} size={22} />
+          <Animated.View entering={FadeInUp.delay(80).duration(320)}>
+            <Surface style={styles.card} elevation={1}>
+              <TouchableRipple
+                onPress={() => {
+                  router.push('/profile/chord-library');
+                }}
+                style={styles.rowRipple}>
+                <View style={styles.row}>
+                  <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
+                    <Icon source="book-music" color={accentColor} size={22} />
+                  </View>
+                  <Text style={styles.rowText}>Chord Library</Text>
+                  <Icon source="chevron-right" color={palette.icon} size={20} style={styles.chevron} />
                 </View>
-                <Text style={styles.preferenceTitle}>Language</Text>
-              </View>
-              <SegmentedButtons
-                value={language}
-                onValueChange={handleLanguageChange}
-                style={styles.segmentedGroup}
-                buttons={[
-                  { value: 'en', label: 'EN', style: styles.segmentButton },
-                  { value: 'mm', label: 'MM', style: styles.segmentButton },
-                ]}
-              />
-            </View>
-          </Surface>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.delay(200).duration(320)}>
-          <Surface style={styles.deleteCard} elevation={1}>
-            <TouchableRipple onPress={() => {}} style={styles.rowRipple}>
-              <View style={styles.row}>
-                <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
-                  <Icon source="trash-can-outline" color={theme.colors.error} size={22} />
+              </TouchableRipple>
+              <Divider />
+              <TouchableRipple
+                onPress={() => {
+                  router.push('/profile/request-chord');
+                }}
+                style={styles.rowRipple}>
+                <View style={styles.row}>
+                  <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
+                    <Icon source="guitar-pick" color={accentColor} size={22} />
+                  </View>
+                  <Text style={styles.rowText}>Request Chord</Text>
+                  <Icon source="chevron-right" color={palette.icon} size={20} style={styles.chevron} />
                 </View>
-                <Text style={styles.deleteText}>Delete Account</Text>
-                <Icon source="chevron-right" color={palette.icon} size={20} style={styles.chevron} />
-              </View>
-            </TouchableRipple>
-          </Surface>
-        </Animated.View>
+              </TouchableRipple>
+              <Divider />
+              <TouchableRipple onPress={() => {}} style={styles.rowRipple}>
+                <View style={styles.row}>
+                  <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
+                    <Icon source="information-outline" color={accentColor} size={22} />
+                  </View>
+                  <Text style={styles.rowText}>Version</Text>
+                  <Text style={styles.rowMeta}>v{appVersion}</Text>
+                </View>
+              </TouchableRipple>
+            </Surface>
+          </Animated.View>
 
-        <Animated.View entering={FadeInUp.delay(240).duration(320)}>
+          <Animated.View entering={FadeInUp.delay(140).duration(320)}>
+            <Surface style={styles.preferenceCard} elevation={1}>
+              <View style={styles.preferenceRow}>
+                <View style={styles.preferenceHeader}>
+                  <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
+                    <Icon source="white-balance-sunny" color={accentColor} size={22} />
+                  </View>
+                  <Text style={styles.preferenceTitle}>Theme</Text>
+                </View>
+                <SegmentedButtons
+                  value={themePreference}
+                  onValueChange={handleThemeChange}
+                  style={styles.segmentedGroup}
+                  buttons={[
+                    { value: 'system', label: 'System', style: styles.segmentButton },
+                    { value: 'light', label: 'Light', style: styles.segmentButton },
+                    { value: 'dark', label: 'Dark', style: styles.segmentButton },
+                  ]}
+                />
+              </View>
+
+              <Divider />
+
+              <View style={styles.preferenceRow}>
+                <View style={styles.preferenceHeader}>
+                  <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
+                    <Icon source="translate" color={accentColor} size={22} />
+                  </View>
+                  <Text style={styles.preferenceTitle}>Language</Text>
+                </View>
+                <SegmentedButtons
+                  value={language}
+                  onValueChange={handleLanguageChange}
+                  style={styles.segmentedGroup}
+                  buttons={[
+                    { value: 'en', label: 'EN', style: styles.segmentButton },
+                    { value: 'mm', label: 'MM', style: styles.segmentButton },
+                  ]}
+                />
+              </View>
+            </Surface>
+          </Animated.View>
+
+          <Animated.View entering={FadeInUp.delay(200).duration(320)}>
+            <Surface style={styles.deleteCard} elevation={1}>
+              <TouchableRipple onPress={() => {}} style={styles.rowRipple}>
+                <View style={styles.row}>
+                  <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
+                    <Icon source="trash-can-outline" color={theme.colors.error} size={22} />
+                  </View>
+                  <Text style={styles.deleteText}>Delete Account</Text>
+                  <Icon source="chevron-right" color={palette.icon} size={20} style={styles.chevron} />
+                </View>
+              </TouchableRipple>
+            </Surface>
+          </Animated.View>
+        </Animated.ScrollView>
+
+        <Animated.View entering={FadeInUp.delay(260).duration(320)} style={styles.logoutContainer}>
           <Button mode="contained" style={styles.logoutButton} onPress={() => {}}>
             LOGOUT
           </Button>
         </Animated.View>
-      </Animated.ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

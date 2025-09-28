@@ -262,9 +262,6 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInUp.delay(220).duration(360)}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Trending albums</Text>
-            <Button compact mode="text" onPress={() => router.push('/subscription')}>
-              Try premium
-            </Button>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
             {TRENDING_ALBUMS.map((album, index) => (

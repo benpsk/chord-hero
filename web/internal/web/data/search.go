@@ -23,17 +23,27 @@ type SearchArtist struct {
 	SongCount int    `json:"songCount"`
 }
 
-var FilterLanguages = []string{"English", "Burmese", "Zomi"}
-
-var SearchTracks = []SearchTrack{
-	{ID: "amazing-grace", Title: "Amazing Grace", Artist: "Traditional", Composer: "Graham, Billie", Level: "Easy", Key: "G", Language: "English"},
-	{ID: "auld-lang-syne", Title: "Auld Lang Syne", Artist: "Traditional", Composer: "Nightingle", Level: "Medium", Key: "G", Language: "English"},
-	{ID: "greensleeves", Title: "Greensleeves", Artist: "Traditional", Composer: "Green Slaver", Level: "Medium", Key: "Em", Language: "English"},
-	{ID: "flower-1", Title: "FLOWER", Artist: "Jessica Gonzalez | Jeff Clay", Level: "Easy", Key: "G", Language: "Burmese"},
-	{ID: "flower-2", Title: "FLOWER", Artist: "Jessica Gonzalez | Jeff Clay", Level: "Easy", Key: "G", Language: "English"},
-	{ID: "horizon-1", Title: "HORIZON", Artist: "Reina Carter | Moe Lwin", Level: "Medium", Key: "F", Language: "English"},
-	{ID: "pulse-1", Title: "PULSE", Artist: "Ngwe Tun | Alex Rivers", Level: "Trending", Key: "C", Language: "English"},
-}
+var SearchTracks = func() []SearchTrack {
+	tracks := make([]SearchTrack, 0, len(Songs))
+	for _, song := range Songs {
+		tracks = append(tracks, SearchTrack{
+			ID:       song.ID,
+			Title:    song.Title,
+			Artist:   song.Artist,
+			Composer: song.Composer,
+			Level:    song.Level,
+			Key:      song.Key,
+			Language: string(song.Language),
+		})
+	}
+	tracks = append(tracks,
+		SearchTrack{ID: "flower-1", Title: "FLOWER", Artist: "Jessica Gonzalez | Jeff Clay", Level: "Easy", Key: "G", Language: "Burmese"},
+		SearchTrack{ID: "flower-2", Title: "FLOWER", Artist: "Jessica Gonzalez | Jeff Clay", Level: "Easy", Key: "G", Language: "English"},
+		SearchTrack{ID: "horizon-1", Title: "HORIZON", Artist: "Reina Carter | Moe Lwin", Level: "Medium", Key: "F", Language: "English"},
+		SearchTrack{ID: "pulse-1", Title: "PULSE", Artist: "Ngwe Tun | Alex Rivers", Level: "Trending", Key: "C", Language: "English"},
+	)
+	return tracks
+}()
 
 var SearchAlbums = []SearchAlbum{
 	{ID: "album-01", Title: "Album 01", Artist: "Jessica Gonzalez", TrackCount: 12},

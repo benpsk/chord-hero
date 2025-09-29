@@ -7,9 +7,11 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/lyricapp/lyric/web/internal/app"
+	chartshandler "github.com/lyricapp/lyric/web/internal/http/handler/charts"
 	healthhandler "github.com/lyricapp/lyric/web/internal/http/handler/health"
 	homehandler "github.com/lyricapp/lyric/web/internal/http/handler/home"
 	searchhandler "github.com/lyricapp/lyric/web/internal/http/handler/search"
+	songshandler "github.com/lyricapp/lyric/web/internal/http/handler/songs"
 )
 
 // New instantiates the HTTP router and wires up handlers and middleware.
@@ -29,8 +31,14 @@ func New(application *app.Application) chi.Router {
 	home := homehandler.New()
 	r.Handle("/", home)
 
+	charts := chartshandler.New()
+	r.Handle("/charts/{id}", charts)
+
 	search := searchhandler.New()
 	r.Handle("/search", search)
+
+	songs := songshandler.New()
+	r.Handle("/songs/{id}", songs)
 
 	return r
 }

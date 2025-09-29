@@ -60,9 +60,8 @@ templ Home() {
                       <h3 class="mt-1 text-xl font-bold">{ chart.Title }</h3>
                       <p class="mt-2 text-sm text-base-content/70">Curated for your team • Updated weekly</p>
                     </div>
-                    <div class="card-actions justify-between">
-                      <div class="badge badge-outline">Tap to explore</div>
-                      <a class="btn btn-outline btn-sm" href={"/charts/" + chart.ID}>Open chart</a>
+                    <div class="card-actions justify-end">
+                      <a class="badge badge-outline badge-lg cursor-pointer px-4 py-3" href={"/charts/" + chart.ID}>Tap to explore</a>
                     </div>
                   </div>
                 </article>

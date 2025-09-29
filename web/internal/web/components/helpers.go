@@ -85,3 +85,19 @@ func albumAccent(index int) string {
 	}
 	return albumAccentPalette[index%len(albumAccentPalette)]
 }
+
+func songModeButtonClass(active bool) string {
+	base := "btn join-item btn-sm"
+	if active {
+		return base + " btn-primary"
+	}
+	return base + " btn-outline"
+}
+
+func transposeButtonClass(enabled bool) string {
+	base := "btn join-item btn-sm btn-outline"
+	if enabled {
+		return base
+	}
+	return base + " btn-disabled pointer-events-none"
+}

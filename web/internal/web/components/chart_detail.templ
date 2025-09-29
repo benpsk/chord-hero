@@ -1,0 +1,115 @@
+package components
+
+import (
+  "fmt"
+  "strings"
+)
+
+templ ChartDetail(props ChartDetailProps) {
+  @Layout(PageMeta{
+    Title:       fmt.Sprintf("Lyric · %s", props.Detail.Heading),
+    Description: fmt.Sprintf("Browse the %s chart with keys, difficulty, and filters by language.", strings.ToLower(props.Detail.CardSubtitle)),
+    Path:        fmt.Sprintf("/charts/%s", props.Detail.ID),
+    Canonical:   fmt.Sprintf("https://lyric.app/charts/%s", props.Detail.ID),
+    ActiveNav:   "home",
+    MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 py-10",
+    OGImage:     "/static/opengraph/home.png",
+    SchemaJSON:  WebPageSchema(props.Detail.Heading, fmt.Sprintf("Explore %s charts with arrangement filters.", props.Detail.Heading), fmt.Sprintf("https://lyric.app/charts/%s", props.Detail.ID)),
+  }) {
+          <section class="grid gap-8 rounded-box bg-base-100 p-8 shadow-sm sm:grid-cols-[auto,1fr]">
+            <div class="rounded-box bg-gradient-to-br from-primary/10 via-primary/5 to-primary/0 p-6 text-center">
+              <div class="badge badge-outline mb-3 text-primary">{ props.Detail.CardSubtitle }</div>
+              <h1 class="text-3xl font-bold leading-tight">{ props.Detail.CardTitle }</h1>
+              <p class="mt-2 text-sm text-base-content/70">Refreshes every Monday • Worship arrangements</p>
+            </div>
+            <div class="flex flex-col justify-between gap-4">
+              <div class="space-y-2">
+                <h2 class="text-3xl font-semibold">{ props.Detail.Heading }</h2>
+                <p class="text-base text-base-content/70">{ props.Detail.Description }</p>
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <a class="btn btn-primary btn-sm" href="#tracks">Skip to tracks</a>
+                <button type="button" class="btn btn-outline btn-sm" onclick="navigator.share ? navigator.share({ title: 'Lyric Charts', url: location.href }) : window.open('mailto:?subject=Lyric Charts&body='+encodeURIComponent(location.href));">
+                  Share chart
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section id="filters" class="rounded-box border border-base-300 bg-base-100 p-6 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 class="text-lg font-semibold">Languages</h3>
+                <p class="text-sm text-base-content/70">Filter arrangements by available lyric translations.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                if props.ShowingAllLanguages {
+                  <span class="badge badge-outline">All languages</span>
+                } else {
+                  for _, lang := range props.SelectedLanguages {
+                    <span class="badge badge-primary badge-outline">{ lang }</span>
+                  }
+                }
+                <a class="btn btn-ghost btn-sm" href={fmt.Sprintf("/charts/%s?all=1", props.Detail.ID)}>Clear filters</a>
+              </div>
+            </div>
+            <div class="mt-5">
+              <form method="get" class="flex flex-wrap items-center gap-4">
+                <div class="grid gap-3 sm:grid-cols-3">
+                  for _, option := range props.LanguageOptions {
+                    <label class="label cursor-pointer justify-start gap-3 rounded-box border border-base-300 bg-base-200 px-4 py-3 shadow-sm transition hover:border-primary">
+                      <input class="checkbox checkbox-primary" type="checkbox" name="language" value={string(option.Value)} checked?={option.Selected}>
+                      <span class="text-sm font-medium text-base-content">{ option.Label }</span>
+                    </label>
+                  }
+                </div>
+                <div class="flex items-center gap-2">
+                  <button class="btn btn-primary btn-sm" type="submit">Apply filters</button>
+                  <input type="hidden" name="all" value="0">
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <section id="tracks" class="space-y-5">
+            <div class="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-semibold">Tracks</h2>
+                <p class="text-sm text-base-content/70">Sorted by team bookmarks • tap a row to preview lyrics.</p>
+              </div>
+              <span class="badge badge-outline">{ len(props.Tracks) } arrangements</span>
+            </div>
+            if len(props.Tracks) == 0 {
+              <div class="rounded-box border border-dashed border-base-300 bg-base-200/50 p-12 text-center text-base-content/70">
+                No tracks available with the selected filters yet.
+              </div>
+            } else {
+              <div class="space-y-3">
+                for _, track := range props.Tracks {
+                  <article class="card border border-base-300 bg-base-100 shadow-sm transition hover:-translate-y-[2px] hover:border-primary/50 hover:shadow-lg">
+                    <div class="card-body gap-4 sm:flex sm:items-center sm:justify-between">
+                      <div class="space-y-1">
+                        <h3 class="text-xl font-semibold">{ track.Title }</h3>
+                        <p class="text-sm text-base-content/70">{ track.Artists }</p>
+                      </div>
+                      <div class="flex flex-wrap items-center gap-3">
+                        <div class="badge badge-primary badge-outline">Key { track.Key }</div>
+                        <div class="badge badge-outline">{ track.Difficulty }</div>
+                        if track.Language != "" {
+                          <div class="badge badge-outline">{ track.Language }</div>
+                        }
+                        <button type="button" class="btn btn-sm btn-ghost" aria-label="Bookmark chart" title="Bookmark chart">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m5.75 21 6.25-4 6.25 4V5.75A2.75 2.75 0 0 0 16.5 3h-9A2.75 2.75 0 0 0 4.75 5.75V21Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 8.5h6" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+  }
+}

@@ -1,0 +1,49 @@
+package components
+
+templ Layout(meta PageMeta) {
+  <!DOCTYPE html>
+  <html lang="en" data-theme="light" class="h-full">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>{ meta.titleValue() }</title>
+      <meta name="description" content={ meta.descriptionValue() } />
+      if meta.NoIndex {
+        <meta name="robots" content="noindex, nofollow" />
+      }
+      if meta.canonicalURL() != "" {
+        <link rel="canonical" href={ meta.canonicalURL() } />
+      }
+      <meta property="og:title" content={ meta.titleValue() } />
+      <meta property="og:description" content={ meta.descriptionValue() } />
+      if meta.canonicalURL() != "" {
+        <meta property="og:url" content={ meta.canonicalURL() } />
+      }
+      <meta property="og:type" content={ meta.ogTypeValue() } />
+      <meta property="og:image" content={ meta.ogImageValue() } />
+      <meta name="twitter:card" content={ meta.twitterCardValue() } />
+      <meta name="twitter:title" content={ meta.titleValue() } />
+      <meta name="twitter:description" content={ meta.descriptionValue() } />
+      <meta name="twitter:image" content={ meta.ogImageValue() } />
+      if meta.renderSchema() != nil {
+        @meta.renderSchema()
+      }
+      for _, extra := range meta.renderExtraHead() {
+        @extra
+      }
+      <link rel="stylesheet" href="/static/app.css" />
+    </head>
+    <body class="min-h-screen bg-base-200 text-base-content">
+      <div class="flex min-h-screen flex-col">
+        @Header(meta.ActiveNav)
+        <main id="main-content" class={ meta.mainClassValue() }>
+          { children... }
+        </main>
+        @Footer(layoutNow())
+      </div>
+      for _, script := range meta.renderBodyScripts() {
+        @script
+      }
+    </body>
+  </html>
+}

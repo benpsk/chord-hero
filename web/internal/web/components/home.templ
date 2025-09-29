@@ -1,0 +1,146 @@
+package components
+
+import (
+  "strings"
+  "time"
+
+  "github.com/lyricapp/lyric/web/internal/web/data"
+)
+
+templ Home() {
+  @Layout(PageMeta{
+    Title:       "Lyric · Home",
+    Description: "Discover weekly worship charts, rehearsal insights, and trending albums tailored for your worship team.",
+    Path:        "/",
+    Canonical:   "https://lyric.app/",
+    ActiveNav:   "home",
+    MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
+    OGImage:     "/static/opengraph/home.png",
+    SchemaJSON:  WebPageSchema("Lyric Home", "Discover weekly worship charts, rehearsal insights, and trending music to equip your team.", "https://lyric.app/"),
+  }) {
+          <section class="grid gap-8 rounded-box bg-base-100 p-8 shadow-sm lg:grid-cols-[2fr,1fr]">
+            <div class="space-y-4">
+              <span class="badge badge-outline">Welcome back</span>
+              <h1 class="text-4xl font-bold">{ greetingForHour(time.Now().Hour()) }, Ashley Scott</h1>
+              <p class="max-w-xl text-base-content/70 text-lg leading-relaxed">
+                Pick up where you left off with this week's charts, insights, and trending arrangements tailored for your team.
+              </p>
+              <div class="flex flex-wrap gap-3">
+                <a class="btn btn-primary" href="/search">Browse songs</a>
+                <a class="btn btn-outline" href="#weekly-charts">View weekly charts</a>
+              </div>
+            </div>
+            <div class="rounded-box bg-gradient-to-br from-primary/10 via-primary/5 to-primary/0 p-6">
+              <p class="text-sm font-semibold uppercase tracking-wide text-primary">Focus set</p>
+              <h2 class="text-2xl font-bold">Sunday rehearsal notes</h2>
+              <p class="mt-3 text-sm text-base-content/70">
+                12 charts pinned • harmonies locked for the opener. Share updates with your team directly from the search tab.
+              </p>
+              <div class="mt-6 flex flex-wrap items-center gap-3">
+                <div class="badge badge-primary badge-outline">4 new comments</div>
+                <div class="badge badge-outline">Key: G Major</div>
+              </div>
+            </div>
+          </section>
+
+          <section id="weekly-charts" class="space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-semibold">Weekly charts</h2>
+                <p class="text-sm text-base-content/70">Curated sets refreshed every Monday morning.</p>
+              </div>
+              <a class="btn btn-link btn-sm" href="#saved">View saved</a>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              for _, chart := range data.WeeklyCharts {
+                <article class="card border border-base-300 bg-base-100 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                  <div class="card-body gap-4">
+                    <div>
+                      <span class="text-sm font-semibold uppercase tracking-wide text-primary/70">{ chart.Subtitle }</span>
+                      <h3 class="mt-1 text-xl font-bold">{ chart.Title }</h3>
+                      <p class="mt-2 text-sm text-base-content/70">Curated for your team • Updated weekly</p>
+                    </div>
+                    <div class="card-actions justify-between">
+                      <div class="badge badge-outline">Tap to explore</div>
+                      <a class="btn btn-outline btn-sm" href={"/charts/" + chart.ID}>Open chart</a>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+
+          <section class="space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-semibold">This week's insights</h2>
+                <p class="text-sm text-base-content/70">Snapshot pulled from rehearsal activity and saved charts.</p>
+              </div>
+              <span class="badge badge-outline">Auto-updates daily</span>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2">
+              for _, insight := range data.WeeklyInsights {
+                <div class="stat rounded-box border border-base-300 bg-base-100 shadow-sm">
+                  <div class="stat-title text-sm text-base-content/70">{ insight.Label }</div>
+                  <div class="stat-value text-3xl font-semibold">{ insight.Value }</div>
+                  <div class="stat-desc text-primary">{ insight.Meta }</div>
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-semibold">Trending albums</h2>
+                <p class="text-sm text-base-content/70">Layered synth textures and rhythmic guitars kept in rotation.</p>
+              </div>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              for idx, album := range data.TrendingAlbums {
+                <article class="card border border-base-300 bg-base-100 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                  <div class="card-body gap-4">
+                    <div class={"rounded-box bg-gradient-to-br " + albumAccent(idx) + " p-8 text-center font-semibold text-primary"}>
+                      <span class="text-3xl">{ strings.ToUpper(firstTwoRunes(album.Title)) }</span>
+                    </div>
+                    <div class="space-y-1">
+                      <h3 class="text-xl font-bold">{ album.Title }</h3>
+                      <p class="text-sm text-base-content/70">by { album.Subtitle }</p>
+                      <p class="text-sm text-base-content/60">Layered arrangements designed to open the set with momentum.</p>
+                    </div>
+                    <div class="card-actions justify-end">
+                      <a class="btn btn-sm btn-outline" href={"/charts/" + album.ID}>View album</a>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+
+          <section class="space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-semibold">Popular artists</h2>
+                <p class="text-sm text-base-content/70">Tap through to explore harmonies and arrangements.</p>
+              </div>
+              <a class="btn btn-sm btn-outline" href="/search">Search artists</a>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2">
+              for _, artist := range data.PopularArtists {
+                <article class="card border border-base-300 bg-base-100 shadow-sm">
+                  <div class="card-body flex items-start gap-4">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+                      { strings.ToUpper(initialsForName(artist.Name)) }
+                    </div>
+                    <div class="flex-1 space-y-1">
+                      <h3 class="text-lg font-semibold">{ artist.Name }</h3>
+                      <p class="text-sm text-base-content/70">{ artist.Bio }</p>
+                      <a class="link link-primary text-sm" href={"/search?tab=artists&query=" + artist.Name}>Jump to artist</a>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+  }
+}

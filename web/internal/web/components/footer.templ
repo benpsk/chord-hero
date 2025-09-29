@@ -1,0 +1,16 @@
+package components
+
+import "time"
+
+templ Footer(now time.Time) {
+  <footer class="border-t border-base-300 bg-base-100">
+    <div class="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-sm text-base-content/60">
+      <span>© { now.Year() } Lyric. All rights reserved.</span>
+      <div class="flex items-center gap-4">
+        <a class="link" href="/">Home</a>
+        <a class="link" href="/search">Search</a>
+        <a class="link" href="/health">Health</a>
+      </div>
+    </div>
+  </footer>
+}

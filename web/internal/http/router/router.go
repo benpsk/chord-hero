@@ -9,6 +9,7 @@ import (
 	"github.com/lyricapp/lyric/web/internal/app"
 	healthhandler "github.com/lyricapp/lyric/web/internal/http/handler/health"
 	homehandler "github.com/lyricapp/lyric/web/internal/http/handler/home"
+	searchhandler "github.com/lyricapp/lyric/web/internal/http/handler/search"
 )
 
 // New instantiates the HTTP router and wires up handlers and middleware.
@@ -27,6 +28,9 @@ func New(application *app.Application) chi.Router {
 
 	home := homehandler.New()
 	r.Handle("/", home)
+
+	search := searchhandler.New()
+	r.Handle("/search", search)
 
 	return r
 }

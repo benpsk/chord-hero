@@ -87,7 +87,7 @@
 - Confirm CORS settings match the mobile client before release.
 
 ### Dependency
-- Use go templ for templating language.
+- Use go templ for templating language [https://templ.guide].
 - Use DaisyUI for every ui components, icons, themes, everything.
 - If there's no built-in in DaisyUI you can use tailwindcss.
 

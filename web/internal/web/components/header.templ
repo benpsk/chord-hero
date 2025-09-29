@@ -1,0 +1,14 @@
+package components
+
+templ Header(active string) {
+  <header class="border-b border-base-300 bg-base-100">
+    <nav class="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+      <a class="text-xl font-bold" href="/">Lyric</a>
+      <div class="flex items-center gap-2">
+        <a class={ navButtonClass(active == "home") } href="/">Home</a>
+        <a class={ primaryButtonClass(active == "search") } href="/search">Search library</a>
+        <a class="btn btn-ghost btn-sm" href="/health">Health</a>
+      </div>
+    </nav>
+  </header>
+}

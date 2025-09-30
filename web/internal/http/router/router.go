@@ -10,6 +10,7 @@ import (
 	chartshandler "github.com/lyricapp/lyric/web/internal/http/handler/charts"
 	healthhandler "github.com/lyricapp/lyric/web/internal/http/handler/health"
 	homehandler "github.com/lyricapp/lyric/web/internal/http/handler/home"
+	libraryhandler "github.com/lyricapp/lyric/web/internal/http/handler/library"
 	searchhandler "github.com/lyricapp/lyric/web/internal/http/handler/search"
 	songshandler "github.com/lyricapp/lyric/web/internal/http/handler/songs"
 )
@@ -36,6 +37,9 @@ func New(application *app.Application) chi.Router {
 
 	search := searchhandler.New()
 	r.Handle("/search", search)
+
+	library := libraryhandler.New()
+	r.Handle("/library", library)
 
 	songs := songshandler.New()
 	r.Handle("/songs/{id}", songs)

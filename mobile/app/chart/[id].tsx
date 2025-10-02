@@ -4,17 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Chip, IconButton, Menu, Surface, TextInput, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-
-import { Colors } from '@/constants/Colors';
 import { FILTER_LANGUAGES, HOME_DETAILS, type FilterLanguage } from '@/constants/home';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { usePreferences } from '@/hooks/usePreferences';
+
 
 export default function ChartDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
   const detail = id ? HOME_DETAILS[id] : undefined;
+  const { themePreference } = usePreferences();
 
   const [selectedLanguages, setSelectedLanguages] = useState<FilterLanguage[]>(['English']);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -62,7 +60,7 @@ export default function ChartDetailScreen() {
       StyleSheet.create({
         safeArea: {
           flex: 1,
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background,
         },
         content: {
           paddingHorizontal: 24,
@@ -80,34 +78,31 @@ export default function ChartDetailScreen() {
           height: 128,
           borderRadius: 24,
           padding: 16,
-          backgroundColor: colorScheme === 'dark' ? theme.colors.surfaceVariant : '#EFE7FF',
-          borderWidth: colorScheme === 'dark' ? 1 : 0,
-          borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.2)' : '#DBCFF5',
           justifyContent: 'center',
           alignItems: 'center',
           gap: 6,
         },
         coverTitle: {
-          color: palette.text,
           fontSize: 20,
           fontWeight: '700',
           textAlign: 'center',
+          color: theme.colors.onSurface,
         },
         coverSubtitle: {
-          color: palette.icon,
           fontSize: 16,
           fontWeight: '500',
           textAlign: 'center',
+          color: theme.colors.onSurface,
         },
         headingText: {
-          color: palette.text,
           fontSize: 24,
           fontWeight: '700',
+          color: theme.colors.onSurface,
         },
         descriptionText: {
-          color: palette.icon,
           fontSize: 15,
           marginTop: 4,
+          color: theme.colors.onSurface,
         },
         filterRow: {
           flexDirection: 'row',
@@ -121,12 +116,11 @@ export default function ChartDetailScreen() {
           flex: 1,
         },
         filterInput: {
-          backgroundColor: palette.background,
         },
         menuContent: {
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background,
+          borderColor: theme.colors.secondary,
           borderWidth: 1,
-          borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.2)' : '#D1D5DB',
         },
         filtersRow: {
           flexDirection: 'row',
@@ -135,16 +129,13 @@ export default function ChartDetailScreen() {
           marginTop: -8,
           paddingLeft: 4,
         },
-        filterChip: {
-          backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : '#F3F4F6',
-        },
         section: {
           gap: 16,
           zIndex: 1,
         },
         trackCard: {
           borderBottomWidth: 1,
-          borderBottomColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
+          borderBottomColor: theme.colors.tertiary,
           paddingBottom: 12,
           marginBottom: 12,
         },
@@ -158,14 +149,14 @@ export default function ChartDetailScreen() {
           flex: 1,
         },
         trackTitle: {
-          color: palette.text,
           fontSize: 16,
           fontWeight: '700',
+          color: theme.colors.onBackground,
         },
         trackDescription: {
-          color: palette.icon,
           fontSize: 13,
           marginTop: 2,
+          color: theme.colors.onBackground,
         },
         trackActions: {
           flexDirection: 'row',
@@ -179,10 +170,10 @@ export default function ChartDetailScreen() {
           paddingHorizontal: 10,
           paddingVertical: 4,
           borderRadius: 12,
-          backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : '#F3F4F6',
+          backgroundColor: theme.colors.secondary,
         },
         metaText: {
-          color: palette.text,
+          color: theme.colors.onSecondary,
           fontSize: 12,
           fontWeight: '600',
         },
@@ -191,11 +182,10 @@ export default function ChartDetailScreen() {
           paddingVertical: 60,
         },
         emptyText: {
-          color: palette.icon,
           fontSize: 16,
         },
       }),
-    [colorScheme, palette, theme.colors.surfaceVariant]
+    [theme.colors.surfaceVariant, theme.colors.tertiary, theme.colors.primary, theme.colors.onSurface]
   );
 
   return (
@@ -207,7 +197,7 @@ export default function ChartDetailScreen() {
             <IconButton
               icon="share-variant"
               size={22}
-              onPress={() => {}}
+              onPress={() => { }}
               accessibilityLabel="Share chart"
             />
           ),
@@ -218,7 +208,7 @@ export default function ChartDetailScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
         <Animated.View style={styles.headerRow} entering={FadeInUp.delay(80).duration(320)}>
-          <Surface style={styles.coverCard} elevation={colorScheme === 'dark' ? 1 : 2}>
+          <Surface style={styles.coverCard} elevation={themePreference === 'dark' ? 1 : 2}>
             <Text style={styles.coverTitle}>{detail?.cardTitle ?? 'Top 50'}</Text>
             <Text style={styles.coverSubtitle}>{detail?.cardSubtitle ?? ''}</Text>
           </Surface>
@@ -276,8 +266,6 @@ export default function ChartDetailScreen() {
             {selectedLanguages.map((lang) => (
               <Chip
                 key={lang}
-                mode="outlined"
-                style={styles.filterChip}
                 onClose={() => toggleLanguage(lang)}>
                 {lang}
               </Chip>
@@ -308,7 +296,7 @@ export default function ChartDetailScreen() {
                     <IconButton
                       icon={bookmarkedTracks.has(track.id) ? 'bookmark' : 'bookmark-outline'}
                       size={22}
-                      iconColor={bookmarkedTracks.has(track.id) ? palette.tint : palette.icon}
+                      iconColor={bookmarkedTracks.has(track.id) ? theme.colors.primary : theme.colors.secondary}
                       onPress={() => toggleBookmark(track.id)}
                       accessibilityLabel={bookmarkedTracks.has(track.id) ? 'Remove bookmark' : 'Add bookmark'}
                       style={styles.bookmarkButton}

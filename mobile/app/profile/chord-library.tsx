@@ -9,8 +9,6 @@ import {
   useTheme,
 } from 'react-native-paper';
 
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { ChordDiagramCarousel } from '@/components/ChordDiagramCarousel';
 import { getChordByName } from '@/constants/chords';
 
@@ -38,8 +36,6 @@ const CHORD_QUALITIES: { key: ChordQualityKey; label: string; display: string; s
 
 export default function ChordLibraryScreen() {
   const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme];
 
   const [accidentalMode, setAccidentalMode] = useState<AccidentalMode>('sharp');
   const [selectedRoot, setSelectedRoot] = useState<string>('C');
@@ -63,7 +59,7 @@ export default function ChordLibraryScreen() {
       StyleSheet.create({
         safeArea: {
           flex: 1,
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background,
         },
         content: {
           paddingHorizontal: 24,
@@ -72,7 +68,6 @@ export default function ChordLibraryScreen() {
         },
         card: {
           borderRadius: 24,
-          backgroundColor: theme.colors.surface,
           paddingHorizontal: 20,
           paddingVertical: 20,
           gap: 20,
@@ -87,12 +82,11 @@ export default function ChordLibraryScreen() {
           alignSelf: 'flex-end',
         },
         title: {
-          color: palette.text,
           fontSize: 22,
           fontWeight: '700',
         },
         subtitle: {
-          color: palette.icon,
+          color: theme.colors.secondary,
           fontSize: 14,
           fontWeight: '600',
           marginBottom: 8,
@@ -110,11 +104,10 @@ export default function ChordLibraryScreen() {
           justifyContent: 'space-between',
         },
         summaryLabel: {
-          color: palette.icon,
+          color: theme.colors.secondary,
           fontSize: 14,
         },
         summaryValue: {
-          color: palette.text,
           fontSize: 20,
           fontWeight: '700',
         },
@@ -126,7 +119,7 @@ export default function ChordLibraryScreen() {
           justifyContent: 'center',
         },
       }),
-    [palette.background, palette.icon, palette.text, theme.colors.surface]
+    [theme.colors.background, theme.colors.secondary]
   );
 
   const selectedQualityMeta =

@@ -16,8 +16,6 @@ import {
 } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import {
   LanguagePreference,
   ThemePreference,
@@ -26,8 +24,6 @@ import {
 export default function ProfileScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme];
   const {
     themePreference,
     setThemePreference,
@@ -40,7 +36,7 @@ export default function ProfileScreen() {
       StyleSheet.create({
         safeArea: {
           flex: 1,
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background,
         },
         container: {
           flex: 1,
@@ -64,17 +60,14 @@ export default function ProfileScreen() {
           gap: 4,
         },
         userName: {
-          color: palette.text,
           fontSize: 22,
           fontWeight: '700',
         },
         userEmail: {
-          color: palette.icon,
           fontSize: 14,
         },
         card: {
           borderRadius: 24,
-          backgroundColor: theme.colors.surface,
           overflow: 'hidden',
           elevation: 1,
         },
@@ -90,12 +83,11 @@ export default function ProfileScreen() {
         },
         rowText: {
           flex: 1,
-          color: palette.text,
           fontSize: 16,
           fontWeight: '600',
         },
         rowMeta: {
-          color: palette.icon,
+          color: theme.colors.primary,
           fontSize: 14,
           fontWeight: '600',
         },
@@ -111,7 +103,6 @@ export default function ProfileScreen() {
         },
         preferenceCard: {
           borderRadius: 24,
-          backgroundColor: theme.colors.surface,
           paddingHorizontal: 20,
           paddingVertical: 20,
           gap: 20,
@@ -126,7 +117,6 @@ export default function ProfileScreen() {
           gap: 16,
         },
         preferenceTitle: {
-          color: palette.text,
           fontSize: 16,
           fontWeight: '600',
         },
@@ -147,7 +137,6 @@ export default function ProfileScreen() {
         },
         deleteCard: {
           borderRadius: 24,
-          backgroundColor: theme.colors.surface,
           overflow: 'hidden',
           elevation: 1,
         },
@@ -158,15 +147,13 @@ export default function ProfileScreen() {
           fontWeight: '600',
         },
       }),
-    [palette.background, palette.icon, palette.text, theme.colors.error, theme.colors.surface]
+    [theme.colors.error, theme.colors.background, theme.colors.primary]
   );
 
   const accentColor = theme.colors.primary;
-  const mutedIconBackground = colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#F4F4F6';
+  const mutedIconBackground = themePreference === 'dark' ? '#120B0B' : '#F4F4F6';
   const appVersion =
     Constants.expoConfig?.version ??
-    // @ts-expect-error: legacy manifest support
-    Constants.manifest?.version ??
     '0.0.0';
 
   const handleThemeChange = (value: string) => {
@@ -214,7 +201,7 @@ export default function ProfileScreen() {
                     <Icon source="book-music" color={accentColor} size={22} />
                   </View>
                   <Text style={styles.rowText}>Chord Library</Text>
-                  <Icon source="chevron-right" color={palette.icon} size={20} style={styles.chevron} />
+                  <Icon source="chevron-right" color={theme.colors.primary} size={20} />
                 </View>
               </TouchableRipple>
               <Divider />
@@ -228,11 +215,11 @@ export default function ProfileScreen() {
                     <Icon source="guitar-pick" color={accentColor} size={22} />
                   </View>
                   <Text style={styles.rowText}>Request Chord</Text>
-                  <Icon source="chevron-right" color={palette.icon} size={20} style={styles.chevron} />
+                  <Icon source="chevron-right" color={theme.colors.primary} size={20} />
                 </View>
               </TouchableRipple>
               <Divider />
-              <TouchableRipple onPress={() => {}} style={styles.rowRipple}>
+              <TouchableRipple onPress={() => { }} style={styles.rowRipple}>
                 <View style={styles.row}>
                   <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
                     <Icon source="information-outline" color={accentColor} size={22} />
@@ -289,13 +276,13 @@ export default function ProfileScreen() {
 
           <Animated.View entering={FadeInUp.delay(200).duration(320)}>
             <Surface style={styles.deleteCard} elevation={1}>
-              <TouchableRipple onPress={() => {}} style={styles.rowRipple}>
+              <TouchableRipple onPress={() => { }} style={styles.rowRipple}>
                 <View style={styles.row}>
                   <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
                     <Icon source="trash-can-outline" color={theme.colors.error} size={22} />
                   </View>
                   <Text style={styles.deleteText}>Delete Account</Text>
-                  <Icon source="chevron-right" color={palette.icon} size={20} style={styles.chevron} />
+                  <Icon source="chevron-right" color={theme.colors.error} size={20} />
                 </View>
               </TouchableRipple>
             </Surface>
@@ -303,7 +290,7 @@ export default function ProfileScreen() {
         </Animated.ScrollView>
 
         <Animated.View entering={FadeInUp.delay(260).duration(320)} style={styles.logoutContainer}>
-          <Button mode="contained" style={styles.logoutButton} onPress={() => {}}>
+          <Button mode="contained" style={styles.logoutButton} onPress={() => { }}>
             LOGOUT
           </Button>
         </Animated.View>

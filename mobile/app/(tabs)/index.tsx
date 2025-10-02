@@ -5,13 +5,10 @@ import { Button, Card, IconButton, Surface, Text, useTheme } from 'react-native-
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-import { Colors } from '@/constants/Colors';
 import { POPULAR_ARTISTS, TRENDING_ALBUMS, WEEKLY_CHARTS } from '@/constants/home';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HORIZONTAL_CARD_WIDTH = Math.min(240, SCREEN_WIDTH * 0.7);
-const ALBUM_ACCENTS = ['#E6DCFF', '#DDF4FF', '#FFE6F1'];
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -23,15 +20,13 @@ function getGreeting() {
 export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme];
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         safeArea: {
           flex: 1,
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background,
         },
         scrollContent: {
           paddingHorizontal: 24,
@@ -43,14 +38,13 @@ export default function HomeScreen() {
           gap: 6,
         },
         greetingText: {
-          color: palette.icon,
+          color: theme.colors.secondary,
           fontSize: 16,
           fontWeight: '500',
         },
         greetingName: {
-          color: palette.text,
           fontSize: 32,
-          fontWeight: '800',
+          fontWeight: '700',
         },
         sectionHeader: {
           flexDirection: 'row',
@@ -58,9 +52,8 @@ export default function HomeScreen() {
           justifyContent: 'space-between',
         },
         sectionTitle: {
-          color: palette.text,
           fontSize: 20,
-          fontWeight: '700',
+          fontWeight: '500',
         },
         horizontalList: {
           flexDirection: 'row',
@@ -79,7 +72,7 @@ export default function HomeScreen() {
           justifyContent: 'space-between',
         },
         cardFooterText: {
-          color: palette.icon,
+          color: theme.colors.secondary,
           fontSize: 13,
           fontWeight: '600',
         },
@@ -89,7 +82,6 @@ export default function HomeScreen() {
         insightsSurface: {
           borderRadius: 28,
           padding: 24,
-          backgroundColor: theme.colors.surface,
           gap: 20,
         },
         insightRow: {
@@ -98,31 +90,32 @@ export default function HomeScreen() {
           justifyContent: 'space-between',
         },
         insightLabel: {
-          color: palette.icon,
           fontSize: 14,
         },
         insightValue: {
-          color: palette.text,
           fontSize: 18,
           fontWeight: '700',
+          color: theme.colors.tertiary,
         },
         albumCard: {
-          width: Math.min(280, SCREEN_WIDTH * 0.75),
+          width: Math.min(240, SCREEN_WIDTH * 0.7),
           borderRadius: 24,
           overflow: 'hidden',
         },
         albumCover: {
-          height: 120,
+          height: 80,
           alignItems: 'center',
           justifyContent: 'center',
+          backgroundColor: theme.colors.secondary,
         },
         albumInitials: {
-          color: colorScheme === 'dark' ? '#160730' : '#30124E',
           fontSize: 32,
           fontWeight: '800',
+          color: theme.colors.background
         },
         albumContent: {
           gap: 8,
+          paddingTop: 14,
         },
         albumHeader: {
           flexDirection: 'row',
@@ -130,22 +123,16 @@ export default function HomeScreen() {
           justifyContent: 'space-between',
         },
         albumTitle: {
-          color: palette.text,
+          color: theme.colors.secondary,
           fontSize: 18,
           fontWeight: '700',
         },
         albumSubtitle: {
-          color: palette.icon,
           fontSize: 14,
           fontWeight: '500',
         },
-        albumDescription: {
-          color: palette.icon,
-          fontSize: 14,
-        },
         artistCard: {
           borderRadius: 24,
-          backgroundColor: theme.colors.surface,
           padding: 20,
           gap: 16,
         },
@@ -160,19 +147,18 @@ export default function HomeScreen() {
           borderRadius: 27,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: colorScheme === 'dark' ? '#2F1A4A' : '#E8DEF8',
+          backgroundColor: theme.colors.primary,
         },
         artistName: {
-          color: palette.text,
           fontSize: 16,
           fontWeight: '600',
         },
         mutedSubtitle: {
-          color: palette.icon,
+          color: theme.colors.secondary,
           fontSize: 13,
         },
       }),
-    [colorScheme, palette.background, palette.icon, palette.text, theme.colors.surface]
+    [theme.colors.background, theme.colors.primary, theme.colors.secondary, theme.colors.tertiary]
   );
 
   return (
@@ -201,13 +187,13 @@ export default function HomeScreen() {
                   mode="elevated"
                   onPress={() => router.push({ pathname: '/chart/[id]', params: { id: item.id } })}>
                   <Card.Content style={styles.cardContent}>
-                    <Text variant="labelLarge" style={{ color: palette.icon }}>
+                    <Text variant="labelLarge" style={{ color: theme.colors.secondary }}>
                       {item.subtitle}
                     </Text>
-                    <Text variant="headlineSmall" style={{ color: palette.text }} numberOfLines={1}>
+                    <Text variant="headlineSmall" style={{ color: theme.colors.primary }} numberOfLines={1}>
                       {item.title}
                     </Text>
-                    <Text variant="bodyMedium" style={{ color: palette.icon }} numberOfLines={2}>
+                    <Text variant="bodyMedium" style={{ color: theme.colors.secondary }} numberOfLines={2}>
                       Curated for your team • Updated weekly
                     </Text>
                     <View style={styles.cardFooter}>
@@ -216,7 +202,7 @@ export default function HomeScreen() {
                         icon="chevron-right"
                         size={20}
                         onPress={() => router.push({ pathname: '/chart/[id]', params: { id: item.id } })}
-                        iconColor={palette.icon}
+                        iconColor={theme.colors.secondary}
                         style={styles.cardFooterIcon}
                       />
                     </View>
@@ -228,39 +214,39 @@ export default function HomeScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(160).duration(360)}>
-        <Surface style={styles.insightsSurface} elevation={1}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>This week&apos;s insights</Text>
-            <IconButton
-              icon="dots-horizontal"
-              onPress={() => {}}
-              size={22}
-              iconColor={palette.icon}
-            />
-          </View>
-          <View style={styles.insightRow}>
-            <View>
-              <Text style={styles.insightLabel}>Hours rehearsed</Text>
-              <Text style={styles.insightValue}>12h 45m</Text>
+          <Surface style={styles.insightsSurface} elevation={1}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>This week&apos;s insights</Text>
+              <IconButton
+                icon="dots-horizontal"
+                onPress={() => { }}
+                size={22}
+                iconColor={theme.colors.secondary}
+              />
             </View>
-            <Button icon="arrow-up-bold" mode="text" textColor={palette.icon} compact>
-              +8% vs last week
-            </Button>
-          </View>
-          <View style={styles.insightRow}>
-            <View>
-              <Text style={styles.insightLabel}>Most requested key</Text>
-              <Text style={styles.insightValue}>G Major</Text>
+            <View style={styles.insightRow}>
+              <View>
+                <Text style={styles.insightLabel}>Hours rehearsed</Text>
+                <Text style={styles.insightValue}>12h 45m</Text>
+              </View>
+              <Button icon="arrow-up-bold" mode="text" textColor={theme.colors.tertiary} compact>
+                +8% vs last week
+              </Button>
             </View>
-            <Button icon="music-clef-treble" mode="text" textColor={palette.icon} compact>
-              Worship Team
-            </Button>
-          </View>
-        </Surface>
+            <View style={styles.insightRow}>
+              <View>
+                <Text style={styles.insightLabel}>Most requested key</Text>
+                <Text style={styles.insightValue}>G Major</Text>
+              </View>
+              <Button icon="music-clef-treble" mode="text" textColor={theme.colors.tertiary} compact>
+                Worship Team
+              </Button>
+            </View>
+          </Surface>
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(220).duration(360)}>
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, { paddingBottom: 10 }]}>
             <Text style={styles.sectionTitle}>Trending albums</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
@@ -270,7 +256,7 @@ export default function HomeScreen() {
                   style={styles.albumCard}
                   mode="elevated"
                   onPress={() => router.push({ pathname: '/chart/[id]', params: { id: album.id } })}>
-                  <View style={[styles.albumCover, { backgroundColor: ALBUM_ACCENTS[index % ALBUM_ACCENTS.length] }]}>
+                  <View style={styles.albumCover}>
                     <Text style={styles.albumInitials}>{album.title.slice(0, 2).toUpperCase()}</Text>
                   </View>
                   <Card.Content style={styles.albumContent}>
@@ -280,14 +266,11 @@ export default function HomeScreen() {
                         icon="chevron-right"
                         size={20}
                         onPress={() => router.push({ pathname: '/chart/[id]', params: { id: album.id } })}
-                        iconColor={palette.icon}
+                        iconColor={theme.colors.secondary}
                         style={styles.cardFooterIcon}
                       />
                     </View>
                     <Text style={styles.albumSubtitle}>by {album.subtitle}</Text>
-                    <Text style={styles.albumDescription} numberOfLines={2}>
-                      Layered synth textures with rhythmic guitar lines ideal for opening sets.
-                    </Text>
                   </Card.Content>
                 </Card>
               </Animated.View>
@@ -296,27 +279,27 @@ export default function HomeScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(280).duration(360)}>
-        <Surface style={styles.artistCard} elevation={1}>
-          <Text style={styles.sectionTitle}>Popular artists</Text>
-          {POPULAR_ARTISTS.map((artist, index) => (
-            <Animated.View key={artist.id} style={styles.artistRow} entering={FadeInUp.delay(300 + index * 50).duration(320)}>
-              <View style={styles.artistAvatar}>
-                <Text style={{ color: colorScheme === 'dark' ? '#F3E9FF' : '#2D1152', fontWeight: '700' }}>
-                  {artist.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.artistName}>{artist.name}</Text>
-                <Text style={styles.mutedSubtitle}>Tap to explore arrangements and harmonies</Text>
-              </View>
-              <IconButton
-                icon="chevron-right"
-                onPress={() => router.push('/(tabs)/search')}
-                iconColor={palette.icon}
-              />
-            </Animated.View>
-          ))}
-        </Surface>
+          <Surface style={styles.artistCard} elevation={1}>
+            <Text style={styles.sectionTitle}>Popular artists</Text>
+            {POPULAR_ARTISTS.map((artist, index) => (
+              <Animated.View key={artist.id} style={styles.artistRow} entering={FadeInUp.delay(300 + index * 50).duration(320)}>
+                <View style={styles.artistAvatar}>
+                  <Text style={{ color: theme.colors.onPrimary, fontWeight: '700' }}>
+                    {artist.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.artistName}>{artist.name}</Text>
+                  <Text style={styles.mutedSubtitle}>Tap to explore arrangements and harmonies</Text>
+                </View>
+                <IconButton
+                  icon="chevron-right"
+                  onPress={() => router.push('/(tabs)/search')}
+                  iconColor={theme.colors.secondary}
+                />
+              </Animated.View>
+            ))}
+          </Surface>
         </Animated.View>
       </Animated.ScrollView>
     </SafeAreaView>

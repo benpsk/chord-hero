@@ -2,13 +2,11 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Chip, IconButton, Menu, Surface, Text, TextInput } from 'react-native-paper';
+import { Chip, IconButton, Menu, Surface, Text, TextInput, useTheme } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-import { Colors } from '@/constants/Colors';
 import { FILTER_LANGUAGES, type FilterLanguage } from '@/constants/home';
 import { SONGS } from '@/constants/songs';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 type SearchTrack = {
   id: string;
@@ -71,16 +69,14 @@ export default function SearchScreen() {
   const [selectedLanguages, setSelectedLanguages] = useState<FilterLanguage[]>([]);
   const [bookmarkedItems, setBookmarkedItems] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<SearchTabKey>('tracks');
-
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const theme = useTheme();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         safeArea: {
           flex: 1,
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background,
         },
         content: {
           flexGrow: 1,
@@ -93,12 +89,11 @@ export default function SearchScreen() {
           gap: 4,
         },
         headingTitle: {
-          color: palette.text,
           fontSize: 28,
           fontWeight: '700',
         },
         headingSubtitle: {
-          color: palette.icon,
+          color: theme.colors.secondary,
           fontSize: 15,
         },
         searchWrapper: {
@@ -115,12 +110,11 @@ export default function SearchScreen() {
           justifyContent: 'flex-start',
         },
         tabLabel: {
-          color: palette.icon,
           fontSize: 16,
           fontWeight: '600',
         },
         tabLabelActive: {
-          color: palette.tint,
+          color: theme.colors.primary,
         },
         tabIndicator: {
           marginTop: 6,
@@ -130,23 +124,21 @@ export default function SearchScreen() {
           backgroundColor: 'transparent',
         },
         tabIndicatorActive: {
-          backgroundColor: palette.tint,
+          backgroundColor: theme.colors.primary,
         },
         searchInput: {
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background
         },
         menuContent: {
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background,
           borderWidth: 1,
-          borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.15)' : '#E5E7EB',
+          borderColor: theme.colors.secondary,
         },
         filtersRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
           gap: 8,
-        },
-        chip: {
-          backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : '#F3F4F6',
+          marginTop: 8,
         },
         sectionHeader: {
           flexDirection: 'row',
@@ -154,12 +146,10 @@ export default function SearchScreen() {
           justifyContent: 'space-between',
         },
         sectionTitle: {
-          color: palette.text,
           fontSize: 18,
           fontWeight: '700',
         },
         sectionSubtitle: {
-          color: palette.icon,
           fontSize: 14,
         },
         trackList: {
@@ -167,7 +157,7 @@ export default function SearchScreen() {
         },
         trackCard: {
           borderBottomWidth: 1,
-          borderBottomColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
+          borderBottomColor: theme.colors.tertiary
         },
         trackRipple: {
           paddingVertical: 16,
@@ -183,12 +173,10 @@ export default function SearchScreen() {
           gap: 4,
         },
         trackTitle: {
-          color: palette.text,
           fontSize: 16,
           fontWeight: '700',
         },
         trackMetaLine: {
-          color: palette.icon,
           fontSize: 13,
         },
         metaGroup: {
@@ -197,15 +185,15 @@ export default function SearchScreen() {
           gap: 8,
         },
         metaText: {
+          color: theme.colors.onSecondary,
           fontSize: 12,
           fontWeight: '600',
-          color: palette.text,
         },
         metaBadge: {
           paddingHorizontal: 10,
           paddingVertical: 4,
           borderRadius: 999,
-          backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : '#F3F4F6',
+          backgroundColor: theme.colors.secondary,
         },
         iconButton: {
           margin: -8,
@@ -216,12 +204,10 @@ export default function SearchScreen() {
           gap: 8,
         },
         emptyTitle: {
-          color: palette.text,
           fontSize: 16,
           fontWeight: '600',
         },
         emptySubtitle: {
-          color: palette.icon,
           fontSize: 14,
           textAlign: 'center',
         },
@@ -232,28 +218,26 @@ export default function SearchScreen() {
           gap: 16,
           paddingVertical: 16,
           borderBottomWidth: 1,
-          borderBottomColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
+          borderBottomColor: theme.colors.tertiary
         },
         albumMeta: {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
         },
-        countChip: {
-          backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : '#F3F4F6',
-        },
         artistRow: {
           paddingVertical: 16,
           borderBottomWidth: 1,
-          borderBottomColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
+          borderBottomColor: theme.colors.tertiary,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
         },
         artistMeta: {
           marginTop: 6,
-          color: palette.icon,
           fontSize: 13,
         },
       }),
-    [colorScheme, palette]
+    [theme.colors.primary, theme.colors.secondary, theme.colors.tertiary]
   );
 
   const openMenu = useCallback(() => {
@@ -388,7 +372,19 @@ export default function SearchScreen() {
             })}
             <Menu.Item onPress={clearLanguages} title="Clear languages" leadingIcon="close" />
           </Menu>
+          {selectedLanguages.length > 0 && (
+            <View style={styles.filtersRow}>
+              {selectedLanguages.map((lang) => (
+                <Chip
+                  key={lang}
+                  onClose={() => toggleLanguage(lang)}>
+                  {lang}
+                </Chip>
+              ))}
+            </View>
+          )}
         </Animated.View>
+
 
         <Animated.View style={styles.tabBar} entering={FadeInUp.delay(100).duration(320)}>
           {SEARCH_TABS.map((tab) => {
@@ -409,20 +405,6 @@ export default function SearchScreen() {
           })}
         </Animated.View>
 
-        {selectedLanguages.length > 0 && (
-          <Animated.View style={styles.filtersRow} entering={FadeInUp.delay(140).duration(320)}>
-            {selectedLanguages.map((lang) => (
-              <Chip
-                key={lang}
-                style={styles.chip}
-                mode="outlined"
-                onClose={() => toggleLanguage(lang)}>
-                {lang}
-              </Chip>
-            ))}
-          </Animated.View>
-        )}
-
         <Animated.View style={styles.sectionHeader} entering={FadeInUp.delay(160).duration(320)}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
             {SEARCH_TABS.find((tab) => tab.key === activeTab)?.label}
@@ -436,47 +418,47 @@ export default function SearchScreen() {
           <Animated.View style={styles.trackList} entering={FadeInUp.delay(200).duration(340)}>
             {filteredTracks.map((track, index) => (
               <Animated.View key={track.id} entering={FadeInUp.delay(200 + index * 30).duration(300)}>
-              <Surface style={styles.trackCard} elevation={0}>
-                <Pressable
-                  style={styles.trackRipple}
-                  onPress={() => handleTrackPress(track.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`View details for ${track.title}`}>
-                  <View style={styles.trackRow}>
-                    <View style={styles.trackInfo}>
-                      <Text variant="titleSmall" style={styles.trackTitle} numberOfLines={1}>
-                        {track.title}
-                      </Text>
-                      <Text variant="bodySmall" style={styles.trackMetaLine} numberOfLines={1}>
-                        {track.artist}
-                        {track.composer ? ` | ${track.composer}` : ''}
-                      </Text>
-                    </View>
-                    <View style={styles.metaGroup}>
-                      <View style={styles.metaBadge}>
-                        <Text style={styles.metaText}>{track.key ?? '—'}</Text>
+                <Surface style={styles.trackCard} elevation={0}>
+                  <Pressable
+                    style={styles.trackRipple}
+                    onPress={() => handleTrackPress(track.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View details for ${track.title}`}>
+                    <View style={styles.trackRow}>
+                      <View style={styles.trackInfo}>
+                        <Text variant="titleSmall" style={styles.trackTitle} numberOfLines={1}>
+                          {track.title}
+                        </Text>
+                        <Text variant="bodySmall" style={styles.trackMetaLine} numberOfLines={1}>
+                          {track.artist}
+                          {track.composer ? ` | ${track.composer}` : ''}
+                        </Text>
                       </View>
-                      <View style={styles.metaBadge}>
-                        <Text style={styles.metaText}>{track.level ?? '—'}</Text>
+                      <View style={styles.metaGroup}>
+                        <View style={styles.metaBadge}>
+                          <Text style={styles.metaText}>{track.key ?? '—'}</Text>
+                        </View>
+                        <View style={styles.metaBadge}>
+                          <Text style={styles.metaText}>{track.level ?? '—'}</Text>
+                        </View>
+                        {(() => {
+                          const trackKey = `track-${track.id}`;
+                          const isBookmarked = bookmarkedItems.has(trackKey);
+                          return (
+                            <IconButton
+                              icon={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                              size={20}
+                              iconColor={isBookmarked ? theme.colors.primary : theme.colors.secondary}
+                              style={styles.iconButton}
+                              onPress={() => toggleBookmark(trackKey)}
+                              accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                            />
+                          );
+                        })()}
                       </View>
-                      {(() => {
-                        const trackKey = `track-${track.id}`;
-                        const isBookmarked = bookmarkedItems.has(trackKey);
-                        return (
-                          <IconButton
-                            icon={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-                            size={20}
-                            iconColor={isBookmarked ? palette.tint : palette.icon}
-                            style={styles.iconButton}
-                            onPress={() => toggleBookmark(trackKey)}
-                            accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-                          />
-                        );
-                      })()}
                     </View>
-                  </View>
-                </Pressable>
-              </Surface>
+                  </Pressable>
+                </Surface>
               </Animated.View>
             ))}
           </Animated.View>
@@ -498,13 +480,15 @@ export default function SearchScreen() {
                     </Text>
                   </View>
                   <View style={styles.albumMeta}>
-                    <Chip compact style={styles.countChip} textStyle={styles.metaText}>
-                      {album.trackCount}
-                    </Chip>
+                    <View style={styles.metaBadge}>
+                      <Text style={styles.metaText}>
+                        {album.trackCount}
+                      </Text>
+                    </View>
                     <IconButton
                       icon={isBookmarked ? 'bookmark' : 'bookmark-outline'}
                       size={20}
-                      iconColor={isBookmarked ? palette.tint : palette.icon}
+                      iconColor={isBookmarked ? theme.colors.primary : theme.colors.secondary}
                       style={styles.iconButton}
                       onPress={() => toggleBookmark(albumKey)}
                       accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
@@ -534,15 +518,15 @@ export default function SearchScreen() {
         {((activeTab === 'tracks' && filteredTracks.length === 0)
           || (activeTab === 'albums' && filteredAlbums.length === 0)
           || (activeTab === 'artists' && filteredArtists.length === 0)) && (
-          <Animated.View style={styles.emptyState} entering={FadeInUp.delay(200).duration(320)}>
-            <Text variant="titleSmall" style={styles.emptyTitle}>
-              No matches yet
-            </Text>
-            <Text variant="bodyMedium" style={styles.emptySubtitle}>
-              Try adjusting your search or removing filters to see more songs.
-            </Text>
-          </Animated.View>
-        )}
+            <Animated.View style={styles.emptyState} entering={FadeInUp.delay(200).duration(320)}>
+              <Text variant="titleSmall" style={styles.emptyTitle}>
+                No matches yet
+              </Text>
+              <Text variant="bodyMedium" style={styles.emptySubtitle}>
+                Try adjusting your search or removing filters to see more songs.
+              </Text>
+            </Animated.View>
+          )}
       </Animated.ScrollView>
     </SafeAreaView>
   );

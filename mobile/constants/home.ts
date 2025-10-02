@@ -28,10 +28,7 @@ export type HomeCard = {
 export const WEEKLY_CHARTS: HomeCard[] = [
   { id: 'easy', title: 'Top 50', subtitle: 'Easy' },
   { id: 'medium', title: 'Top 50', subtitle: 'Medium' },
-  { id: 'trending', title: 'Top 50', subtitle: 'Trending' },
   { id: 'hard', title: 'Top 50', subtitle: 'Hard' },
-  { id: 'legend', title: 'Top 50', subtitle: 'Legend' },
-  { id: 'fresh', title: 'Top 50', subtitle: 'Fresh' },
 ];
 
 export const TRENDING_ALBUMS: HomeCard[] = [

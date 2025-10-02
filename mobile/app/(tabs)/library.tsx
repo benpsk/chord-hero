@@ -18,9 +18,7 @@ import {
 } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-import { Colors } from '@/constants/Colors';
 import { SONGS } from '@/constants/songs';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 type Library = {
   id: string;
@@ -32,8 +30,6 @@ type Library = {
 type ModalStep = 'name' | 'songs';
 
 export default function LibraryScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
   const theme = useTheme();
 
   const [libraries, setLibraries] = useState<Library[]>([]);
@@ -50,7 +46,7 @@ export default function LibraryScreen() {
       StyleSheet.create({
         safeArea: {
           flex: 1,
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background
         },
         container: {
           flexGrow: 1,
@@ -65,7 +61,6 @@ export default function LibraryScreen() {
           justifyContent: 'space-between',
         },
         headingTitle: {
-          color: palette.text,
           fontSize: 24,
           fontWeight: '700',
         },
@@ -81,10 +76,10 @@ export default function LibraryScreen() {
           height: 12,
         },
         artwork: {
+          backgroundColor: theme.colors.tertiary,
           width: 52,
           height: 52,
           borderRadius: 12,
-          backgroundColor: colorScheme === 'dark' ? '#4338CA' : '#8B5CF6',
         },
         libraryInfo: {
           flex: 1,
@@ -92,7 +87,6 @@ export default function LibraryScreen() {
           gap: 6,
         },
         libraryTitle: {
-          color: palette.text,
           fontSize: 16,
           fontWeight: '700',
         },
@@ -102,7 +96,6 @@ export default function LibraryScreen() {
           gap: 6,
         },
         librarySubtitle: {
-          color: palette.icon,
           fontSize: 13,
         },
         chevronButton: {
@@ -110,7 +103,6 @@ export default function LibraryScreen() {
         },
         inlineDivider: {
           marginTop: 12,
-          backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
         },
         emptyState: {
           alignItems: 'center',
@@ -119,20 +111,18 @@ export default function LibraryScreen() {
           paddingHorizontal: 24,
         },
         emptyTitle: {
-          color: palette.text,
           fontSize: 18,
           fontWeight: '700',
         },
         emptySubtitle: {
-          color: palette.icon,
           fontSize: 14,
           textAlign: 'center',
         },
         fab: {
+          backgroundColor: theme.colors.primary,
           position: 'absolute',
           right: 24,
           bottom: 32,
-          backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#1F1F1F',
         },
         modalContainer: {
           marginHorizontal: 24,
@@ -145,12 +135,10 @@ export default function LibraryScreen() {
           gap: 4,
         },
         modalTitle: {
-          color: palette.text,
           fontSize: 20,
           fontWeight: '700',
         },
         modalSubtitle: {
-          color: palette.icon,
           fontSize: 14,
         },
         modalActions: {
@@ -169,11 +157,9 @@ export default function LibraryScreen() {
           paddingHorizontal: 0,
         },
         songListTitle: {
-          color: palette.text,
           fontWeight: '600',
         },
         songListDescription: {
-          color: palette.icon,
         },
         songStepSummary: {
           flexDirection: 'row',
@@ -182,11 +168,10 @@ export default function LibraryScreen() {
           paddingTop: 8,
         },
         selectionCounter: {
-          color: palette.icon,
           fontSize: 14,
         },
       }),
-    [colorScheme, palette, theme.colors.surface]
+    [theme.colors.tertiary, theme.colors.background, theme.colors.primary, theme.colors.surface]
   );
 
   const resetModalState = useCallback(() => {

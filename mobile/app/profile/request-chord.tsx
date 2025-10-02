@@ -11,14 +11,8 @@ import {
 } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-
 export default function RequestChordScreen() {
   const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme];
-
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -27,7 +21,7 @@ export default function RequestChordScreen() {
       StyleSheet.create({
         safeArea: {
           flex: 1,
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background,
         },
         keyboardAvoider: {
           flex: 1,
@@ -42,18 +36,16 @@ export default function RequestChordScreen() {
           gap: 8,
         },
         title: {
-          color: palette.text,
           fontSize: 28,
           fontWeight: '700',
         },
         subtitle: {
-          color: palette.icon,
+          color: theme.colors.secondary,
           fontSize: 15,
           lineHeight: 22,
         },
         formSurface: {
           borderRadius: 24,
-          backgroundColor: theme.colors.surface,
           padding: 24,
           gap: 20,
         },
@@ -70,7 +62,7 @@ export default function RequestChordScreen() {
           fontWeight: '600',
         },
       }),
-    [palette.background, palette.icon, palette.text, theme.colors.primary, theme.colors.surface]
+    [theme.colors.primary, theme.colors.background, theme.colors.secondary]
   );
 
   const trimmedMessage = message.trim();

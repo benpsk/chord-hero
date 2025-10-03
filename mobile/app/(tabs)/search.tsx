@@ -422,7 +422,6 @@ export default function SearchScreen() {
                   <Pressable
                     style={styles.trackRipple}
                     onPress={() => handleTrackPress(track.id)}
-                    accessibilityRole="button"
                     accessibilityLabel={`View details for ${track.title}`}>
                     <View style={styles.trackRow}>
                       <View style={styles.trackInfo}>

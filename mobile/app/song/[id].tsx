@@ -36,15 +36,11 @@ import { ChordDiagramCarousel } from '@/components/ChordDiagramCarousel';
 import { getChordByName, type GuitarChord } from '@/constants/chords';
 import { extractMeta, toDisplayLines, transposeChordPro, transposeChordToken } from '@/lib/chord';
 import SongHeaderTitle from '@/components/SongHeaderTitle';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function SongDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const song = getSongById(String(id));
   const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme];
   const nav = useNavigation();
   const [transpose, setTranspose] = useState(0);
   const [mode, setMode] = useState<'inline' | 'over' | 'lyrics'>('over');
@@ -366,31 +362,31 @@ export default function SongDetailScreen() {
       ),
       headerBackTitleVisible: false,
       headerTitleAlign: 'left',
-      headerTitleContainerStyle: { marginLeft: -12 },
+      headerTitleContainerStyle: { marginLeft: 0 },
       headerLeftContainerStyle: { marginLeft: 0 },
     });
   }, [nav, song, singer, composer, openControls, openGuide, theme]);
 
   if (!song) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
-        <View style={[styles.center, { backgroundColor: palette.background }]}> 
-          <Text style={{ color: palette.text }}>Song not found.</Text>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
+        <View style={[styles.center, { backgroundColor: theme.colors.background }]}> 
+          <Text>Song not found.</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: palette.background }]} edges={['top', 'bottom']}>
-      <View style={[styles.container, { backgroundColor: palette.background }]}> 
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}> 
         <Animated.ScrollView
           ref={(ref) => {
             scrollViewRef.current = ref as unknown as ScrollView | null;
           }}
           entering={FadeInUp.duration(360)}
           style={{ flex: 1 }}
-          contentContainerStyle={[styles.content, { backgroundColor: palette.background }]}
+          contentContainerStyle={[styles.content, { backgroundColor: theme.colors.background }]}
           onLayout={handleLayout}
           onContentSizeChange={handleContentSizeChange}
           onScroll={handleScroll}
@@ -417,11 +413,11 @@ export default function SongDetailScreen() {
               <ChordProView
                 lines={lines}
                 chordColor={theme.colors.primary}
-                lyricColor={palette.text}
                 mode={mode}
                 fontSize={fontSize}
                 overGap={overGap}
                 lineGap={lineGap}
+                lyricColor={theme.colors.onBackground}
                 onChordPress={handleChordPress}
               />
             </Pressable>

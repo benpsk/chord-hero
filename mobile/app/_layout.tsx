@@ -4,19 +4,15 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { PreferencesProvider } from '@/hooks/usePreferences';
-import {
-  Provider as PaperProvider,
-} from 'react-native-paper';
+import { PreferencesProvider, usePreferences } from '@/hooks/usePreferences';
 import { DarkTheme, LightTheme } from '@/constants/Theme';
+import { PaperProvider } from 'react-native-paper';
 
 function RootLayoutContent() {
-  const colorScheme = useColorScheme();
-
-  const navTheme = colorScheme === 'dark' ? NavDarkTheme : NavDefaultTheme;
-  const paperTheme = colorScheme === 'dark' ? DarkTheme : LightTheme;
-  const statusBarStyle = colorScheme === 'dark' ? 'light' : 'dark';
+  const { themePreference } = usePreferences();
+  const navTheme = themePreference === 'dark' ? NavDarkTheme : NavDefaultTheme;
+  const paperTheme = themePreference === 'dark' ? DarkTheme : LightTheme;
+  const statusBarStyle = themePreference === 'dark' ? 'light' : 'dark';
 
   return (
     <PaperProvider theme={paperTheme}>

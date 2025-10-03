@@ -12,8 +12,6 @@ import {
 } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 const SSO_OPTIONS = [
   {
@@ -34,15 +32,13 @@ const SSO_OPTIONS = [
 
 export default function LoginScreen() {
   const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme];
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         safeArea: {
           flex: 1,
-          backgroundColor: palette.background,
+          backgroundColor: theme.colors.background,
         },
         scrollContent: {
           flexGrow: 1,
@@ -67,12 +63,10 @@ export default function LoginScreen() {
         title: {
           fontSize: 30,
           fontWeight: '700',
-          color: palette.text,
           textAlign: 'center',
         },
         subtitle: {
           fontSize: 16,
-          color: theme.colors.onSurfaceVariant,
           textAlign: 'center',
         },
         ssoButton: {
@@ -82,30 +76,19 @@ export default function LoginScreen() {
           padding: 22,
           borderRadius: 24,
           gap: 16,
-          backgroundColor:
-            colorScheme === 'dark'
-              ? theme.colors.elevation.level2
-              : theme.colors.surfaceVariant,
         },
         ssoLabel: {
           fontSize: 13,
-          color: theme.colors.onSurfaceVariant,
           textAlign: 'center',
           letterSpacing: 0.15,
         },
         helperText: {
           fontSize: 12,
           textAlign: 'center',
-          color: theme.colors.onSurfaceVariant,
         },
       }),
     [
-      colorScheme,
-      palette.background,
-      palette.text,
-      theme.colors.elevation.level2,
-      theme.colors.onSurfaceVariant,
-      theme.colors.surfaceVariant,
+      theme.colors.background,
     ]
   );
 
@@ -140,7 +123,7 @@ export default function LoginScreen() {
                   key={option.key}
                   mode={option.buttonColor === '#FFFFFF' ? 'contained-tonal' : 'contained'}
                   icon={option.icon}
-                  onPress={() => {}}
+                  onPress={() => { }}
                   style={styles.ssoButton}
                   contentStyle={{ justifyContent: 'center' }}
                   buttonColor={option.buttonColor}

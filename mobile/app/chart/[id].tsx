@@ -229,7 +229,6 @@ export default function ChartDetailScreen() {
                 <Pressable
                   onPress={toggleMenu}
                   style={styles.menuPressable}
-                  accessibilityRole="button"
                   accessibilityLabel="Filter languages"
                   accessibilityState={{ expanded: menuVisible }}>
                   <TextInput

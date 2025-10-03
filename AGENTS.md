@@ -48,7 +48,7 @@
 
 ### Dependency
 - Use React Native Paper for UI components when possible (colors, components, icons, ...).
-- Mobile mockups are in `design/`; focus on the white-background screens.
+- For colors always use the theme.colors.[already defined] value, and don't use too many different colors, 
 
 ## Web (`./web`)
 
@@ -59,9 +59,9 @@
 - Keep templates or static assets in `web/static/` and configuration in `web/config/` if/when needed.
 
 ### Build, Test, and Development Commands
-- `go run ./...`: Start the web server locally for iterative development.
-- `go build ./...`: Produce binaries for deployment targets.
-- `go test ./...`: Run unit tests; add integration tests under `internal/...` as APIs expand.
+- `make run`: Start the web server locally for iterative development.
+- `make build`: Produce binaries for deployment targets and generate css + go templ.
+- `make test`: Run unit tests; add integration tests under `internal/...` as APIs expand.
 
 ### Coding Style & Naming Conventions
 - Follow standard Go formatting via `gofmt` (run automatically with `go fmt ./...`).
@@ -90,4 +90,5 @@
 - Use go templ for templating language [https://templ.guide].
 - Use DaisyUI for every ui components, icons, themes, everything.
 - If there's no built-in in DaisyUI you can use tailwindcss.
+
 

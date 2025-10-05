@@ -1,0 +1,181 @@
+## api format structure
+-- api success response with message 
+{
+  "data": {
+    "message": "Success"
+  }
+}
+
+-- api success response with data []
+{
+  "data": [
+    {
+      "id": 1
+    }
+  ],
+  "per_page": 10, -- only if pagination
+  "total": 10 -- only if pagination
+}
+
+-- api failed response with message
+{
+  "errors": {
+    "message": "failed request"
+  }
+}
+
+-- api validation failed response 
+{
+  "errors": {
+    "address": "Address is required."
+    ...
+  }
+}
+
+
+## api lists
+
+-- GET /api/songs
+  - lists all songs by alphabetically order
+  - filter param => ?album_id=1, ?artist_id=1, ?writer_id=1, ?release_year=2000, ?search=hello [filter by name], ?playlist_id=1
+    - release year will check first album release_year then song release_year
+{
+  "data": [
+    {
+      "id": 1,
+      "title": "Amazing Grace",
+      "level": "Easy",
+      "key": "G",
+      "language": "english",
+      "lyric": "Intro: [G]... \n Amazing...",
+      "release_year": null
+      "artists": [
+        {"id": 1, "name": "John"}
+      ],
+      "writers": [
+        {"id": 1, "name": "Doe"}
+      ],
+      "albums": [
+        {"id": 1, "name": "Whatever", "release_year": 2000}
+      ],
+      "is_bookmark": true, -- check it's added to current user playlists or not
+    }
+  ],
+  "page": 1,
+  "per_page": 10,
+  "total": 30
+}
+
+-- GET /api/albums
+  -- ?search="album_name"
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Whatever",
+      "total": 12,
+      "release_year": 2000
+      "is_bookmark": false, -- true only when all of the album are added into current user playlists
+    }
+  ],
+  "page": 1,
+  "per_page": 10,
+  "total": 30
+}
+
+-- GET /api/artists
+  -- ?search="album_name"
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "John Denver",
+      "total": 60
+    }
+  ],
+  "page": 1,
+  "per_page": 10,
+  "total": 30
+}
+
+-- GET /api/writers
+  -- ?search="album_name"
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Johnny",
+      "total": 60
+    }
+  ],
+  "page": 1,
+  "per_page": 10,
+  "total": 30
+}
+
+-- GET /api/release-year
+  - filter based on albums release_year if null check song release_year
+{
+  "data": [
+    {
+      "id": 1,
+      "name": 2000,
+      "total": 60
+    },
+  ],
+  "page": 1,
+  "per_page": 10,
+  "total": 30
+}
+
+-- GET /api/playlists
+  -- ?search="name"
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "my uname playlist",
+      "total": 3
+    },
+  ],
+  "page": 1,
+  "per_page": 10,
+  "total": 30
+}
+
+-- POST /api/feedback
+-- request
+{
+  "message": "hello there"
+}
+
+-- GET /api/chords/{c}
+{
+  "data": {
+    "name": 'C',
+    "positions": [
+      {
+        "id": 1,
+        "base_fret": 10,
+        "frets": [-1, -1, 10, 8, 8, 8],
+        "fingers": [null, null, 4, 2, 1, 1],
+      }
+    ]
+  },
+}
+
+-- GET /api/trendings
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Top 10",
+      "level": "Easy"
+      "description": "Easy song for you!"
+    }
+  ]
+}
+
+-- GET /api/trending-albums
+-- GET /api/trending-artists
+

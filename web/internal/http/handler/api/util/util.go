@@ -1,4 +1,4 @@
-package api
+package util
 
 import (
 	"encoding/json"
@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-func parseOptionalPositiveInt(raw string, field string, errs map[string]string) *int {
+// ParseOptionalPositiveInt returns a pointer to a positive integer or records a validation error.
+func ParseOptionalPositiveInt(raw, field string, errs map[string]string) *int {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return nil
@@ -22,7 +23,8 @@ func parseOptionalPositiveInt(raw string, field string, errs map[string]string) 
 	return &value
 }
 
-func parseOptionalInt(raw string, field string, errs map[string]string) *int {
+// ParseOptionalInt returns a pointer to an integer or records a validation error.
+func ParseOptionalInt(raw, field string, errs map[string]string) *int {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return nil
@@ -37,11 +39,13 @@ func parseOptionalInt(raw string, field string, errs map[string]string) *int {
 	return &value
 }
 
-func parseOptionalSearch(raw string) string {
+// ParseOptionalSearch trims the search query parameter.
+func ParseOptionalSearch(raw string) string {
 	return strings.TrimSpace(raw)
 }
 
-func respondJSON(w http.ResponseWriter, status int, payload any) {
+// RespondJSON writes a JSON response with the provided status code.
+func RespondJSON(w http.ResponseWriter, status int, payload any) {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

@@ -3,8 +3,6 @@ package health
 import (
 	"context"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Service defines the health-check contract.
@@ -25,13 +23,18 @@ type DatabaseDetails struct {
 	Message string `json:"message,omitempty"`
 }
 
+// Repository abstracts the persistence-layer health check.
+type Repository interface {
+	Ping(ctx context.Context) error
+}
+
 type service struct {
-	db *pgxpool.Pool
+	repo Repository
 }
 
 // NewService creates a healthy default implementation.
-func NewService(db *pgxpool.Pool) Service {
-	return &service{db: db}
+func NewService(repo Repository) Service {
+	return &service{repo: repo}
 }
 
 func (s *service) Status(ctx context.Context) (Status, error) {
@@ -45,14 +48,14 @@ func (s *service) Status(ctx context.Context) (Status, error) {
 		},
 	}
 
-	if s.db == nil {
+	if s.repo == nil {
 		status.Database.Status = "unconfigured"
 		status.Database.Message = "database connection not initialised"
 		status.Status = "degraded"
 		return status, nil
 	}
 
-	if err := s.db.Ping(ctx); err != nil {
+	if err := s.repo.Ping(ctx); err != nil {
 		status.Database.Status = "error"
 		status.Database.Message = err.Error()
 		status.Status = "degraded"

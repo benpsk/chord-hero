@@ -14,6 +14,16 @@ import (
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 	trendingsvc "github.com/lyricapp/lyric/web/internal/services/trending"
 	writersvc "github.com/lyricapp/lyric/web/internal/services/writers"
+	albumrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/albums"
+	artistrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/artists"
+	chordrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/chords"
+	feedbackrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/feedback"
+	healthrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/health"
+	playlistrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/playlists"
+	releaseyearrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/releaseyear"
+	songrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/songs"
+	trendingrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/trending"
+	writerrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/writers"
 )
 
 // Application wires dependencies together so transports remain thin.
@@ -39,20 +49,31 @@ type Services struct {
 
 // New constructs a new Application instance with default implementations.
 func New(cfg config.Config, db *pgxpool.Pool) *Application {
+	songRepository := songrepo.NewRepository(db)
+	albumRepository := albumrepo.NewRepository(db)
+	artistRepository := artistrepo.NewRepository(db)
+	writerRepository := writerrepo.NewRepository(db)
+	releaseYearRepository := releaseyearrepo.NewRepository(db)
+	playlistRepository := playlistrepo.NewRepository(db)
+	trendingRepository := trendingrepo.NewRepository(db)
+	chordRepository := chordrepo.NewRepository(db)
+	feedbackRepository := feedbackrepo.NewRepository(db)
+	healthRepository := healthrepo.NewRepository(db)
+
 	return &Application{
 		Config: cfg,
 		DB:     db,
 		Services: Services{
-			Health:      healthsvc.NewService(db),
-			Songs:       songsvc.NewService(db),
-			Albums:      albumsvc.NewService(db),
-			Artists:     artistsvc.NewService(db),
-			Writers:     writersvc.NewService(db),
-			ReleaseYear: releaseyearsvc.NewService(db),
-			Playlists:   playlistsvc.NewService(db),
-			Trendings:   trendingsvc.NewService(db),
-			Chords:      chordsvc.NewService(db),
-			Feedback:    feedbacksvc.NewService(db),
+			Health:      healthsvc.NewService(healthRepository),
+			Songs:       songsvc.NewService(songRepository),
+			Albums:      albumsvc.NewService(albumRepository),
+			Artists:     artistsvc.NewService(artistRepository),
+			Writers:     writersvc.NewService(writerRepository),
+			ReleaseYear: releaseyearsvc.NewService(releaseYearRepository),
+			Playlists:   playlistsvc.NewService(playlistRepository),
+			Trendings:   trendingsvc.NewService(trendingRepository),
+			Chords:      chordsvc.NewService(chordRepository),
+			Feedback:    feedbacksvc.NewService(feedbackRepository),
 		},
 	}
 }

@@ -1,4 +1,4 @@
-package api
+package feedback
 
 import (
 	"encoding/json"
@@ -6,28 +6,29 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	feedbacksvc "github.com/lyricapp/lyric/web/internal/services/feedback"
 )
 
-// FeedbackHandler manages feedback submissions.
-type FeedbackHandler struct {
+// Handler manages feedback submissions.
+type Handler struct {
 	svc feedbacksvc.Service
 }
 
-// NewFeedbackHandler constructs a feedback handler.
-func NewFeedbackHandler(svc feedbacksvc.Service) FeedbackHandler {
-	return FeedbackHandler{svc: svc}
+// New constructs a feedback handler.
+func New(svc feedbacksvc.Service) Handler {
+	return Handler{svc: svc}
 }
 
 // Create stores a feedback entry.
-func (h FeedbackHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		Message string `json:"message"`
 		UserID  *int   `json:"user_id,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
 		return
 	}
 
@@ -43,7 +44,7 @@ func (h FeedbackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(errorsMap) > 0 {
-		respondJSON(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
 		return
 	}
 
@@ -52,11 +53,11 @@ func (h FeedbackHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Message: message,
 	})
 	if err != nil {
-		respondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to store feedback"}})
+		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to store feedback"}})
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, map[string]any{"data": map[string]any{"message": "Feedback submitted", "feedback": feedback}})
+	util.RespondJSON(w, http.StatusCreated, map[string]any{"data": map[string]any{"message": "Feedback submitted", "feedback": feedback}})
 }
 
 func resolveUserID(headerValue string, payloadValue *int) int {

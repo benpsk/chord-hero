@@ -1,4 +1,4 @@
-package shared
+package pagination
 
 const (
 	// DefaultPage is the fallback page index for list endpoints.

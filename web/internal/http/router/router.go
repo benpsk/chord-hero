@@ -7,13 +7,21 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/lyricapp/lyric/web/internal/app"
-	apihandler "github.com/lyricapp/lyric/web/internal/http/handler/api"
+	albumsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/albums"
+	artistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/artists"
+	chordsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/chords"
+	feedbackapi "github.com/lyricapp/lyric/web/internal/http/handler/api/feedback"
+	playlistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/playlists"
+	releaseyearapi "github.com/lyricapp/lyric/web/internal/http/handler/api/releaseyear"
+	songsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/songs"
+	trendingapi "github.com/lyricapp/lyric/web/internal/http/handler/api/trending"
+	writersapi "github.com/lyricapp/lyric/web/internal/http/handler/api/writers"
 	chartshandler "github.com/lyricapp/lyric/web/internal/http/handler/charts"
 	healthhandler "github.com/lyricapp/lyric/web/internal/http/handler/health"
 	homehandler "github.com/lyricapp/lyric/web/internal/http/handler/home"
 	libraryhandler "github.com/lyricapp/lyric/web/internal/http/handler/library"
 	searchhandler "github.com/lyricapp/lyric/web/internal/http/handler/search"
-	songshandler "github.com/lyricapp/lyric/web/internal/http/handler/songs"
+	songspagehandler "github.com/lyricapp/lyric/web/internal/http/handler/songs"
 )
 
 // New instantiates the HTTP router and wires up handlers and middleware.
@@ -42,18 +50,18 @@ func New(application *app.Application) chi.Router {
 	library := libraryhandler.New()
 	r.Handle("/library", library)
 
-	songs := songshandler.New()
+	songs := songspagehandler.New()
 	r.Handle("/songs/{id}", songs)
 
-	apiSongs := apihandler.NewSongsHandler(application.Services.Songs)
-	apiAlbums := apihandler.NewAlbumsHandler(application.Services.Albums)
-	apiArtists := apihandler.NewArtistsHandler(application.Services.Artists)
-	apiWriters := apihandler.NewWritersHandler(application.Services.Writers)
-	apiReleaseYear := apihandler.NewReleaseYearHandler(application.Services.ReleaseYear)
-	apiPlaylists := apihandler.NewPlaylistsHandler(application.Services.Playlists)
-	apiTrending := apihandler.NewTrendingHandler(application.Services.Trendings)
-	apiChords := apihandler.NewChordsHandler(application.Services.Chords)
-	apiFeedback := apihandler.NewFeedbackHandler(application.Services.Feedback)
+	apiSongs := songsapi.New(application.Services.Songs)
+	apiAlbums := albumsapi.New(application.Services.Albums)
+	apiArtists := artistsapi.New(application.Services.Artists)
+	apiWriters := writersapi.New(application.Services.Writers)
+	apiReleaseYear := releaseyearapi.New(application.Services.ReleaseYear)
+	apiPlaylists := playlistsapi.New(application.Services.Playlists)
+	apiTrending := trendingapi.New(application.Services.Trendings)
+	apiChords := chordsapi.New(application.Services.Chords)
+	apiFeedback := feedbackapi.New(application.Services.Feedback)
 	r.Route("/api", func(api chi.Router) {
 		api.Get("/songs", apiSongs.List)
 		api.Get("/albums", apiAlbums.List)

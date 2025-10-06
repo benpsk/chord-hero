@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Service provides feedback submission.
@@ -27,35 +25,28 @@ type Feedback struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// Repository abstracts persistence for feedback entries.
+type Repository interface {
+	Create(ctx context.Context, input CreateInput) (Feedback, error)
+}
+
 type service struct {
-	db *pgxpool.Pool
+	repo Repository
 }
 
 // NewService builds the default feedback service.
-func NewService(db *pgxpool.Pool) Service {
-	return &service{db: db}
+func NewService(repo Repository) Service {
+	return &service{repo: repo}
 }
 
 func (s *service) Create(ctx context.Context, input CreateInput) (Feedback, error) {
-	message := strings.TrimSpace(input.Message)
-	if message == "" {
+	input.Message = strings.TrimSpace(input.Message)
+	if input.Message == "" {
 		return Feedback{}, fmt.Errorf("message is required")
 	}
 	if input.UserID <= 0 {
 		return Feedback{}, fmt.Errorf("user_id is required")
 	}
 
-	var feedback Feedback
-
-	query := `
-        INSERT INTO feedbacks (user_id, message)
-        VALUES ($1, $2)
-        RETURNING id, message, created_at
-    `
-
-	if err := s.db.QueryRow(ctx, query, input.UserID, message).Scan(&feedback.ID, &feedback.Message, &feedback.CreatedAt); err != nil {
-		return Feedback{}, fmt.Errorf("create feedback: %w", err)
-	}
-
-	return feedback, nil
+	return s.repo.Create(ctx, input)
 }

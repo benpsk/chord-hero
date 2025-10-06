@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/lyricapp/lyric/web/internal/app"
+	apihandler "github.com/lyricapp/lyric/web/internal/http/handler/api"
 	chartshandler "github.com/lyricapp/lyric/web/internal/http/handler/charts"
 	healthhandler "github.com/lyricapp/lyric/web/internal/http/handler/health"
 	homehandler "github.com/lyricapp/lyric/web/internal/http/handler/home"
@@ -43,6 +44,29 @@ func New(application *app.Application) chi.Router {
 
 	songs := songshandler.New()
 	r.Handle("/songs/{id}", songs)
+
+	apiSongs := apihandler.NewSongsHandler(application.Services.Songs)
+	apiAlbums := apihandler.NewAlbumsHandler(application.Services.Albums)
+	apiArtists := apihandler.NewArtistsHandler(application.Services.Artists)
+	apiWriters := apihandler.NewWritersHandler(application.Services.Writers)
+	apiReleaseYear := apihandler.NewReleaseYearHandler(application.Services.ReleaseYear)
+	apiPlaylists := apihandler.NewPlaylistsHandler(application.Services.Playlists)
+	apiTrending := apihandler.NewTrendingHandler(application.Services.Trendings)
+	apiChords := apihandler.NewChordsHandler(application.Services.Chords)
+	apiFeedback := apihandler.NewFeedbackHandler(application.Services.Feedback)
+	r.Route("/api", func(api chi.Router) {
+		api.Get("/songs", apiSongs.List)
+		api.Get("/albums", apiAlbums.List)
+		api.Get("/artists", apiArtists.List)
+		api.Get("/writers", apiWriters.List)
+		api.Get("/release-year", apiReleaseYear.List)
+		api.Get("/playlists", apiPlaylists.List)
+		api.Get("/trendings", apiTrending.List)
+		api.Get("/trending-albums", apiTrending.Albums)
+		api.Get("/trending-artists", apiTrending.Artists)
+		api.Get("/chords/{name}", apiChords.Show)
+		api.Post("/feedback", apiFeedback.Create)
+	})
 
 	return r
 }

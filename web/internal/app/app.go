@@ -1,9 +1,13 @@
 package app
 
 import (
+	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	adminsession "github.com/lyricapp/lyric/web/internal/auth/admin"
 	"github.com/lyricapp/lyric/web/internal/config"
+	adminauthsvc "github.com/lyricapp/lyric/web/internal/services/adminauth"
 	albumsvc "github.com/lyricapp/lyric/web/internal/services/albums"
 	artistsvc "github.com/lyricapp/lyric/web/internal/services/artists"
 	chordsvc "github.com/lyricapp/lyric/web/internal/services/chords"
@@ -14,6 +18,7 @@ import (
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 	trendingsvc "github.com/lyricapp/lyric/web/internal/services/trending"
 	writersvc "github.com/lyricapp/lyric/web/internal/services/writers"
+	adminrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/admin"
 	albumrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/albums"
 	artistrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/artists"
 	chordrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/chords"
@@ -28,9 +33,10 @@ import (
 
 // Application wires dependencies together so transports remain thin.
 type Application struct {
-	Config   config.Config
-	DB       *pgxpool.Pool
-	Services Services
+	Config        config.Config
+	DB            *pgxpool.Pool
+	Services      Services
+	AdminSessions *adminsession.Manager
 }
 
 // Services aggregates domain services for easier handler composition.
@@ -45,6 +51,7 @@ type Services struct {
 	Trendings   trendingsvc.Service
 	Chords      chordsvc.Service
 	Feedback    feedbacksvc.Service
+	AdminAuth   adminauthsvc.Service
 }
 
 // New constructs a new Application instance with default implementations.
@@ -59,6 +66,16 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 	chordRepository := chordrepo.NewRepository(db)
 	feedbackRepository := feedbackrepo.NewRepository(db)
 	healthRepository := healthrepo.NewRepository(db)
+	adminRepository := adminrepo.NewRepository(db)
+
+	adminAuthRepository := adminAuthRepoAdapter{repo: adminRepository}
+	adminAuthService := adminauthsvc.NewService(adminAuthRepository)
+	adminSessions := adminsession.NewManager(
+		cfg.Admin.SessionCookie,
+		[]byte(cfg.Admin.SessionSecret),
+		cfg.Admin.SessionTTL,
+		cfg.Admin.SessionSecure,
+	)
 
 	return &Application{
 		Config: cfg,
@@ -74,6 +91,24 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 			Trendings:   trendingsvc.NewService(trendingRepository),
 			Chords:      chordsvc.NewService(chordRepository),
 			Feedback:    feedbacksvc.NewService(feedbackRepository),
+			AdminAuth:   adminAuthService,
 		},
+		AdminSessions: adminSessions,
 	}
+}
+
+type adminAuthRepoAdapter struct {
+	repo *adminrepo.Repository
+}
+
+func (a adminAuthRepoAdapter) FindByUsername(ctx context.Context, username string) (adminauthsvc.Credential, error) {
+	user, err := a.repo.FindByUsername(ctx, username)
+	if err != nil {
+		return adminauthsvc.Credential{}, err
+	}
+	return adminauthsvc.Credential{
+		ID:           user.ID,
+		Username:     user.Username,
+		PasswordHash: user.PasswordHash,
+	}, nil
 }

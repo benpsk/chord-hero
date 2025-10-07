@@ -1,0 +1,49 @@
+package components
+
+import "fmt"
+
+templ EditorPage() {
+	@Layout(PageMeta{
+		Title:       "titie",
+		Description: fmt.Sprintf("View chords and lyrics for %s with overlay, inline, and lyric modes.", "ok"),
+		Path:        fmt.Sprintf("/songs/%s", "1"),
+		Canonical:   fmt.Sprintf("https://lyric.app/songs/%s", "1"),
+		ActiveNav:   "search",
+		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8",
+		OGImage:     "/static/opengraph/search.png",
+	}) {
+		<div class="w-full max-w-4xl p-8 bg-white rounded-lg shadow-lg">
+			<h1 class="text-3xl font-bold mb-2">Templ Text Editor</h1>
+			<p class="text-slate-600 mb-6">A simple text area where the Tab key works for indentation.</p>
+			<form action="/save" method="POST">
+				<textarea
+					id="editor"
+					name="editor_content"
+					spellcheck="false"
+					class="w-full h-96 p-4 font-mono text-sm bg-slate-50 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+				></textarea>
+				<div class="mt-4 text-right">
+					<button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-blue-700 transition-colors">
+						Save Content
+					</button>
+				</div>
+			</form>
+		</div>
+		<script>
+				const editor = document.getElementById('editor');
+				if (editor) {
+					editor.addEventListener('keydown', function(e) {
+						if (e.key === 'Tab') {
+							e.preventDefault(); // Stop the browser from switching focus
+							
+							// Insert a tab character at the cursor's position
+							const start = this.selectionStart;
+							const end = this.selectionEnd;
+							this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
+							this.selectionStart = this.selectionEnd = start + 1;
+						}
+					});
+				}
+			</script>
+	}
+}

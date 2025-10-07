@@ -9,11 +9,13 @@ import (
 )
 
 const (
-	defaultHTTPAddr        = ":8080"
-	defaultShutdownTimeout = 5 * time.Second
-	defaultDBMaxConns      = int32(4)
-	defaultDBConnLifetime  = 30 * time.Minute
-	defaultDBConnIdleTime  = 5 * time.Minute
+	defaultHTTPAddr           = ":8080"
+	defaultShutdownTimeout    = 5 * time.Second
+	defaultDBMaxConns         = int32(4)
+	defaultDBConnLifetime     = 30 * time.Minute
+	defaultDBConnIdleTime     = 5 * time.Minute
+	defaultAdminSessionCookie = "admin_session"
+	defaultAdminSessionTTL    = 24 * time.Hour
 )
 
 // Config collects runtime configuration for the web service.
@@ -21,6 +23,7 @@ type Config struct {
 	HTTPAddr        string
 	ShutdownTimeout time.Duration
 	Database        DatabaseConfig
+	Admin           AdminConfig
 }
 
 // DatabaseConfig holds PostgreSQL connection settings.
@@ -29,6 +32,14 @@ type DatabaseConfig struct {
 	MaxConns        int32
 	MaxConnLifetime time.Duration
 	MaxConnIdleTime time.Duration
+}
+
+// AdminConfig holds configuration for the admin surface.
+type AdminConfig struct {
+	SessionSecret string
+	SessionCookie string
+	SessionTTL    time.Duration
+	SessionSecure bool
 }
 
 // Load reads configuration from environment variables and applies sane defaults.
@@ -40,6 +51,11 @@ func Load() (Config, error) {
 			MaxConns:        defaultDBMaxConns,
 			MaxConnLifetime: defaultDBConnLifetime,
 			MaxConnIdleTime: defaultDBConnIdleTime,
+		},
+		Admin: AdminConfig{
+			SessionCookie: defaultAdminSessionCookie,
+			SessionTTL:    defaultAdminSessionTTL,
+			SessionSecure: false,
 		},
 	}
 
@@ -90,6 +106,32 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("parse WEB_DATABASE_MAX_CONN_IDLE_TIME: %w", err)
 		}
 		cfg.Database.MaxConnIdleTime = d
+	}
+
+	secret, ok := os.LookupEnv("WEB_ADMIN_SESSION_SECRET")
+	if !ok || secret == "" {
+		return Config{}, errors.New("WEB_ADMIN_SESSION_SECRET is required")
+	}
+	cfg.Admin.SessionSecret = secret
+
+	if v, ok := os.LookupEnv("WEB_ADMIN_SESSION_COOKIE"); ok && v != "" {
+		cfg.Admin.SessionCookie = v
+	}
+
+	if v, ok := os.LookupEnv("WEB_ADMIN_SESSION_TTL"); ok && v != "" {
+		d, err := parseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("parse WEB_ADMIN_SESSION_TTL: %w", err)
+		}
+		cfg.Admin.SessionTTL = d
+	}
+
+	if v, ok := os.LookupEnv("WEB_ADMIN_SESSION_SECURE"); ok && v != "" {
+		secure, err := strconv.ParseBool(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("parse WEB_ADMIN_SESSION_SECURE: %w", err)
+		}
+		cfg.Admin.SessionSecure = secure
 	}
 
 	return cfg, nil

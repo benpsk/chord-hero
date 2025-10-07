@@ -7,6 +7,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/lyricapp/lyric/web/internal/app"
+	adminloginhandler "github.com/lyricapp/lyric/web/internal/http/handler/admin/login"
+	adminsonghandler "github.com/lyricapp/lyric/web/internal/http/handler/admin/song"
 	albumsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/albums"
 	artistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/artists"
 	chordsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/chords"
@@ -22,6 +24,7 @@ import (
 	libraryhandler "github.com/lyricapp/lyric/web/internal/http/handler/library"
 	searchhandler "github.com/lyricapp/lyric/web/internal/http/handler/search"
 	songspagehandler "github.com/lyricapp/lyric/web/internal/http/handler/songs"
+	adminmw "github.com/lyricapp/lyric/web/internal/http/middleware/adminauth"
 )
 
 // New instantiates the HTTP router and wires up handlers and middleware.
@@ -52,6 +55,24 @@ func New(application *app.Application) chi.Router {
 
 	songs := songspagehandler.New()
 	r.Handle("/songs/{id}", songs)
+
+	adminLogin := adminloginhandler.New(application.Services.AdminAuth, application.AdminSessions)
+	adminSong := adminsonghandler.New(application.Services.Songs, application.Services.Albums, application.Services.Artists, application.Services.Writers)
+	adminMiddleware := adminmw.Middleware{Sessions: application.AdminSessions, LoginPath: "/admin/login"}
+
+	r.Route("/admin", func(admin chi.Router) {
+		admin.Use(adminMiddleware.WithUser)
+
+		admin.Get("/login", adminLogin.Show)
+		admin.Post("/login", adminLogin.Submit)
+
+		admin.Group(func(protected chi.Router) {
+			protected.Use(adminMiddleware.Require)
+			protected.Get("/song/create", adminSong.Show)
+			protected.Post("/song/create", adminSong.Create)
+			protected.Post("/logout", adminLogin.Logout)
+		})
+	})
 
 	apiSongs := songsapi.New(application.Services.Songs)
 	apiAlbums := albumsapi.New(application.Services.Albums)

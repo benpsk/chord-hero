@@ -2,6 +2,9 @@ package songs
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/lyricapp/lyric/web/pkg/pagination"
 )
@@ -9,6 +12,7 @@ import (
 // Service exposes song related domain behaviours.
 type Service interface {
 	List(ctx context.Context, params ListParams) (ListResult, error)
+	Create(ctx context.Context, params CreateParams) (int, error)
 }
 
 // ListParams captures filtering options accepted by the list endpoint.
@@ -22,6 +26,21 @@ type ListParams struct {
 	PlaylistID  *int
 	Search      string
 	UserID      *int
+}
+
+// CreateParams captures the fields required to create a new song record.
+type CreateParams struct {
+	Title           string
+	Level           *string
+	Key             *string
+	Language        *string
+	Lyric           *string
+	ReleaseYear     *int
+	AlbumID         *int
+	PrimaryWriterID *int
+	ArtistIDs       []int
+	WriterIDs       []int
+	CreatedBy       *int
 }
 
 // ListResult represents a paginated song collection.
@@ -63,6 +82,7 @@ type Album struct {
 // Repository encapsulates storage for songs.
 type Repository interface {
 	List(ctx context.Context, params ListParams) (ListResult, error)
+	Create(ctx context.Context, params CreateParams) (int, error)
 }
 
 type service struct {
@@ -79,4 +99,109 @@ func (s *service) List(ctx context.Context, params ListParams) (ListResult, erro
 	params.PerPage = pagination.NormalisePerPage(params.PerPage)
 
 	return s.repo.List(ctx, params)
+}
+
+var (
+	allowedLevels = map[string]struct{}{
+		"easy":   {},
+		"medium": {},
+		"hard":   {},
+	}
+	allowedLanguages = map[string]struct{}{
+		"english": {},
+		"burmese": {},
+	}
+)
+
+// ErrTitleRequired is returned when attempting to create a song without a title.
+var ErrTitleRequired = errors.New("songs: title is required")
+
+func (s *service) Create(ctx context.Context, params CreateParams) (int, error) {
+	title := strings.TrimSpace(params.Title)
+	if title == "" {
+		return 0, ErrTitleRequired
+	}
+	params.Title = title
+
+	if params.Level != nil {
+		value := strings.ToLower(strings.TrimSpace(*params.Level))
+		if value == "" {
+			params.Level = nil
+		} else {
+			if _, ok := allowedLevels[value]; !ok {
+				return 0, fmt.Errorf("songs: invalid level %q", value)
+			}
+			params.Level = ptr(value)
+		}
+	}
+
+	if params.Language != nil {
+		value := strings.ToLower(strings.TrimSpace(*params.Language))
+		if value == "" {
+			params.Language = nil
+		} else {
+			if _, ok := allowedLanguages[value]; !ok {
+				return 0, fmt.Errorf("songs: invalid language %q", value)
+			}
+			params.Language = ptr(value)
+		}
+	}
+
+	if params.Key != nil {
+		value := strings.TrimSpace(*params.Key)
+		if value == "" {
+			params.Key = nil
+		} else {
+			params.Key = ptr(value)
+		}
+	}
+
+	if params.Lyric != nil {
+		value := strings.ReplaceAll(*params.Lyric, "\r\n", "\n")
+		//		value = strings.ReplaceAll(value, "\n", "\\n")
+		params.Lyric = ptr(value)
+	}
+
+	if params.ReleaseYear != nil {
+		if *params.ReleaseYear <= 0 {
+			params.ReleaseYear = nil
+		}
+	}
+
+	if params.AlbumID != nil && *params.AlbumID <= 0 {
+		params.AlbumID = nil
+	}
+
+	if params.PrimaryWriterID != nil && *params.PrimaryWriterID <= 0 {
+		params.PrimaryWriterID = nil
+	}
+
+	if params.CreatedBy != nil && *params.CreatedBy <= 0 {
+		params.CreatedBy = nil
+	}
+
+	params.ArtistIDs = uniquePositive(params.ArtistIDs)
+	params.WriterIDs = uniquePositive(params.WriterIDs)
+
+	return s.repo.Create(ctx, params)
+}
+
+func ptr[T any](value T) *T {
+	return &value
+}
+
+func uniquePositive(values []int) []int {
+	seen := make(map[int]struct{}, len(values))
+	result := make([]int, 0, len(values))
+	for _, v := range values {
+		if v <= 0 {
+			continue
+		}
+		if _, exists := seen[v]; exists {
+			continue
+		}
+		seen[v] = struct{}{}
+		result = append(result, v)
+	}
+	return result
 }

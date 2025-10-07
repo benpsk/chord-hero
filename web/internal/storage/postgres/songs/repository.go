@@ -203,6 +203,58 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 	return result, nil
 }
 
+// Create persists a new song along with its artist and writer relations.
+func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (int, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("begin create song: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	var songID int
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO songs (title, level, key, language, lyric, release_year, album_id, writer_id, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id
+	`,
+		params.Title,
+		nullableString(params.Level),
+		nullableString(params.Key),
+		nullableString(params.Language),
+		nullableString(params.Lyric),
+		nullableInt(params.ReleaseYear),
+		nullableInt(params.AlbumID),
+		nullableInt(params.PrimaryWriterID),
+		nullableInt(params.CreatedBy),
+	).Scan(&songID); err != nil {
+		return 0, fmt.Errorf("insert song: %w", err)
+	}
+
+	for _, artistID := range params.ArtistIDs {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO artist_song (artist_id, song_id)
+			VALUES ($1, $2)
+		`, artistID, songID); err != nil {
+			return 0, fmt.Errorf("insert artist relation: %w", err)
+		}
+	}
+
+	for _, writerID := range params.WriterIDs {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO song_writer (writer_id, song_id)
+			VALUES ($1, $2)
+		`, writerID, songID); err != nil {
+			return 0, fmt.Errorf("insert writer relation: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("commit create song: %w", err)
+	}
+
+	return songID, nil
+}
+
 func (r *Repository) attachArtists(ctx context.Context, songIDs []int32, songIndex map[int]int, songs *[]songsvc.Song) error {
 	query := `
         SELECT sa.song_id, ar.id, ar.name
@@ -365,4 +417,18 @@ func titleCase(input string) string {
 
 	lower := strings.ToLower(input)
 	return strings.ToUpper(lower[:1]) + lower[1:]
+}
+
+func nullableString(input *string) any {
+	if input == nil {
+		return nil
+	}
+	return *input
+}
+
+func nullableInt(input *int) any {
+	if input == nil {
+		return nil
+	}
+	return *input
 }

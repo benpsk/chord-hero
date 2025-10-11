@@ -28,8 +28,6 @@
 - lyric text
 - release_year => int [for digit]
 - created_by => foreign key to users table => nullable
-- album_id => foreign key to albums table => nullable
-- writer_id => foreign key to writers table => nullable
 
 ## artist_song table 
 - artist_id => foreign key to artists table
@@ -40,6 +38,11 @@
 - writer_id=> foreign key to writers table
 - song_id => foreign key to songs table
 - [writer_id, song_id] pair unique
+
+## album_songs table 
+- album_id => foreign key to albums table
+- song_id => foreign key to songs table
+- [artist_id, song_id] pair unique
 
 ## plays table
 - datetime => datetime

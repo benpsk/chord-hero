@@ -164,7 +164,7 @@
   },
 }
 
--- GET /api/trendings
+-- GET /api/trending-songs
 {
   "data": [
     {
@@ -177,5 +177,27 @@
 }
 
 -- GET /api/trending-albums
--- GET /api/trending-artists
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Album 1",
+      "artists": [
+        {
+          "id": 1,
+          "name": "J J"
+        }
+      ]
+    }
+  ]
+}
 
+-- GET /api/trending-artists
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "J Cole",
+    }
+  ]
+}

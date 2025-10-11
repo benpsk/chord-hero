@@ -86,8 +86,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Key:             strings.TrimSpace(r.FormValue("key")),
 		Language:        strings.ToLower(strings.TrimSpace(r.FormValue("language"))),
 		ReleaseYear:     strings.TrimSpace(r.FormValue("release_year")),
-		AlbumID:         strings.TrimSpace(r.FormValue("album_id")),
-		PrimaryWriterID: strings.TrimSpace(r.FormValue("primary_writer_id")),
+		AlbumIDs:        r.Form["album_ids"],
 		ArtistIDs:       r.Form["artist_ids"],
 		WriterIDs:       r.Form["writer_ids"],
 		Lyric:           r.FormValue("lyric"),
@@ -117,14 +116,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		fieldErrors["release_year"] = "Release year must be a number."
 	}
 
-	albumID, err := parseOptionalInt(values.AlbumID)
+	albumIDs, err := parseIDList(values.AlbumIDs)
 	if err != nil {
-		fieldErrors["album_id"] = "Album must be a valid number."
-	}
-
-	primaryWriterID, err := parseOptionalInt(values.PrimaryWriterID)
-	if err != nil {
-		fieldErrors["primary_writer_id"] = "Primary writer must be a valid number."
+		fieldErrors["album_ids"] = "Album must be a valid number."
 	}
 
 	artistIDs, err := parseIDList(values.ArtistIDs)
@@ -145,7 +139,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			FieldErrors: fieldErrors,
 			Artists:     markSelected(lookups.artists, values.ArtistIDs),
 			Writers:     markSelected(lookups.writers, values.WriterIDs),
-			Albums:      markSelectedSingle(lookups.albums, values.AlbumID),
+			Albums:      markSelected(lookups.albums, values.AlbumIDs),
 			Levels:      buildLevelOptions(values.Level),
 			Languages:   buildLanguageOptions(values.Language),
 			CurrentUser: user.Username,
@@ -160,7 +154,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			FieldErrors: fieldErrors,
 			Artists:     markSelected(lookups.artists, values.ArtistIDs),
 			Writers:     markSelected(lookups.writers, values.WriterIDs),
-			Albums:      markSelectedSingle(lookups.albums, values.AlbumID),
+			Albums:      markSelected(lookups.albums, values.AlbumIDs),
 			Levels:      buildLevelOptions(values.Level),
 			Languages:   buildLanguageOptions(values.Language),
 			CurrentUser: user.Username,
@@ -191,11 +185,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if releaseYear != nil {
 		params.ReleaseYear = releaseYear
 	}
-	if albumID != nil {
-		params.AlbumID = albumID
-	}
-	if primaryWriterID != nil {
-		params.PrimaryWriterID = primaryWriterID
+	if albumIDs != nil {
+		params.AlbumIDs = albumIDs
 	}
 
 	createdBy := user.ID
@@ -209,7 +200,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			FieldErrors: fieldErrors,
 			Artists:     markSelected(lookups.artists, values.ArtistIDs),
 			Writers:     markSelected(lookups.writers, values.WriterIDs),
-			Albums:      markSelectedSingle(lookups.albums, values.AlbumID),
+			Albums:      markSelected(lookups.albums, values.AlbumIDs),
 			Levels:      buildLevelOptions(values.Level),
 			Languages:   buildLanguageOptions(values.Language),
 			CurrentUser: user.Username,

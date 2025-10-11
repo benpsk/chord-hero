@@ -22,22 +22,19 @@
 
 ## Mobile Pages
 - Home 
+  - add suspend timer [end time of free usage]
   - top played by level [beginner, intermediate, difficult], week
     - top played by language [mm, zomi, falam, rakhine], week
   - trending albums , week
   - popular artist, week
 - Search
   - search => filter by [language => mm, zomi, mizo, china]
-  - Tracks => all songs
+  - Tracks => all songs => copy => edit 
   - Artists => filter by author
   - Albums 
-- Library [auth]
+- Library [auth, add editor]
 - Profile
-  - Personal Information
-    - Name 
-    - Email
-    - Password
-  - subscription => explain benefits
+  - chord library
   - dark/white theme toggle
   - language settings => en/mm
   - login / register  => logout
@@ -50,6 +47,7 @@
  - free editor [add tab signature]
  - community can add tabs note, keyboard note [need to make replacable chord]
 - theme customization, fonts => styles
+- subscription => explain benefits
 
 
 # Additional notes 

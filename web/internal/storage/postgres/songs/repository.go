@@ -46,7 +46,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 
 	if params.AlbumID != nil {
 		placeholder := nextPlaceholder()
-		conditions = append(conditions, fmt.Sprintf("s.album_id = %s", placeholder))
+		conditions = append(conditions, fmt.Sprintf("EXISTS (SELECT 1 FROM album_song als WHERE als.song_id = s.id AND als.album_id = %s)", placeholder))
 		args = append(args, *params.AlbumID)
 	}
 
@@ -70,7 +70,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 
 	if params.ReleaseYear != nil {
 		placeholder := nextPlaceholder()
-		conditions = append(conditions, fmt.Sprintf("COALESCE((SELECT a.release_year FROM albums a WHERE a.id = s.album_id), s.release_year) = %s", placeholder))
+		conditions = append(conditions, fmt.Sprintf("COALESCE((SELECT a.release_year FROM albums a WHERE a.id = als.album_id), s.release_year) = %s", placeholder))
 		args = append(args, *params.ReleaseYear)
 	}
 
@@ -100,8 +100,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
             s.key,
             s.language,
             s.lyric,
-            COALESCE((SELECT a.release_year FROM albums a WHERE a.id = s.album_id), s.release_year) AS release_year,
-            s.album_id
+            s.release_year
         FROM songs s
         %s
         ORDER BY s.title ASC
@@ -130,10 +129,9 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 			language    sql.NullString
 			lyric       sql.NullString
 			releaseYear sql.NullInt32
-			albumID     sql.NullInt32
 		)
 
-		if err := rows.Scan(&id, &title, &level, &songKey, &language, &lyric, &releaseYear, &albumID); err != nil {
+		if err := rows.Scan(&id, &title, &level, &songKey, &language, &lyric, &releaseYear); err != nil {
 			return result, fmt.Errorf("scan song: %w", err)
 		}
 
@@ -166,11 +164,6 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 			value := int(releaseYear.Int32)
 			song.ReleaseYear = &value
 		}
-
-		if albumID.Valid {
-			song.Albums = make([]songsvc.Album, 0, 1)
-		}
-
 		songIndex[id] = len(songs)
 		songs = append(songs, song)
 		songIDs = append(songIDs, int32(id))
@@ -213,8 +206,8 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 
 	var songID int
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO songs (title, level, key, language, lyric, release_year, album_id, writer_id, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO songs (title, level, key, language, lyric, release_year, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`,
 		params.Title,
@@ -223,8 +216,6 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 		nullableString(params.Language),
 		nullableString(params.Lyric),
 		nullableInt(params.ReleaseYear),
-		nullableInt(params.AlbumID),
-		nullableInt(params.PrimaryWriterID),
 		nullableInt(params.CreatedBy),
 	).Scan(&songID); err != nil {
 		return 0, fmt.Errorf("insert song: %w", err)
@@ -245,6 +236,15 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 			VALUES ($1, $2)
 		`, writerID, songID); err != nil {
 			return 0, fmt.Errorf("insert writer relation: %w", err)
+		}
+	}
+	
+	for _, albumID := range params.AlbumIDs {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO album_song (album_id, song_id)
+			VALUES ($1, $2)
+		`, albumID, songID); err != nil {
+			return 0, fmt.Errorf("insert album relation: %w", err)
 		}
 	}
 
@@ -321,7 +321,8 @@ func (r *Repository) attachAlbums(ctx context.Context, songIDs []int32, songInde
 	query := `
         SELECT s.id, a.id, a.name, a.release_year
         FROM songs s
-        JOIN albums a ON a.id = s.album_id
+        JOIN album_song als ON als.song_id = s.id
+        JOIN albums a ON a.id = als.album_id
         WHERE s.id = ANY($1::int4[])
         ORDER BY a.name ASC
     `

@@ -43,7 +43,7 @@ func Library(props LibraryProps) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"space-y-8\"><div class=\"flex flex-wrap items-start justify-between gap-6\"><div class=\"space-y-4\"><span class=\"badge badge-outline\">Organize</span><h1 class=\"text-4xl font-bold\">Your library</h1><p class=\"max-w-2xl text-base-content/70 text-lg\">Craft rehearsal-ready collections, group songs by moment, and keep everything in sync with your team.</p></div><a class=\"btn btn-outline\" href=\"/search\">Search library</a></div><div class=\"rounded-box border border-base-300 bg-base-100 shadow-sm\"><div class=\"space-y-6 p-6\" id=\"library-surface\"><div id=\"library-empty-state\" class=\"flex flex-col items-center gap-4 rounded-box border border-dashed border-base-300 bg-base-100/70 p-12 text-center\"><div class=\"space-y-2\"><h2 class=\"text-2xl font-semibold\">No libraries yet</h2><p class=\"max-w-md text-base-content/70\">Create a custom library to organize songs for your next performance or study session.</p></div><button type=\"button\" class=\"btn btn-primary\" id=\"library-empty-create\" onclick=\"library_modal.showModal()\">Create a library</button></div><div id=\"library-list\" class=\"hidden space-y-5\"><div class=\"flex flex-wrap items-center justify-between gap-4\"><div><h2 class=\"text-2xl font-semibold\">Saved libraries</h2><p class=\"text-sm text-base-content/60\">Track sets, devotionals, or chord studies in one place.</p></div><span id=\"library-count\" class=\"text-sm text-base-content/60\"></span></div><div id=\"library-items\" class=\"space-y-4\"></div></div></div></div></section><button id=\"library-open-modal\" type=\"button\" class=\"btn btn-primary btn-circle fixed bottom-8 right-8 shadow-lg shadow-primary/40\" aria-label=\"Create library\">+</button> <dialog id=\"library_modal\" class=\"modal\"><div class=\"modal-box w-full max-w-3xl space-y-6\"><form method=\"dialog\" class=\"absolute right-4 top-4\"><button class=\"btn btn-sm btn-circle btn-ghost\" type=\"submit\" aria-label=\"Close modal\">✕</button></form><div data-step=\"name\" class=\"space-y-6\"><div class=\"space-y-2\"><h2 class=\"text-2xl font-semibold\">New library</h2><p class=\"text-base-content/70\">Give your library a clear name so it is easy to find later.</p></div><div class=\"space-y-2\"><label class=\"form-control w-full\"><div class=\"label\"><span class=\"label-text\">Library name</span></div><input id=\"library-name\" type=\"text\" class=\"input input-bordered w-full\" placeholder=\"Sunday rehearsal\" autocomplete=\"off\" required></label><p id=\"library-name-error\" class=\"text-sm text-error hidden\">Library name is required</p></div><div class=\"flex justify-end gap-3\"><form method=\"dialog\"><button class=\"btn btn-ghost\">Close</button></form><button type=\"button\" id=\"library-continue\" class=\"btn btn-primary\">Continue</button></div></div><div data-step=\"songs\" class=\"hidden space-y-6\"><div class=\"space-y-2\"><h2 class=\"text-2xl font-semibold\">Select songs</h2><p class=\"text-base-content/70\">Choose the songs you want to include in “<span id=\"library-name-preview\" class=\"font-semibold text-base-content\"></span>”.</p></div><div class=\"rounded-box border border-base-300\"><div class=\"max-h-96 overflow-y-auto\" id=\"library-song-options\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"space-y-8\"><div class=\"flex flex-wrap items-start justify-between gap-6\"><div class=\"space-y-4\"><h1 class=\"text-4xl font-bold\">Your library</h1><p class=\"max-w-2xl text-base-content/70 text-lg\">Craft rehearsal-ready collections, group songs by moment, and keep everything in sync with your team.</p></div></div><div class=\"rounded-box border border-base-300 bg-base-100 shadow-sm\"><div class=\"space-y-6 p-6\" id=\"library-surface\"><div id=\"library-empty-state\" class=\"flex flex-col items-center gap-4 rounded-box border border-dashed border-base-300 bg-base-100/70 p-12 text-center\"><div class=\"space-y-2\"><h2 class=\"text-2xl font-semibold\">No libraries yet</h2><p class=\"max-w-md text-base-content/70\">Create a custom library to organize songs for your next performance or study session.</p></div><button type=\"button\" class=\"btn btn-primary\" id=\"library-empty-create\" onclick=\"library_modal.showModal()\">Create a library</button></div><div id=\"library-list\" class=\"hidden space-y-5\"><div class=\"flex flex-wrap items-center justify-between gap-4\"><div><h2 class=\"text-2xl font-semibold\">Saved libraries</h2><p class=\"text-sm text-base-content/60\">Track sets, devotionals, or chord studies in one place.</p></div><span id=\"library-count\" class=\"text-sm text-base-content/60\"></span></div><div id=\"library-items\" class=\"space-y-4\"></div></div></div></div></section><dialog id=\"library_modal\" class=\"modal\"><div class=\"modal-box w-full max-w-3xl space-y-6\"><form method=\"dialog\" class=\"absolute right-4 top-4\"><button class=\"btn btn-sm btn-circle btn-ghost\" type=\"submit\" aria-label=\"Close modal\">✕</button></form><div data-step=\"name\" class=\"space-y-6\"><div class=\"space-y-2\"><h2 class=\"text-2xl font-semibold\">New library</h2><p class=\"text-base-content/70\">Give your library a clear name so it is easy to find later.</p></div><div class=\"space-y-2\"><label class=\"form-control w-full\"><div class=\"label\"><span class=\"label-text\">Library name</span></div><input id=\"library-name\" type=\"text\" class=\"input input-bordered w-full\" placeholder=\"Sunday rehearsal\" autocomplete=\"off\" required></label><p id=\"library-name-error\" class=\"text-sm text-error hidden\">Library name is required</p></div><div class=\"flex justify-end gap-3\"><form method=\"dialog\"><button class=\"btn btn-ghost\">Close</button></form><button type=\"button\" id=\"library-continue\" class=\"btn btn-primary\">Continue</button></div></div><div data-step=\"songs\" class=\"hidden space-y-6\"><div class=\"space-y-2\"><h2 class=\"text-2xl font-semibold\">Select songs</h2><p class=\"text-base-content/70\">Choose the songs you want to include in “<span id=\"library-name-preview\" class=\"font-semibold text-base-content\"></span>”.</p></div><div class=\"rounded-box border border-base-300\"><div class=\"max-h-96 overflow-y-auto\" id=\"library-song-options\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -55,7 +55,7 @@ func Library(props LibraryProps) templ.Component {
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(song.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/library.templ`, Line: 106, Col: 135}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/library.templ`, Line: 93, Col: 135}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -68,7 +68,7 @@ func Library(props LibraryProps) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(song.Artist)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/library.templ`, Line: 106, Col: 168}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/library.templ`, Line: 93, Col: 168}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -81,7 +81,7 @@ func Library(props LibraryProps) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(song.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/library.templ`, Line: 109, Col: 74}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/library.templ`, Line: 96, Col: 74}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -99,7 +99,7 @@ func Library(props LibraryProps) templ.Component {
 					var templ_7745c5c3_Var6 string
 					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(song.Artist)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/library.templ`, Line: 111, Col: 78}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/library.templ`, Line: 98, Col: 78}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 					if templ_7745c5c3_Err != nil {
@@ -129,9 +129,6 @@ func Library(props LibraryProps) templ.Component {
 			ActiveNav:   "library",
 			MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
 			OGImage:     "/static/opengraph/library.png",
-			BodyScripts: BodyScripts(
-				JSONScript("library-songs-data", props.SongsPayload),
-			),
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

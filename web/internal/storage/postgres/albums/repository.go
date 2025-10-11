@@ -59,9 +59,8 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 
 	listQuery := fmt.Sprintf(`
         WITH album_totals AS (
-            SELECT s.album_id, COUNT(DISTINCT s.id) AS total_songs
-            FROM songs s
-            WHERE s.album_id IS NOT NULL
+            SELECT s.album_id, COUNT(DISTINCT s.song_id) AS total_songs
+            FROM album_song s
             GROUP BY s.album_id
         )
         SELECT a.id, a.name, a.release_year, COALESCE(at.total_songs, 0) AS total_songs

@@ -21,7 +21,7 @@ type AdminSongFormValues struct {
 	Key             string
 	Language        string
 	ReleaseYear     string
-	AlbumID         string
+	AlbumIDs         []string
 	PrimaryWriterID string
 	ArtistIDs       []string
 	WriterIDs       []string

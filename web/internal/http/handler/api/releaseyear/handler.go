@@ -1,6 +1,7 @@
 package releaseyear
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
@@ -38,6 +39,7 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.svc.List(r.Context(), params)
 	if err != nil {
+		log.Println(err)
 		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list release years"}})
 		return
 	}

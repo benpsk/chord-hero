@@ -36,8 +36,7 @@ type CreateParams struct {
 	Language        *string
 	Lyric           *string
 	ReleaseYear     *int
-	AlbumID         *int
-	PrimaryWriterID *int
+	AlbumIDs         []int
 	ArtistIDs       []int
 	WriterIDs       []int
 	CreatedBy       *int
@@ -167,21 +166,13 @@ func (s *service) Create(ctx context.Context, params CreateParams) (int, error) 
 			params.ReleaseYear = nil
 		}
 	}
-
-	if params.AlbumID != nil && *params.AlbumID <= 0 {
-		params.AlbumID = nil
-	}
-
-	if params.PrimaryWriterID != nil && *params.PrimaryWriterID <= 0 {
-		params.PrimaryWriterID = nil
-	}
-
 	if params.CreatedBy != nil && *params.CreatedBy <= 0 {
 		params.CreatedBy = nil
 	}
 
 	params.ArtistIDs = uniquePositive(params.ArtistIDs)
 	params.WriterIDs = uniquePositive(params.WriterIDs)
+	params.AlbumIDs = uniquePositive(params.WriterIDs)
 
 	return s.repo.Create(ctx, params)
 }

@@ -32,7 +32,8 @@ func (r *Repository) List(ctx context.Context, params releaseyearsvc.ListParams)
         WITH song_years AS (
             SELECT DISTINCT COALESCE(a.release_year, s.release_year) AS year_value
             FROM songs s
-            LEFT JOIN albums a ON a.id = s.album_id
+            LEFT JOIN album_song als ON als.song_id = s.id
+            LEFT JOIN albums a ON als.album_id = a.id
             WHERE COALESCE(a.release_year, s.release_year) IS NOT NULL
         )
         SELECT COUNT(*) FROM song_years
@@ -50,7 +51,8 @@ func (r *Repository) List(ctx context.Context, params releaseyearsvc.ListParams)
         WITH song_years AS (
             SELECT COALESCE(a.release_year, s.release_year) AS year_value
             FROM songs s
-            LEFT JOIN albums a ON a.id = s.album_id
+            LEFT JOIN album_song als ON als.song_id = s.id
+            LEFT JOIN albums a ON als.album_id = a.id
             WHERE COALESCE(a.release_year, s.release_year) IS NOT NULL
         )
         SELECT year_value, COUNT(*) AS total

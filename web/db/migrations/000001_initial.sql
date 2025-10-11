@@ -107,13 +107,9 @@ CREATE TABLE IF NOT EXISTS songs (
     lyric TEXT,
     release_year INT,
     created_by INT,
-    album_id INT,
-    writer_id INT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE SET NULL,
-    FOREIGN KEY (writer_id) REFERENCES writers(id) ON DELETE SET NULL
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 --bun:split
@@ -158,6 +154,26 @@ CREATE TABLE IF NOT EXISTS song_writer (
 
 CREATE TRIGGER update_song_writer_updated_at
 BEFORE UPDATE ON song_writer
+FOR EACH ROW
+EXECUTE PROCEDURE update_updated_at_column();
+
+
+--bun:split
+
+CREATE TABLE IF NOT EXISTS album_song (
+    album_id INT NOT NULL,
+    song_id INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (album_id, song_id),
+    FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE,
+    FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
+);
+
+--bun:split
+
+CREATE TRIGGER update_album_song_updated_at
+BEFORE UPDATE ON album_song
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
@@ -274,7 +290,7 @@ EXECUTE PROCEDURE update_updated_at_column();
 
 --bun:split
 
-CREATE TABLE IF NOT EXISTS trendings (
+CREATE TABLE IF NOT EXISTS trending_songs (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     level VARCHAR(50) CHECK (level IN ('easy', 'medium', 'hard')),
@@ -285,7 +301,10 @@ CREATE TABLE IF NOT EXISTS trendings (
 
 --bun:split
 
-CREATE TRIGGER update_trendings_updated_at
-BEFORE UPDATE ON trendings
+CREATE TRIGGER update_trending_songs_updated_at
+BEFORE UPDATE ON trending_songs
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
+
+
+

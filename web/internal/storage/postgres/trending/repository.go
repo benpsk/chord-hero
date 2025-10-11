@@ -24,7 +24,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 func (r *Repository) TrendingSets(ctx context.Context) ([]trendingsvc.Trending, error) {
 	rows, err := r.db.Query(ctx, `
         SELECT id, name, level, description
-        FROM trendings
+        FROM trending_songs
         ORDER BY id ASC
     `)
 	if err != nil {
@@ -73,11 +73,10 @@ func (r *Repository) TrendingAlbums(ctx context.Context, limit int) ([]trendings
 
 	query := `
         WITH album_plays AS (
-            SELECT s.album_id, COUNT(*) AS play_count
+            SELECT als.album_id, COUNT(*) AS play_count
             FROM plays p
-            JOIN songs s ON s.id = p.song_id
-            WHERE s.album_id IS NOT NULL
-            GROUP BY s.album_id
+            JOIN album_song als ON als.song_id = p.song_id
+            GROUP BY als.album_id
         )
         SELECT a.id, a.name, ap.play_count
         FROM album_plays ap
@@ -119,8 +118,7 @@ func (r *Repository) TrendingArtists(ctx context.Context, limit int) ([]trending
         WITH artist_plays AS (
             SELECT sa.artist_id, COUNT(*) AS play_count
             FROM plays p
-            JOIN songs s ON s.id = p.song_id
-            JOIN artist_song sa ON sa.song_id = s.id
+            JOIN artist_song sa ON sa.song_id = p.song_id
             GROUP BY sa.artist_id
         )
         SELECT ar.id, ar.name, ap.play_count

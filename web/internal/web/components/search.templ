@@ -1,182 +1,162 @@
 package components
 
 import (
-  "fmt"
-  "strings"
+	"fmt"
+	"strings"
 )
 
 templ Search(props SearchProps) {
-  @Layout(PageMeta{
-    Title:       "Lyric · Search",
-    Description: "Search worship tracks, albums, and artists to build your next set list in seconds.",
-    Path:        "/search",
-    Canonical:   "https://lyric.app/search",
-    ActiveNav:   "search",
-    MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
-    OGImage:     "/static/opengraph/search.png",
-    SchemaJSON:  SearchResultsSchema("Lyric Search", "Search worship charts, albums, and artists curated for your team.", "https://lyric.app/search"),
-  }) {
-    <section class="space-y-2">
-      <h1 class="text-4xl font-bold">Search</h1>
-      <p class="text-base-content/70 text-lg">Find tracks, artists, and albums for your next set.</p>
-    </section>
-
-    <section class="space-y-6 rounded-box bg-base-100 p-6 shadow-sm">
-      <form method="get" class="space-y-3">
-        <div class="join w-full">
-          <span class="join-item btn btn-ghost btn-square" aria-hidden="true">🔍</span>
-          <input id="search-input" name="query" type="search" placeholder="Search songs, artists, or albums" class="input join-item input-bordered w-full" value={ props.Query } autocomplete="off">
-          <button type="submit" class="join-item btn btn-primary">Search</button>
-        </div>
-        <input type="hidden" name="tab" value={ string(props.ActiveTab) }>
-        for _, lang := range props.SelectedLanguages {
-          <input type="hidden" name="language" value={ string(lang) }>
-        }
-        <div class="flex flex-wrap gap-3 text-sm">
-          if props.HasQuery {
-            <a class="btn btn-ghost btn-sm" href={ props.ClearQueryURL }>Clear query</a>
-          }
-          if len(props.SelectedLanguages) > 0 {
-            <a class="btn btn-ghost btn-sm" href={ props.ClearLanguagesURL }>Clear languages</a>
-          }
-          if props.HasActiveFilters {
-            <a class="btn btn-outline btn-sm" href={ props.ResetURL }>Reset all</a>
-          }
-        </div>
-      </form>
-
-      <div>
-        <span class="text-sm font-semibold uppercase tracking-wide text-base-content/60">Filter by language</span>
-        <div class="mt-3 flex flex-wrap gap-2">
-          for _, option := range props.LanguageOptions {
-            <form method="get" class="contents">
-              <input type="hidden" name="tab" value={ string(props.ActiveTab) }>
-              if props.HasQuery {
-                <input type="hidden" name="query" value={ props.Query }>
-              }
-              for _, lang := range option.SubmitLanguages {
-                <input type="hidden" name="language" value={ string(lang) }>
-              }
-              <button type="submit" class={ searchLanguageButtonClass(option.Active) } aria-pressed={ fmt.Sprintf("%t", option.Active) }>{ option.Label }</button>
-            </form>
-          }
-        </div>
-      </div>
-    </section>
-
-    <section class="space-y-6 rounded-box bg-base-100 p-6 shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="tabs tabs-boxed bg-base-200 p-1" role="tablist">
-          for _, tab := range props.Tabs {
-            <form method="get" class="contents" role="presentation">
-              if props.HasQuery {
-                <input type="hidden" name="query" value={ props.Query }>
-              }
-              for _, lang := range props.SelectedLanguages {
-                <input type="hidden" name="language" value={ string(lang) }>
-              }
-              <input type="hidden" name="tab" value={ string(tab.Key) }>
-              <button type="submit" class={ searchTabButtonClass(tab.Active) } role="tab" aria-selected={ fmt.Sprintf("%t", tab.Active) }>{ tab.Label }</button>
-            </form>
-          }
-        </div>
-        <div class="text-sm text-base-content/70">{ fmt.Sprintf("%d result%s", props.ActiveCount, pluralSuffix(props.ActiveCount)) }</div>
-      </div>
-
-      if len(props.SelectedLanguages) > 0 {
-        <div class="flex flex-wrap gap-2">
-          for _, lang := range props.SelectedLanguages {
-            <span class="badge badge-outline">{ lang }</span>
-          }
-        </div>
-      }
-
-      <div class="space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 id="results-heading" class="text-xl font-semibold">{ props.ActiveTabLabel }</h2>
-          if props.HasActiveFilters {
-            <span class="badge badge-outline">Filters active</span>
-          }
-        </div>
-
-        if props.ActiveTab == SearchTabTracks {
-          if len(props.Tracks) > 0 {
-            <div class="space-y-3" role="tabpanel">
-              for _, track := range props.Tracks {
-                <a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ fmt.Sprintf("/songs/%s", track.ID) }>
-                  <span class="min-w-0 flex flex-1 items-center gap-3">
-                    <span class="truncate font-semibold text-base-content">{ track.Title }</span>
-                    if strings.TrimSpace(track.Artist) != "" {
-                      <span class="hidden text-base-content/40 sm:inline">•</span>
-                      <span class="truncate text-sm text-base-content/70">{ track.Artist }</span>
-                    }
-                    if strings.TrimSpace(track.Composer) != "" {
-                      <span class="hidden text-base-content/40 sm:inline">•</span>
-                      <span class="truncate text-sm text-base-content/60">{ track.Composer }</span>
-                    }
-                  </span>
-                  <span class="flex shrink-0 items-center gap-2 text-sm">
-                    if strings.TrimSpace(track.Key) != "" {
-                      <span class="badge badge-outline">{ track.Key }</span>
-                    } else {
-                      <span class="badge badge-ghost">—</span>
-                    }
-                    if strings.TrimSpace(track.Level) != "" {
-                      <span class="badge badge-outline">{ track.Level }</span>
-                    } else {
-                      <span class="badge badge-ghost">—</span>
-                    }
-                    if strings.TrimSpace(track.Language) != "" {
-                      <span class="badge badge-outline">{ track.Language }</span>
-                    }
-                  </span>
-                </a>
-              }
-            </div>
-          }
-        } else if props.ActiveTab == SearchTabAlbums {
-          if len(props.Albums) > 0 {
-            <div class="space-y-3" role="tabpanel">
-              for _, album := range props.Albums {
-                <a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ SearchURL(SearchTabTracks, album.Title, props.SelectedLanguages) }>
-                  <span class="min-w-0 flex flex-1 items-center gap-3">
-                    <span class="truncate font-semibold text-base-content">{ album.Title }</span>
-                    if strings.TrimSpace(album.Artist) != "" {
-                      <span class="hidden text-base-content/40 sm:inline">•</span>
-                      <span class="truncate text-sm text-base-content/70">{ album.Artist }</span>
-                    }
-                  </span>
-                  <span class="flex shrink-0 items-center gap-2 text-sm">
-                    <span class="badge badge-outline">{ fmt.Sprintf("%d track%s", album.TrackCount, pluralSuffix(album.TrackCount)) }</span>
-                  </span>
-                </a>
-              }
-            </div>
-          }
-        } else {
-          if len(props.Artists) > 0 {
-            <div class="space-y-3" role="tabpanel">
-              for _, artist := range props.Artists {
-                <a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ SearchURL(SearchTabTracks, artist.Name, props.SelectedLanguages) }>
-                  <span class="min-w-0 flex flex-1 items-center gap-3">
-                    <span class="truncate font-semibold text-base-content">{ artist.Name }</span>
-                  </span>
-                  <span class="flex shrink-0 items-center gap-2 text-sm text-base-content/70">
-                    <span>{ fmt.Sprintf("%d song%s", artist.SongCount, pluralSuffix(artist.SongCount)) }</span>
-                  </span>
-                </a>
-              }
-            </div>
-          }
-        }
-
-        if props.ActiveCount == 0 {
-          <div id="empty-state" class="rounded-box border border-dashed border-base-300 bg-base-100/70 p-10 text-center">
-            <h3 class="text-lg font-semibold">No matches yet</h3>
-            <p class="mt-2 text-base-content/70">Try adjusting your search or removing filters to see more songs.</p>
-          </div>
-        }
-      </div>
-    </section>
-  }
+	@Layout(PageMeta{
+		Title:       "Lyric · Search",
+		Description: "Search worship tracks, albums, and artists to build your next set list in seconds.",
+		Path:        "/search",
+		Canonical:   "https://lyric.app/search",
+		ActiveNav:   "search",
+		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
+		OGImage:     "/static/opengraph/search.png",
+		SchemaJSON:  SearchResultsSchema("Lyric Search", "Search worship charts, albums, and artists curated for your team.", "https://lyric.app/search"),
+	}) {
+		<section class="space-y-2">
+			<h1 class="text-4xl font-bold">Search</h1>
+			<p class="text-base-content/70 text-lg">Find tracks, artists, and albums for your next set.</p>
+		</section>
+		<section class="space-y-6 rounded-box bg-base-100 p-6 shadow-sm">
+			<form method="get" class="space-y-3">
+				<div class="join w-full">
+					<span class="join-item btn btn-ghost btn-square" aria-hidden="true">🔍</span>
+					<input id="search-input" name="query" type="search" placeholder="Search songs, artists, or albums" class="input join-item input-bordered w-full" value={ props.Query } autocomplete="off"/>
+					<button type="submit" class="join-item btn btn-primary">Search</button>
+				</div>
+				<input type="hidden" name="tab" value={ string(props.ActiveTab) }/>
+				for _, lang := range props.SelectedLanguages {
+					<input type="hidden" name="language" value={ string(lang) }/>
+				}
+				<div class="flex flex-wrap gap-3 text-sm">
+					if props.HasActiveFilters {
+						<a class="btn btn-outline btn-sm" href={ props.ResetURL }>Reset all</a>
+					}
+				</div>
+			</form>
+			<div>
+				<span class="text-sm font-semibold uppercase tracking-wide text-base-content/60">Filter by language</span>
+				<div class="mt-3 flex flex-wrap gap-2">
+					for _, option := range props.LanguageOptions {
+						<form method="get" class="contents">
+							<input type="hidden" name="tab" value={ string(props.ActiveTab) }/>
+							if props.HasQuery {
+								<input type="hidden" name="query" value={ props.Query }/>
+							}
+							for _, lang := range option.SubmitLanguages {
+								<input type="hidden" name="language" value={ string(lang) }/>
+							}
+							<button type="submit" class={ searchLanguageButtonClass(option.Active) } aria-pressed={ fmt.Sprintf("%t", option.Active) }>{ option.Label }</button>
+						</form>
+					}
+				</div>
+			</div>
+		</section>
+		<section class="space-y-6 rounded-box bg-base-100 p-6 shadow-sm">
+			<div class="flex flex-wrap items-center justify-between gap-4">
+				<div class="tabs tabs-boxed bg-base-200 p-1" role="tablist">
+					for _, tab := range props.Tabs {
+						<form method="get" class="contents" role="presentation">
+							if props.HasQuery {
+								<input type="hidden" name="query" value={ props.Query }/>
+							}
+							for _, lang := range props.SelectedLanguages {
+								<input type="hidden" name="language" value={ string(lang) }/>
+							}
+							<input type="hidden" name="tab" value={ string(tab.Key) }/>
+							<button type="submit" class={ searchTabButtonClass(tab.Active) } role="tab" aria-selected={ fmt.Sprintf("%t", tab.Active) }>{ tab.Label }</button>
+						</form>
+					}
+				</div>
+				<div class="text-sm text-base-content/70">{ fmt.Sprintf("%d result%s", props.ActiveCount, pluralSuffix(props.ActiveCount)) }</div>
+			</div>
+			<div class="space-y-4">
+				<div class="flex items-center justify-between">
+					<h2 id="results-heading" class="text-xl font-semibold">{ props.ActiveTabLabel }</h2>
+					if props.HasActiveFilters {
+						<span class="badge badge-outline">Filters active</span>
+					}
+				</div>
+				if props.ActiveTab == SearchTabTracks {
+					if len(props.Tracks) > 0 {
+						<div class="space-y-3" role="tabpanel">
+							for _, track := range props.Tracks {
+								<a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ fmt.Sprintf("/songs/%s", track.ID) }>
+									<span class="min-w-0 flex flex-1 items-center gap-3">
+										<span class="truncate font-semibold text-base-content">{ track.Title }</span>
+										if strings.TrimSpace(track.Artist) != "" {
+											<span class="hidden text-base-content/40 sm:inline">•</span>
+											<span class="truncate text-sm text-base-content/70">{ track.Artist }</span>
+										}
+										if strings.TrimSpace(track.Composer) != "" {
+											<span class="hidden text-base-content/40 sm:inline">•</span>
+											<span class="truncate text-sm text-base-content/60">{ track.Composer }</span>
+										}
+									</span>
+									<span class="flex shrink-0 items-center gap-2 text-sm">
+										if strings.TrimSpace(track.Key) != "" {
+											<span class="badge badge-outline">{ track.Key }</span>
+										} else {
+											<span class="badge badge-ghost">—</span>
+										}
+										if strings.TrimSpace(track.Level) != "" {
+											<span class="badge badge-outline">{ track.Level }</span>
+										} else {
+											<span class="badge badge-ghost">—</span>
+										}
+										if strings.TrimSpace(track.Language) != "" {
+											<span class="badge badge-outline">{ track.Language }</span>
+										}
+									</span>
+								</a>
+							}
+						</div>
+					}
+				} else if props.ActiveTab == SearchTabAlbums {
+					if len(props.Albums) > 0 {
+						<div class="space-y-3" role="tabpanel">
+							for _, album := range props.Albums {
+								<a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ SearchURL(SearchTabTracks, album.Title, props.SelectedLanguages) }>
+									<span class="min-w-0 flex flex-1 items-center gap-3">
+										<span class="truncate font-semibold text-base-content">{ album.Title }</span>
+										if strings.TrimSpace(album.Artist) != "" {
+											<span class="hidden text-base-content/40 sm:inline">•</span>
+											<span class="truncate text-sm text-base-content/70">{ album.Artist }</span>
+										}
+									</span>
+									<span class="flex shrink-0 items-center gap-2 text-sm">
+										<span class="badge badge-outline">{ fmt.Sprintf("%d track%s", album.TrackCount, pluralSuffix(album.TrackCount)) }</span>
+									</span>
+								</a>
+							}
+						</div>
+					}
+				} else {
+					if len(props.Artists) > 0 {
+						<div class="space-y-3" role="tabpanel">
+							for _, artist := range props.Artists {
+								<a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ SearchURL(SearchTabTracks, artist.Name, props.SelectedLanguages) }>
+									<span class="min-w-0 flex flex-1 items-center gap-3">
+										<span class="truncate font-semibold text-base-content">{ artist.Name }</span>
+									</span>
+									<span class="flex shrink-0 items-center gap-2 text-sm text-base-content/70">
+										<span>{ fmt.Sprintf("%d song%s", artist.SongCount, pluralSuffix(artist.SongCount)) }</span>
+									</span>
+								</a>
+							}
+						</div>
+					}
+				}
+				if props.ActiveCount == 0 {
+					<div id="empty-state" class="rounded-box border border-dashed border-base-300 bg-base-100/70 p-10 text-center">
+						<h3 class="text-lg font-semibold">No matches yet</h3>
+						<p class="mt-2 text-base-content/70">Try adjusting your search or removing filters to see more songs.</p>
+					</div>
+				}
+			</div>
+		</section>
+	}
 }

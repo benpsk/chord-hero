@@ -21,10 +21,7 @@ type Artist struct {
 var WeeklyCharts = []HomeCard{
 	{ID: "easy", Title: "Top 50", Subtitle: "Easy"},
 	{ID: "medium", Title: "Top 50", Subtitle: "Medium"},
-	{ID: "trending", Title: "Top 50", Subtitle: "Trending"},
 	{ID: "hard", Title: "Top 50", Subtitle: "Hard"},
-	{ID: "legend", Title: "Top 50", Subtitle: "Legend"},
-	{ID: "fresh", Title: "Top 50", Subtitle: "Fresh"},
 }
 
 var TrendingAlbums = []HomeCard{

@@ -90,7 +90,7 @@ func New(application *app.Application) chi.Router {
 		api.Get("/writers", apiWriters.List)
 		api.Get("/release-year", apiReleaseYear.List)
 		api.Get("/playlists", apiPlaylists.List)
-		api.Get("/trendings", apiTrending.List)
+		api.Get("/trending-songs", apiTrending.List)
 		api.Get("/trending-albums", apiTrending.Albums)
 		api.Get("/trending-artists", apiTrending.Artists)
 		api.Get("/chords/{name}", apiChords.Show)

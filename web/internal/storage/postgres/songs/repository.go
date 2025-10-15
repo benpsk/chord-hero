@@ -3,9 +3,11 @@ package songs
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
@@ -196,6 +198,87 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 	return result, nil
 }
 
+// Get returns a single song by identifier including related entities.
+func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
+	query := `
+        SELECT
+            s.id,
+            s.title,
+            s.level,
+            s.key,
+            s.language,
+            s.lyric,
+            s.release_year
+        FROM songs s
+        WHERE s.id = $1
+    `
+
+	var (
+		level       sql.NullString
+		songKey     sql.NullString
+		language    sql.NullString
+		lyric       sql.NullString
+		releaseYear sql.NullInt32
+		song        songsvc.Song
+	)
+
+	if err := r.db.QueryRow(ctx, query, id).Scan(
+		&song.ID,
+		&song.Title,
+		&level,
+		&songKey,
+		&language,
+		&lyric,
+		&releaseYear,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return songsvc.Song{}, songsvc.ErrNotFound
+		}
+		return songsvc.Song{}, fmt.Errorf("get song: %w", err)
+	}
+
+	if level.Valid {
+		value := titleCase(level.String)
+		song.Level = &value
+	}
+	if songKey.Valid {
+		value := songKey.String
+		song.Key = &value
+	}
+	if language.Valid {
+		value := strings.ToLower(language.String)
+		song.Language = &value
+	}
+	if lyric.Valid {
+		value := lyric.String
+		song.Lyric = &value
+	}
+	if releaseYear.Valid {
+		value := int(releaseYear.Int32)
+		song.ReleaseYear = &value
+	}
+
+	song.Artists = []songsvc.Person{}
+	song.Writers = []songsvc.Person{}
+	song.Albums = []songsvc.Album{}
+
+	songs := []songsvc.Song{song}
+	songIndex := map[int]int{id: 0}
+	songIDs := []int32{int32(id)}
+
+	if err := r.attachArtists(ctx, songIDs, songIndex, &songs); err != nil {
+		return songsvc.Song{}, err
+	}
+	if err := r.attachWriters(ctx, songIDs, songIndex, &songs); err != nil {
+		return songsvc.Song{}, err
+	}
+	if err := r.attachAlbums(ctx, songIDs, songIndex, &songs); err != nil {
+		return songsvc.Song{}, err
+	}
+
+	return songs[0], nil
+}
+
 // Create persists a new song along with its artist and writer relations.
 func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (int, error) {
 	tx, err := r.db.Begin(ctx)
@@ -238,7 +321,7 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 			return 0, fmt.Errorf("insert writer relation: %w", err)
 		}
 	}
-	
+
 	for _, albumID := range params.AlbumIDs {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO album_song (album_id, song_id)
@@ -253,6 +336,92 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 	}
 
 	return songID, nil
+}
+
+// Update mutates an existing song and refreshes its relations.
+func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdateParams) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin update song: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	cmdTag, err := tx.Exec(ctx, `
+		UPDATE songs
+		SET title = $1,
+		    level = $2,
+		    key = $3,
+		    language = $4,
+		    lyric = $5,
+		    release_year = $6
+		WHERE id = $7
+	`, params.Title,
+		nullableString(params.Level),
+		nullableString(params.Key),
+		nullableString(params.Language),
+		nullableString(params.Lyric),
+		nullableInt(params.ReleaseYear),
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("update song: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return songsvc.ErrNotFound
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM artist_song WHERE song_id = $1`, id); err != nil {
+		return fmt.Errorf("clear artist relations: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM song_writer WHERE song_id = $1`, id); err != nil {
+		return fmt.Errorf("clear writer relations: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM album_song WHERE song_id = $1`, id); err != nil {
+		return fmt.Errorf("clear album relations: %w", err)
+	}
+
+	for _, artistID := range params.ArtistIDs {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO artist_song (artist_id, song_id)
+			VALUES ($1, $2)
+		`, artistID, id); err != nil {
+			return fmt.Errorf("insert artist relation: %w", err)
+		}
+	}
+	for _, writerID := range params.WriterIDs {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO song_writer (writer_id, song_id)
+			VALUES ($1, $2)
+		`, writerID, id); err != nil {
+			return fmt.Errorf("insert writer relation: %w", err)
+		}
+	}
+	for _, albumID := range params.AlbumIDs {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO album_song (album_id, song_id)
+			VALUES ($1, $2)
+		`, albumID, id); err != nil {
+			return fmt.Errorf("insert album relation: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit update song: %w", err)
+	}
+
+	return nil
+}
+
+// Delete removes a song and cascades related records via FK constraints.
+func (r *Repository) Delete(ctx context.Context, id int) error {
+	cmdTag, err := r.db.Exec(ctx, `DELETE FROM songs WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete song: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return songsvc.ErrNotFound
+	}
+	return nil
 }
 
 func (r *Repository) attachArtists(ctx context.Context, songIDs []int32, songIndex map[int]int, songs *[]songsvc.Song) error {

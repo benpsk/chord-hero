@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/go-chi/chi/v5"
 
 	adminctx "github.com/lyricapp/lyric/web/internal/http/context/admin"
 	albumsvc "github.com/lyricapp/lyric/web/internal/services/albums"
@@ -33,6 +35,55 @@ var (
 // New constructs a song admin handler with the required dependencies.
 func New(songs songsvc.Service, albums albumsvc.Service, artists artistsvc.Service, writers writersvc.Service) *Handler {
 	return &Handler{songs: songs, albums: albums, artists: artists, writers: writers}
+}
+
+// Index renders the admin song list with optional search.
+func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
+	user, ok := adminctx.FromContext(r.Context())
+	if !ok {
+		http.Redirect(w, r, "/admin/login", http.StatusFound)
+		return
+	}
+
+	searchTerm := strings.TrimSpace(r.URL.Query().Get("q"))
+
+	list, err := h.songs.List(r.Context(), songsvc.ListParams{
+		Page:    1,
+		PerPage: 50,
+		Search:  searchTerm,
+	})
+	if err != nil {
+		http.Error(w, "failed to load songs", http.StatusInternalServerError)
+		return
+	}
+
+	items := make([]components.AdminSongListItem, 0, len(list.Data))
+	for _, song := range list.Data {
+		items = append(items, components.AdminSongListItem{
+			ID:          song.ID,
+			Title:       song.Title,
+			Artists:     joinNames(song.Artists),
+			Writers:     joinNames(song.Writers),
+			Level:       pointerToHuman(song.Level),
+			Language:    pointerToHuman(song.Language),
+			ReleaseYear: releaseYearOrDash(song.ReleaseYear),
+		})
+	}
+
+	resultsLabel := "songs"
+	if list.Total == 1 {
+		resultsLabel = "song"
+	}
+
+	props := components.AdminSongListProps{
+		SearchTerm:   searchTerm,
+		Total:        list.Total,
+		Songs:        items,
+		CurrentUser:  user.Username,
+		ResultsLabel: resultsLabel,
+	}
+
+	templ.Handler(components.AdminSongListPage(props)).ServeHTTP(w, r)
 }
 
 // Show displays the song creation form.
@@ -62,6 +113,7 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 
 	if r.URL.Query().Get("created") == "1" {
 		props.Success = true
+		props.SuccessText = "Song created successfully."
 	}
 
 	templ.Handler(components.AdminSongCreatePage(props)).ServeHTTP(w, r)
@@ -75,88 +127,40 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
+	payload, err := parseSongForm(r)
+	if err != nil {
 		http.Error(w, "invalid form submission", http.StatusBadRequest)
 		return
 	}
 
-	values := components.AdminSongFormValues{
-		Title:           strings.TrimSpace(r.FormValue("title")),
-		Level:           strings.ToLower(strings.TrimSpace(r.FormValue("level"))),
-		Key:             strings.TrimSpace(r.FormValue("key")),
-		Language:        strings.ToLower(strings.TrimSpace(r.FormValue("language"))),
-		ReleaseYear:     strings.TrimSpace(r.FormValue("release_year")),
-		AlbumIDs:        r.Form["album_ids"],
-		ArtistIDs:       r.Form["artist_ids"],
-		WriterIDs:       r.Form["writer_ids"],
-		Lyric:           r.FormValue("lyric"),
-	}
-
-	fieldErrors := make(map[string]string)
-	errorsList := make([]string, 0)
-
-	if values.Title == "" {
-		fieldErrors["title"] = "Title is required."
-	}
-
-	if values.Level != "" {
-		if _, ok := allowedLevels[values.Level]; !ok {
-			fieldErrors["level"] = "Choose a valid level."
-		}
-	}
-
-	if values.Language != "" {
-		if _, ok := allowedLanguages[values.Language]; !ok {
-			fieldErrors["language"] = "Choose a valid language."
-		}
-	}
-
-	releaseYear, err := parseOptionalInt(values.ReleaseYear)
-	if err != nil {
-		fieldErrors["release_year"] = "Release year must be a number."
-	}
-
-	albumIDs, err := parseIDList(values.AlbumIDs)
-	if err != nil {
-		fieldErrors["album_ids"] = "Album must be a valid number."
-	}
-
-	artistIDs, err := parseIDList(values.ArtistIDs)
-	if err != nil {
-		fieldErrors["artist_ids"] = "Artist selection must contain numeric IDs."
-	}
-
-	writerIDs, err := parseIDList(values.WriterIDs)
-	if err != nil {
-		fieldErrors["writer_ids"] = "Writer selection must contain numeric IDs."
-	}
-
 	lookups, lookupErr := h.fetchLookups(r)
 	if lookupErr != nil {
-		templ.Handler(components.AdminSongCreatePage(components.AdminSongCreateProps{
-			Values:      values,
-			Errors:      []string{"Unable to load supporting data."},
-			FieldErrors: fieldErrors,
-			Artists:     markSelected(lookups.artists, values.ArtistIDs),
-			Writers:     markSelected(lookups.writers, values.WriterIDs),
-			Albums:      markSelected(lookups.albums, values.AlbumIDs),
-			Levels:      buildLevelOptions(values.Level),
-			Languages:   buildLanguageOptions(values.Language),
+		payload.Errors = append(payload.Errors, "Unable to load supporting data.")
+		props := components.AdminSongCreateProps{
+			Values:      payload.Values,
+			Errors:      payload.Errors,
+			FieldErrors: payload.FieldErrors,
+			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
+			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
+			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
+			Levels:      buildLevelOptions(payload.Values.Level),
+			Languages:   buildLanguageOptions(payload.Values.Language),
 			CurrentUser: user.Username,
-		})).ServeHTTP(w, r)
+		}
+		templ.Handler(components.AdminSongCreatePage(props)).ServeHTTP(w, r)
 		return
 	}
 
-	if len(fieldErrors) > 0 || len(errorsList) > 0 {
+	if len(payload.FieldErrors) > 0 || len(payload.Errors) > 0 {
 		props := components.AdminSongCreateProps{
-			Values:      values,
-			Errors:      errorsList,
-			FieldErrors: fieldErrors,
-			Artists:     markSelected(lookups.artists, values.ArtistIDs),
-			Writers:     markSelected(lookups.writers, values.WriterIDs),
-			Albums:      markSelected(lookups.albums, values.AlbumIDs),
-			Levels:      buildLevelOptions(values.Level),
-			Languages:   buildLanguageOptions(values.Language),
+			Values:      payload.Values,
+			Errors:      payload.Errors,
+			FieldErrors: payload.FieldErrors,
+			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
+			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
+			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
+			Levels:      buildLevelOptions(payload.Values.Level),
+			Languages:   buildLanguageOptions(payload.Values.Language),
 			CurrentUser: user.Username,
 		}
 		templ.Handler(components.AdminSongCreatePage(props)).ServeHTTP(w, r)
@@ -164,52 +168,314 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := songsvc.CreateParams{
-		Title:     values.Title,
-		ArtistIDs: artistIDs,
-		WriterIDs: writerIDs,
+		MutationParams: songsvc.MutationParams{
+			Title:     payload.Values.Title,
+			ArtistIDs: payload.ArtistIDs,
+			WriterIDs: payload.WriterIDs,
+			AlbumIDs:  payload.AlbumIDs,
+		},
 	}
 
-	if values.Level != "" {
-		params.Level = &values.Level
+	if payload.Values.Level != "" {
+		level := payload.Values.Level
+		params.Level = &level
 	}
-	if values.Key != "" {
-		params.Key = &values.Key
+	if payload.Values.Key != "" {
+		key := payload.Values.Key
+		params.Key = &key
 	}
-	if values.Language != "" {
-		params.Language = &values.Language
+	if payload.Values.Language != "" {
+		language := payload.Values.Language
+		params.Language = &language
 	}
-	if strings.TrimSpace(values.Lyric) != "" {
-		lyric := values.Lyric
+	if strings.TrimSpace(payload.Values.Lyric) != "" {
+		lyric := payload.Values.Lyric
 		params.Lyric = &lyric
 	}
-	if releaseYear != nil {
-		params.ReleaseYear = releaseYear
-	}
-	if albumIDs != nil {
-		params.AlbumIDs = albumIDs
+	if payload.ReleaseYear != nil {
+		params.ReleaseYear = payload.ReleaseYear
 	}
 
 	createdBy := user.ID
 	params.CreatedBy = &createdBy
 
 	if _, err := h.songs.Create(r.Context(), params); err != nil {
-		errorsList = append(errorsList, "Failed to save the song. Please try again.")
+		payload.Errors = append(payload.Errors, "Failed to save the song. Please try again.")
 		props := components.AdminSongCreateProps{
-			Values:      values,
-			Errors:      errorsList,
-			FieldErrors: fieldErrors,
-			Artists:     markSelected(lookups.artists, values.ArtistIDs),
-			Writers:     markSelected(lookups.writers, values.WriterIDs),
-			Albums:      markSelected(lookups.albums, values.AlbumIDs),
-			Levels:      buildLevelOptions(values.Level),
-			Languages:   buildLanguageOptions(values.Language),
+			Values:      payload.Values,
+			Errors:      payload.Errors,
+			FieldErrors: payload.FieldErrors,
+			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
+			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
+			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
+			Levels:      buildLevelOptions(payload.Values.Level),
+			Languages:   buildLanguageOptions(payload.Values.Language),
 			CurrentUser: user.Username,
 		}
 		templ.Handler(components.AdminSongCreatePage(props)).ServeHTTP(w, r)
 		return
 	}
 
-	http.Redirect(w, r, "/admin/song/create?created=1", http.StatusFound)
+	http.Redirect(w, r, "/admin/songs/create?created=1", http.StatusFound)
+}
+
+// Edit loads an existing song and renders the edit form.
+func (h *Handler) Edit(w http.ResponseWriter, r *http.Request) {
+	user, ok := adminctx.FromContext(r.Context())
+	if !ok {
+		http.Redirect(w, r, "/admin/login", http.StatusFound)
+		return
+	}
+
+	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
+	songID, err := strconv.Atoi(rawID)
+	if err != nil || songID <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+
+	song, err := h.songs.Get(r.Context(), songID)
+	if err != nil {
+		if errors.Is(err, songsvc.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, "failed to load song", http.StatusInternalServerError)
+		return
+	}
+
+	lookups, lookupErr := h.fetchLookups(r)
+	if lookupErr != nil {
+		http.Error(w, "failed to load admin data", http.StatusInternalServerError)
+		return
+	}
+
+	values := buildValuesFromSong(song)
+
+	props := components.AdminSongEditProps{
+		SongID:      songID,
+		Values:      values,
+		FieldErrors: map[string]string{},
+		Artists:     markSelected(lookups.artists, values.ArtistIDs),
+		Writers:     markSelected(lookups.writers, values.WriterIDs),
+		Albums:      markSelected(lookups.albums, values.AlbumIDs),
+		Levels:      buildLevelOptions(values.Level),
+		Languages:   buildLanguageOptions(values.Language),
+		CurrentUser: user.Username,
+	}
+
+	if r.URL.Query().Get("updated") == "1" {
+		props.Success = true
+		props.SuccessText = "Song updated successfully."
+	}
+
+	templ.Handler(components.AdminSongEditPage(props)).ServeHTTP(w, r)
+}
+
+// Update processes the edit form submission for an existing song.
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	user, ok := adminctx.FromContext(r.Context())
+	if !ok {
+		http.Redirect(w, r, "/admin/login", http.StatusFound)
+		return
+	}
+
+	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
+	songID, err := strconv.Atoi(rawID)
+	if err != nil || songID <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+
+	payload, parseErr := parseSongForm(r)
+	if parseErr != nil {
+		http.Error(w, "invalid form submission", http.StatusBadRequest)
+		return
+	}
+
+	lookups, lookupErr := h.fetchLookups(r)
+	if lookupErr != nil {
+		payload.Errors = append(payload.Errors, "Unable to load supporting data.")
+		props := components.AdminSongEditProps{
+			SongID:      songID,
+			Values:      payload.Values,
+			Errors:      payload.Errors,
+			FieldErrors: payload.FieldErrors,
+			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
+			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
+			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
+			Levels:      buildLevelOptions(payload.Values.Level),
+			Languages:   buildLanguageOptions(payload.Values.Language),
+			CurrentUser: user.Username,
+		}
+		templ.Handler(components.AdminSongEditPage(props)).ServeHTTP(w, r)
+		return
+	}
+
+	if len(payload.FieldErrors) > 0 || len(payload.Errors) > 0 {
+		props := components.AdminSongEditProps{
+			SongID:      songID,
+			Values:      payload.Values,
+			Errors:      payload.Errors,
+			FieldErrors: payload.FieldErrors,
+			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
+			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
+			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
+			Levels:      buildLevelOptions(payload.Values.Level),
+			Languages:   buildLanguageOptions(payload.Values.Language),
+			CurrentUser: user.Username,
+		}
+		templ.Handler(components.AdminSongEditPage(props)).ServeHTTP(w, r)
+		return
+	}
+
+	params := songsvc.UpdateParams{
+		MutationParams: songsvc.MutationParams{
+			Title:     payload.Values.Title,
+			ArtistIDs: payload.ArtistIDs,
+			WriterIDs: payload.WriterIDs,
+			AlbumIDs:  payload.AlbumIDs,
+		},
+	}
+
+	if payload.Values.Level != "" {
+		level := payload.Values.Level
+		params.Level = &level
+	}
+	if payload.Values.Key != "" {
+		key := payload.Values.Key
+		params.Key = &key
+	}
+	if payload.Values.Language != "" {
+		language := payload.Values.Language
+		params.Language = &language
+	}
+	if strings.TrimSpace(payload.Values.Lyric) != "" {
+		lyric := payload.Values.Lyric
+		params.Lyric = &lyric
+	}
+	if payload.ReleaseYear != nil {
+		params.ReleaseYear = payload.ReleaseYear
+	}
+
+	if err := h.songs.Update(r.Context(), songID, params); err != nil {
+		if errors.Is(err, songsvc.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, "failed to update song", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/admin/songs/%d/edit?updated=1", songID), http.StatusFound)
+}
+
+// Delete removes a song and redirects back to the listing.
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	if _, ok := adminctx.FromContext(r.Context()); !ok {
+		http.Redirect(w, r, "/admin/login", http.StatusFound)
+		return
+	}
+
+	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
+	songID, err := strconv.Atoi(rawID)
+	if err != nil || songID <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+
+	searchTerm := strings.TrimSpace(r.FormValue("q"))
+
+	if err := h.songs.Delete(r.Context(), songID); err != nil && !errors.Is(err, songsvc.ErrNotFound) {
+		http.Error(w, "failed to delete song", http.StatusInternalServerError)
+		return
+	}
+
+	redirectURL := "/admin/songs"
+	if searchTerm != "" {
+		redirectURL = "/admin/songs?q=" + url.QueryEscape(searchTerm)
+	}
+
+	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+type songFormPayload struct {
+	Values      components.AdminSongFormValues
+	FieldErrors map[string]string
+	Errors      []string
+	ReleaseYear *int
+	AlbumIDs    []int
+	ArtistIDs   []int
+	WriterIDs   []int
+}
+
+func parseSongForm(r *http.Request) (songFormPayload, error) {
+	payload := songFormPayload{
+		Values: components.AdminSongFormValues{
+			AlbumIDs:  []string{},
+			ArtistIDs: []string{},
+			WriterIDs: []string{},
+		},
+		FieldErrors: map[string]string{},
+		Errors:      []string{},
+	}
+
+	if err := r.ParseForm(); err != nil {
+		return payload, err
+	}
+
+	payload.Values.Title = strings.TrimSpace(r.FormValue("title"))
+	payload.Values.Level = strings.ToLower(strings.TrimSpace(r.FormValue("level")))
+	payload.Values.Key = strings.TrimSpace(r.FormValue("key"))
+	payload.Values.Language = strings.ToLower(strings.TrimSpace(r.FormValue("language")))
+	payload.Values.ReleaseYear = strings.TrimSpace(r.FormValue("release_year"))
+	payload.Values.AlbumIDs = r.Form["album_ids"]
+	payload.Values.ArtistIDs = r.Form["artist_ids"]
+	payload.Values.WriterIDs = r.Form["writer_ids"]
+	payload.Values.Lyric = r.FormValue("lyric")
+
+	if payload.Values.Title == "" {
+		payload.FieldErrors["title"] = "Title is required."
+	}
+
+	if payload.Values.Level != "" {
+		if _, ok := allowedLevels[payload.Values.Level]; !ok {
+			payload.FieldErrors["level"] = "Choose a valid level."
+		}
+	}
+
+	if payload.Values.Language != "" {
+		if _, ok := allowedLanguages[payload.Values.Language]; !ok {
+			payload.FieldErrors["language"] = "Choose a valid language."
+		}
+	}
+
+	releaseYear, err := parseOptionalInt(payload.Values.ReleaseYear)
+	if err != nil {
+		payload.FieldErrors["release_year"] = "Release year must be a number."
+	} else {
+		payload.ReleaseYear = releaseYear
+	}
+
+	if albumIDs, err := parseIDList(payload.Values.AlbumIDs); err != nil {
+		payload.FieldErrors["album_ids"] = "Album must be a valid number."
+	} else {
+		payload.AlbumIDs = albumIDs
+	}
+
+	if artistIDs, err := parseIDList(payload.Values.ArtistIDs); err != nil {
+		payload.FieldErrors["artist_ids"] = "Artist selection must contain numeric IDs."
+	} else {
+		payload.ArtistIDs = artistIDs
+	}
+
+	if writerIDs, err := parseIDList(payload.Values.WriterIDs); err != nil {
+		payload.FieldErrors["writer_ids"] = "Writer selection must contain numeric IDs."
+	} else {
+		payload.WriterIDs = writerIDs
+	}
+
+	return payload, nil
 }
 
 func (h *Handler) fetchLookups(r *http.Request) (struct {
@@ -284,8 +550,41 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 	return lookups, nil
 }
 
+func buildValuesFromSong(song songsvc.Song) components.AdminSongFormValues {
+	values := components.AdminSongFormValues{
+		Title:       song.Title,
+		Level:       "",
+		Key:         "",
+		Language:    "",
+		ReleaseYear: "",
+		AlbumIDs:    toStringIDsFromAlbums(song.Albums),
+		ArtistIDs:   toStringIDsFromPeople(song.Artists),
+		WriterIDs:   toStringIDsFromPeople(song.Writers),
+		Lyric:       "",
+	}
+
+	if song.Level != nil {
+		values.Level = strings.ToLower(strings.TrimSpace(*song.Level))
+	}
+	if song.Key != nil {
+		values.Key = strings.TrimSpace(*song.Key)
+	}
+	if song.Language != nil {
+		values.Language = strings.ToLower(strings.TrimSpace(*song.Language))
+	}
+	if song.ReleaseYear != nil {
+		values.ReleaseYear = strconv.Itoa(*song.ReleaseYear)
+	}
+	if song.Lyric != nil {
+		values.Lyric = *song.Lyric
+	}
+
+	return values
+}
+
 func defaultSongValues() components.AdminSongFormValues {
 	return components.AdminSongFormValues{
+		AlbumIDs:  []string{},
 		ArtistIDs: []string{},
 		WriterIDs: []string{},
 	}
@@ -351,15 +650,6 @@ func markSelected(options []components.AdminSongOption, selectedValues []string)
 	return marked
 }
 
-func markSelectedSingle(options []components.AdminSongOption, selectedValue string) []components.AdminSongOption {
-	marked := make([]components.AdminSongOption, len(options))
-	for i, option := range options {
-		option.Selected = option.Value == selectedValue
-		marked[i] = option
-	}
-	return marked
-}
-
 func buildLevelOptions(selected string) []components.AdminSongOption {
 	levels := []components.AdminSongOption{
 		{Value: "easy", Label: "Easy"},
@@ -383,4 +673,66 @@ func buildLanguageOptions(selected string) []components.AdminSongOption {
 		languages[i].Selected = option.Value == selected
 	}
 	return languages
+}
+
+func joinNames(people []songsvc.Person) string {
+	if len(people) == 0 {
+		return "—"
+	}
+
+	names := make([]string, 0, len(people))
+	for _, person := range people {
+		name := strings.TrimSpace(person.Name)
+		if name == "" {
+			continue
+		}
+		names = append(names, name)
+	}
+
+	if len(names) == 0 {
+		return "—"
+	}
+
+	return strings.Join(names, ", ")
+}
+
+func toStringIDsFromPeople(people []songsvc.Person) []string {
+	if len(people) == 0 {
+		return []string{}
+	}
+	ids := make([]string, 0, len(people))
+	for _, person := range people {
+		ids = append(ids, strconv.Itoa(person.ID))
+	}
+	return ids
+}
+
+func toStringIDsFromAlbums(albums []songsvc.Album) []string {
+	if len(albums) == 0 {
+		return []string{}
+	}
+	ids := make([]string, 0, len(albums))
+	for _, album := range albums {
+		ids = append(ids, strconv.Itoa(album.ID))
+	}
+	return ids
+}
+
+func pointerToHuman(value *string) string {
+	if value == nil {
+		return "—"
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return "—"
+	}
+	lower := strings.ToLower(trimmed)
+	return strings.ToUpper(lower[:1]) + lower[1:]
+}
+
+func releaseYearOrDash(value *int) string {
+	if value == nil || *value <= 0 {
+		return "—"
+	}
+	return strconv.Itoa(*value)
 }

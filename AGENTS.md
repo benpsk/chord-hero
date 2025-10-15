@@ -57,7 +57,7 @@
 - `cmd/migrate`: Raw SQL migration runner.
 - Group reusable code under `internal/` (domain logic, handlers) and `pkg/` (shared utilities) as the service grows.
 - Keep templates or static assets in `web/static/` and configuration in `web/config/` if/when needed.
-- Use layered architecture.
+- Follow the layered architecture.
 
 ### Build, Test, and Development Commands
 - `make run`: Start the web server locally for iterative development.

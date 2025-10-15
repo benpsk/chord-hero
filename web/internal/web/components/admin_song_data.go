@@ -6,12 +6,65 @@ type AdminSongCreateProps struct {
 	Errors      []string
 	FieldErrors map[string]string
 	Success     bool
+	SuccessText string
 	Artists     []AdminSongOption
 	Writers     []AdminSongOption
 	Albums      []AdminSongOption
 	Levels      []AdminSongOption
 	Languages   []AdminSongOption
 	CurrentUser string
+}
+
+// AdminSongEditProps collects data used by the song edit template.
+type AdminSongEditProps struct {
+	SongID      int
+	Values      AdminSongFormValues
+	Errors      []string
+	FieldErrors map[string]string
+	Success     bool
+	SuccessText string
+	Artists     []AdminSongOption
+	Writers     []AdminSongOption
+	Albums      []AdminSongOption
+	Levels      []AdminSongOption
+	Languages   []AdminSongOption
+	CurrentUser string
+}
+
+// AdminSongListProps contains information for the admin song index.
+type AdminSongListProps struct {
+	SearchTerm   string
+	Total        int
+	Songs        []AdminSongListItem
+	CurrentUser  string
+	ResultsLabel string
+}
+
+// AdminSongListItem represents a single row in the admin song list.
+type AdminSongListItem struct {
+	ID          int
+	Title       string
+	Artists     string
+	Writers     string
+	Level       string
+	Language    string
+	ReleaseYear string
+}
+
+// AdminSongFormProps drives the shared song form template.
+type AdminSongFormProps struct {
+	Values      AdminSongFormValues
+	Errors      []string
+	FieldErrors map[string]string
+	Success     bool
+	SuccessText string
+	Artists     []AdminSongOption
+	Writers     []AdminSongOption
+	Albums      []AdminSongOption
+	Levels      []AdminSongOption
+	Languages   []AdminSongOption
+	FormAction  string
+	SubmitLabel string
 }
 
 // AdminSongFormValues captures submitted form values for re-rendering the page.
@@ -21,7 +74,7 @@ type AdminSongFormValues struct {
 	Key             string
 	Language        string
 	ReleaseYear     string
-	AlbumIDs         []string
+	AlbumIDs        []string
 	PrimaryWriterID string
 	ArtistIDs       []string
 	WriterIDs       []string

@@ -5,8 +5,8 @@ import "context"
 // Service aggregates trending data sets for the discovery endpoints.
 type Service interface {
 	TrendingSets(ctx context.Context) ([]Trending, error)
-	TrendingAlbums(ctx context.Context, limit int) ([]TrendingAlbum, error)
-	TrendingArtists(ctx context.Context, limit int) ([]TrendingArtist, error)
+	TrendingAlbums(ctx context.Context) ([]TrendingAlbum, error)
+	TrendingArtists(ctx context.Context) ([]TrendingArtist, error)
 }
 
 // Trending represents a curated trending collection.
@@ -17,25 +17,31 @@ type Trending struct {
 	Description *string `json:"description,omitempty"`
 }
 
+type Artist struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 // TrendingAlbum captures aggregate data for a popular album.
 type TrendingAlbum struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Total int    `json:"total"`
+	ID         int      `json:"id"`
+	Name       string   `json:"name"`
+	TotalPlays int      `json:"total_plays"`
+	Artists    []Artist `json:"artists"`
 }
 
 // TrendingArtist captures aggregate data for a popular artist.
 type TrendingArtist struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Total int    `json:"total"`
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	TotalPlays int    `json:"total_plays"`
 }
 
 // Repository encapsulates data access for trending resources.
 type Repository interface {
 	TrendingSets(ctx context.Context) ([]Trending, error)
-	TrendingAlbums(ctx context.Context, limit int) ([]TrendingAlbum, error)
-	TrendingArtists(ctx context.Context, limit int) ([]TrendingArtist, error)
+	TrendingAlbums(ctx context.Context) ([]TrendingAlbum, error)
+	TrendingArtists(ctx context.Context) ([]TrendingArtist, error)
 }
 
 type service struct {
@@ -51,10 +57,10 @@ func (s *service) TrendingSets(ctx context.Context) ([]Trending, error) {
 	return s.repo.TrendingSets(ctx)
 }
 
-func (s *service) TrendingAlbums(ctx context.Context, limit int) ([]TrendingAlbum, error) {
-	return s.repo.TrendingAlbums(ctx, limit)
+func (s *service) TrendingAlbums(ctx context.Context) ([]TrendingAlbum, error) {
+	return s.repo.TrendingAlbums(ctx)
 }
 
-func (s *service) TrendingArtists(ctx context.Context, limit int) ([]TrendingArtist, error) {
-	return s.repo.TrendingArtists(ctx, limit)
+func (s *service) TrendingArtists(ctx context.Context) ([]TrendingArtist, error) {
+	return s.repo.TrendingArtists(ctx)
 }

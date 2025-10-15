@@ -12,7 +12,7 @@ import (
 	"github.com/lyricapp/lyric/web/internal/web/components"
 )
 
-const defaultRedirect = "/admin/song/create"
+const defaultRedirect = "/admin/songs"
 
 // Handler serves the admin login page and processes sign-in requests.
 type Handler struct {

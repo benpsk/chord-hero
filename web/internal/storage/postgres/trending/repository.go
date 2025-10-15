@@ -66,41 +66,79 @@ func (r *Repository) TrendingSets(ctx context.Context) ([]trendingsvc.Trending, 
 }
 
 // TrendingAlbums returns albums ordered by play count.
-func (r *Repository) TrendingAlbums(ctx context.Context, limit int) ([]trendingsvc.TrendingAlbum, error) {
-	if limit <= 0 {
-		limit = 10
-	}
-
+func (r *Repository) TrendingAlbums(ctx context.Context) ([]trendingsvc.TrendingAlbum, error) {
+	limit := 3
 	query := `
-        WITH album_plays AS (
-            SELECT als.album_id, COUNT(*) AS play_count
-            FROM plays p
-            JOIN album_song als ON als.song_id = p.song_id
-            GROUP BY als.album_id
-        )
-        SELECT a.id, a.name, ap.play_count
-        FROM album_plays ap
-        JOIN albums a ON a.id = ap.album_id
-        ORDER BY ap.play_count DESC, a.name ASC
-        LIMIT $1
-    `
+		with song_plays as (
+			-- step 1: efficiently count plays for each song
+			select
+				song_id,
+				count(*) as play_count
+			from
+				plays
+			where
+				created_at >= now() - interval '30 days'
+			group by
+				song_id
+		),
+		album_plays as (
+			-- step 2: sum up song plays for each album
+			select
+				aso.album_id,
+				sum(sp.play_count) as total_plays
+			from
+				album_song as aso
+			join
+				song_plays as sp on aso.song_id = sp.song_id
+			group by
+				aso.album_id
+		),
+		album_artists_agg as (
+			-- step 3: aggregate artists into a json array for each album
+			select
+				aa.album_id,
+				jsonb_agg(
+					jsonb_build_object('id', ar.id, 'name', ar.name)
+					order by ar.name
+				) as artists
+			from
+				album_artist as aa
+			join
+				artists as ar on aa.artist_id = ar.id
+			group by
+				aa.album_id
+		)
+		-- final step: combine album play counts, names, and the new artist json
+		select
+			ap.album_id,
+			al.name as album_name,
+			ap.total_plays,
+			aaa.artists
+		from
+			album_plays as ap
+		join
+			albums as al on ap.album_id = al.id
+		left join -- use left join in case an album has plays but no artists linked
+			album_artists_agg as aaa on ap.album_id = aaa.album_id
+		order by
+			ap.total_plays desc
+		limit $1
+	`
 
 	rows, err := r.db.Query(ctx, query, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list trending albums: %w", err)
 	}
 	defer rows.Close()
-
 	albums := make([]trendingsvc.TrendingAlbum, 0, limit)
 
 	for rows.Next() {
 		var album trendingsvc.TrendingAlbum
-		if err := rows.Scan(&album.ID, &album.Name, &album.Total); err != nil {
+		if err := rows.Scan(&album.ID, &album.Name, &album.TotalPlays, &album.Artists); err != nil {
 			return nil, fmt.Errorf("scan trending album: %w", err)
 		}
 		albums = append(albums, album)
 	}
-
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate trending albums: %w", err)
 	}
@@ -109,24 +147,27 @@ func (r *Repository) TrendingAlbums(ctx context.Context, limit int) ([]trendings
 }
 
 // TrendingArtists returns artists ordered by play count.
-func (r *Repository) TrendingArtists(ctx context.Context, limit int) ([]trendingsvc.TrendingArtist, error) {
-	if limit <= 0 {
-		limit = 10
-	}
-
+func (r *Repository) TrendingArtists(ctx context.Context) ([]trendingsvc.TrendingArtist, error) {
+	limit := 3
 	query := `
-        WITH artist_plays AS (
-            SELECT sa.artist_id, COUNT(*) AS play_count
-            FROM plays p
-            JOIN artist_song sa ON sa.song_id = p.song_id
-            GROUP BY sa.artist_id
-        )
-        SELECT ar.id, ar.name, ap.play_count
-        FROM artist_plays ap
-        JOIN artists ar ON ar.id = ap.artist_id
-        ORDER BY ap.play_count DESC, ar.name ASC
-        LIMIT $1
-    `
+		select
+			a.id,
+			a.name,
+			count(p.song_id) as total_plays
+		from
+			artists as a
+		join
+			artist_song as a_s on a.id = a_s.artist_id
+		join
+			plays as p on a_s.song_id = p.song_id
+		where
+			p.created_at >= now() - interval '30 days'
+		group by
+			a.id, a.name
+		order by
+			total_plays desc
+		limit $1
+	`
 
 	rows, err := r.db.Query(ctx, query, limit)
 	if err != nil {
@@ -138,7 +179,7 @@ func (r *Repository) TrendingArtists(ctx context.Context, limit int) ([]trending
 
 	for rows.Next() {
 		var artist trendingsvc.TrendingArtist
-		if err := rows.Scan(&artist.ID, &artist.Name, &artist.Total); err != nil {
+		if err := rows.Scan(&artist.ID, &artist.Name, &artist.TotalPlays); err != nil {
 			return nil, fmt.Errorf("scan trending artist: %w", err)
 		}
 		artists = append(artists, artist)

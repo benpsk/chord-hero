@@ -12,7 +12,10 @@ import (
 // Service exposes song related domain behaviours.
 type Service interface {
 	List(ctx context.Context, params ListParams) (ListResult, error)
+	Get(ctx context.Context, id int) (Song, error)
 	Create(ctx context.Context, params CreateParams) (int, error)
+	Update(ctx context.Context, id int, params UpdateParams) error
+	Delete(ctx context.Context, id int) error
 }
 
 // ListParams captures filtering options accepted by the list endpoint.
@@ -28,18 +31,28 @@ type ListParams struct {
 	UserID      *int
 }
 
+// MutationParams captures shared song fields used across create and update flows.
+type MutationParams struct {
+	Title       string
+	Level       *string
+	Key         *string
+	Language    *string
+	Lyric       *string
+	ReleaseYear *int
+	AlbumIDs    []int
+	ArtistIDs   []int
+	WriterIDs   []int
+}
+
 // CreateParams captures the fields required to create a new song record.
 type CreateParams struct {
-	Title           string
-	Level           *string
-	Key             *string
-	Language        *string
-	Lyric           *string
-	ReleaseYear     *int
-	AlbumIDs         []int
-	ArtistIDs       []int
-	WriterIDs       []int
-	CreatedBy       *int
+	MutationParams
+	CreatedBy *int
+}
+
+// UpdateParams captures the fields required to update an existing song record.
+type UpdateParams struct {
+	MutationParams
 }
 
 // ListResult represents a paginated song collection.
@@ -82,6 +95,9 @@ type Album struct {
 type Repository interface {
 	List(ctx context.Context, params ListParams) (ListResult, error)
 	Create(ctx context.Context, params CreateParams) (int, error)
+	Get(ctx context.Context, id int) (Song, error)
+	Update(ctx context.Context, id int, params UpdateParams) error
+	Delete(ctx context.Context, id int) error
 }
 
 type service struct {
@@ -115,10 +131,54 @@ var (
 // ErrTitleRequired is returned when attempting to create a song without a title.
 var ErrTitleRequired = errors.New("songs: title is required")
 
+// ErrNotFound indicates a requested song does not exist.
+var ErrNotFound = errors.New("songs: not found")
+
 func (s *service) Create(ctx context.Context, params CreateParams) (int, error) {
+	if err := normaliseMutation(&params.MutationParams); err != nil {
+		return 0, err
+	}
+
+	if params.CreatedBy != nil && *params.CreatedBy <= 0 {
+		params.CreatedBy = nil
+	}
+
+	return s.repo.Create(ctx, params)
+}
+
+// Get returns a song with its related data by identifier.
+func (s *service) Get(ctx context.Context, id int) (Song, error) {
+	if id <= 0 {
+		return Song{}, ErrNotFound
+	}
+	return s.repo.Get(ctx, id)
+}
+
+// Update applies new values to an existing song.
+func (s *service) Update(ctx context.Context, id int, params UpdateParams) error {
+	if id <= 0 {
+		return ErrNotFound
+	}
+
+	if err := normaliseMutation(&params.MutationParams); err != nil {
+		return err
+	}
+
+	return s.repo.Update(ctx, id, params)
+}
+
+// Delete removes a song record.
+func (s *service) Delete(ctx context.Context, id int) error {
+	if id <= 0 {
+		return ErrNotFound
+	}
+	return s.repo.Delete(ctx, id)
+}
+
+func normaliseMutation(params *MutationParams) error {
 	title := strings.TrimSpace(params.Title)
 	if title == "" {
-		return 0, ErrTitleRequired
+		return ErrTitleRequired
 	}
 	params.Title = title
 
@@ -128,7 +188,7 @@ func (s *service) Create(ctx context.Context, params CreateParams) (int, error) 
 			params.Level = nil
 		} else {
 			if _, ok := allowedLevels[value]; !ok {
-				return 0, fmt.Errorf("songs: invalid level %q", value)
+				return fmt.Errorf("songs: invalid level %q", value)
 			}
 			params.Level = ptr(value)
 		}
@@ -140,7 +200,7 @@ func (s *service) Create(ctx context.Context, params CreateParams) (int, error) 
 			params.Language = nil
 		} else {
 			if _, ok := allowedLanguages[value]; !ok {
-				return 0, fmt.Errorf("songs: invalid language %q", value)
+				return fmt.Errorf("songs: invalid language %q", value)
 			}
 			params.Language = ptr(value)
 		}
@@ -157,7 +217,6 @@ func (s *service) Create(ctx context.Context, params CreateParams) (int, error) 
 
 	if params.Lyric != nil {
 		value := strings.ReplaceAll(*params.Lyric, "\r\n", "\n")
-		//		value = strings.ReplaceAll(value, "\n", "\\n")
 		params.Lyric = ptr(value)
 	}
 
@@ -166,15 +225,12 @@ func (s *service) Create(ctx context.Context, params CreateParams) (int, error) 
 			params.ReleaseYear = nil
 		}
 	}
-	if params.CreatedBy != nil && *params.CreatedBy <= 0 {
-		params.CreatedBy = nil
-	}
 
 	params.ArtistIDs = uniquePositive(params.ArtistIDs)
 	params.WriterIDs = uniquePositive(params.WriterIDs)
-	params.AlbumIDs = uniquePositive(params.WriterIDs)
+	params.AlbumIDs = uniquePositive(params.AlbumIDs)
 
-	return s.repo.Create(ctx, params)
+	return nil
 }
 
 func ptr[T any](value T) *T {

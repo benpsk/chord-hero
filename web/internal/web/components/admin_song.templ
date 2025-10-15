@@ -1,229 +1,358 @@
 package components
 
-templ AdminSongCreatePage(props AdminSongCreateProps) {
+import "fmt"
+
+templ AdminSongListPage(props AdminSongListProps) {
 	@Layout(PageMeta{
-		Title:       "Create Song",
-		Description: "Add a new song to the catalogue.",
-		Path:        "/admin/song/create",
-		MainClass:   "mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-6 py-10",
+		Title:       "Songs · Admin",
+		Description: "Browse and manage songs in the catalogue.",
+		Path:        "/admin/songs",
+		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
 		ActiveNav:   "",
 		NoIndex:     true,
 	}) {
 		<section class="space-y-8">
-			<div class="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-				<div>
-					<span class="badge badge-primary badge-outline mb-2">Admin</span>
-					<h1 class="text-3xl font-semibold">New song</h1>
-					<p class="text-base-content/70">Fill in the details below to publish a song to the catalogue.</p>
-				</div>
-				<div class="flex items-center gap-4">
-					if props.CurrentUser != "" {
-						<span class="text-sm text-base-content/70">Signed in as <span class="font-medium text-base-content">{ props.CurrentUser }</span></span>
-					}
-					<form method="post" action="/admin/logout">
-						<button type="submit" class="btn btn-ghost btn-sm">Log out</button>
+			@AdminHeader(AdminHeaderProps{
+				Title:       "Songs",
+				Description: "Search, edit, or remove songs from the catalogue",
+				CurrentUser: props.CurrentUser,
+			})
+			<div class="flex flex-col gap-4 rounded-box border border-base-300 bg-base-100 p-6 shadow">
+				<div class="flex gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+					<form method="get" class="flex w-full gap-2 sm:flex-row sm:items-center sm:gap-3">
+						<label class="input input-bordered flex w-full items-center gap-2 sm:w-72">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18a7.5 7.5 0 006.15-3.35z"></path>
+							</svg>
+							<input
+								type="search"
+								name="q"
+								class="grow"
+								placeholder="Search by title"
+								value={ props.SearchTerm }
+							/>
+						</label>
+						<button type="submit" class="btn btn-neutral btn-outline sm:w-auto">Search</button>
 					</form>
+					<a href="/admin/songs" class="btn btn-secondary sm:w-auto">Reset</a>
+					<a href="/admin/songs/create" class="btn btn-primary sm:w-auto">New</a>
 				</div>
+				if props.Total > 0 {
+					<p class="text-sm text-base-content/70">Found { props.Total } { props.ResultsLabel }.</p>
+				} else {
+					<p class="text-sm text-base-content/70">No matching songs yet.</p>
+				}
 			</div>
-			if props.Success {
-				<div class="alert alert-success">
-					<span>Song created successfully.</span>
+			if len(props.Songs) == 0 {
+				<div class="rounded-box border border-dashed border-base-300 bg-base-100 p-12 text-center text-base-content/60 shadow">
+					<p class="text-lg font-medium">No songs match your search.</p>
+					<p class="mt-2">Try a different title or <a href="/admin/songs/create" class="link link-primary">add a new song</a>.</p>
+				</div>
+			} else {
+				<div class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow">
+					<table class="table">
+						<thead>
+							<tr class="text-base-content/70">
+								<th class="min-w-[200px]">Title</th>
+								<th class="min-w-[180px]">Artists</th>
+								<th class="min-w-[180px]">Writers</th>
+								<th class="w-24">Level</th>
+								<th class="w-28">Language</th>
+								<th class="w-24">Release</th>
+								<th class="w-32 text-right">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, song := range props.Songs {
+								<tr class="hover">
+									<td class="align-top font-medium">{ song.Title }</td>
+									<td class="align-top">{ song.Artists }</td>
+									<td class="align-top">{ song.Writers }</td>
+									<td class="align-top">{ song.Level }</td>
+									<td class="align-top">{ song.Language }</td>
+									<td class="align-top">{ song.ReleaseYear }</td>
+									<td class="align-top text-right">
+										<div class="flex justify-end gap-2">
+											<a href={ fmt.Sprintf("/admin/songs/%d/edit", song.ID) } class="btn btn-ghost btn-xs">Edit</a>
+											<form method="post" action={ fmt.Sprintf("/admin/songs/%d/delete", song.ID) } class="inline">
+												if props.SearchTerm != "" {
+													<input type="hidden" name="q" value={ props.SearchTerm }/>
+												}
+												<button type="submit" class="btn btn-error btn-xs" onclick="return confirm('Delete this song?');">Delete</button>
+											</form>
+										</div>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
 				</div>
 			}
-			for _, errorMsg := range props.Errors {
-				<div class="alert alert-error">
-					<span>{ errorMsg }</span>
-				</div>
-			}
-			<form method="post" action="/admin/song/create" class="space-y-6">
-				<div class="grid gap-6 md:grid-cols-2">
-					<div class="space-y-2">
-						<label class="form-control w-full">
-							<div class="label">
-								<span class="label-text">Title</span>
-							</div>
-							<input
-								type="text"
-								name="title"
-								class="input input-bordered w-full"
-								value={ props.Values.Title }
-								required
-							/>
-						</label>
-						if message, ok := props.FieldErrors["title"]; ok {
-							<p class="text-sm text-error">{ message }</p>
-						}
-					</div>
-					<div class="space-y-2">
-						<label class="form-control w-full">
-							<div class="label">
-								<span class="label-text">Key</span>
-							</div>
-							<input
-								type="text"
-								name="key"
-								class="input input-bordered w-full"
-								value={ props.Values.Key }
-								placeholder="C, G, D..."
-							/>
-						</label>
-					</div>
-				</div>
-				<div class="grid gap-6 md:grid-cols-2">
-					<div class="space-y-2">
-						<label class="form-control w-full">
-							<div class="label">
-								<span class="label-text">Level</span>
-							</div>
-							<select name="level" class="select select-bordered w-full">
-								<option value="">Choose level</option>
-								for _, option := range props.Levels {
-									<option value={ option.Value } selected={ option.Selected }>{ option.Label }</option>
-								}
-							</select>
-						</label>
-						if message, ok := props.FieldErrors["level"]; ok {
-							<p class="text-sm text-error">{ message }</p>
-						}
-					</div>
-					<div class="space-y-2">
-						<label class="form-control w-full">
-							<div class="label">
-								<span class="label-text">Language</span>
-							</div>
-							<select name="language" class="select select-bordered w-full">
-								<option value="">Choose language</option>
-								for _, option := range props.Languages {
-									<option value={ option.Value } selected={ option.Selected }>{ option.Label }</option>
-								}
-							</select>
-						</label>
-						if message, ok := props.FieldErrors["language"]; ok {
-							<p class="text-sm text-error">{ message }</p>
-						}
-					</div>
-				</div>
-				<div class="grid gap-6 md:grid-cols-2">
-					<div class="space-y-2">
-						<label class="form-control w-full">
-							<div class="label">
-								<span class="label-text">Release year</span>
-							</div>
-							<input
-								type="number"
-								name="release_year"
-								class="input input-bordered w-full"
-								value={ props.Values.ReleaseYear }
-								min="0"
-								placeholder="2024"
-							/>
-						</label>
-						if message, ok := props.FieldErrors["release_year"]; ok {
-							<p class="text-sm text-error">{ message }</p>
-						}
-					</div>
-					<div class="space-y-2">
-						<label class="form-control w-full">
-							<div class="label">
-								<span class="label-text">Album</span>
-							</div>
-							<select name="album_ids" multiple class="select select-bordered h-48 w-full">
-								<option value="">No album</option>
-								for _, option := range props.Albums {
-									if option.Selected {
-										<option value={ option.Value } selected>{ option.Label }</option>
-									} else {
-										<option value={ option.Value }>{ option.Label }</option>
-									}
-								}
-							</select>
-						</label>
-						if message, ok := props.FieldErrors["album_ids"]; ok {
-							<p class="text-sm text-error">{ message }</p>
-						}
-					</div>
-				</div>
-				<div class="grid gap-6 md:grid-cols-2">
-					<div class="space-y-2">
-						<label class="form-control w-full">
-							<div class="label">
-								<span class="label-text">Writers</span>
-								<span class="label-text-alt">Hold Cmd/Ctrl to select multiple</span>
-							</div>
-							<select name="writer_ids" multiple class="select select-bordered h-48 w-full" size="6">
-								<option value="">Unknwon writer</option>
-								for _, option := range props.Writers {
-									if option.Selected {
-										<option value={ option.Value } selected>{ option.Label }</option>
-									} else {
-										<option value={ option.Value }>{ option.Label }</option>
-									}
-								}
-							</select>
-						</label>
-						if message, ok := props.FieldErrors["writer_ids"]; ok {
-							<p class="text-sm text-error">{ message }</p>
-						}
-					</div>
-					<div class="space-y-2">
-						<label class="form-control w-full">
-							<div class="label">
-								<span class="label-text">Artists</span>
-								<span class="label-text-alt">Hold Cmd/Ctrl to select multiple</span>
-							</div>
-							<select name="artist_ids" multiple class="select select-bordered h-48 w-full" size="6">
-								<option value="">Unknwon artist</option>
-								for _, option := range props.Artists {
-									if option.Selected {
-										<option value={ option.Value } selected>{ option.Label }</option>
-									} else {
-										<option value={ option.Value }>{ option.Label }</option>
-									}
-								}
-							</select>
-						</label>
-						if message, ok := props.FieldErrors["artist_ids"]; ok {
-							<p class="text-sm text-error">{ message }</p>
-						}
-					</div>
-				</div>
-				<div class="space-y-2">
-					<label class="form-control">
-						<div class="label">
-							<span class="label-text">Lyric &amp; chords</span>
-							<span class="label-text-alt">Tab inserts a tab character</span>
-						</div>
-						<textarea
-							id="lyric-editor"
-							name="lyric"
-							class="textarea textarea-bordered h-80 w-full font-mono"
-							spellcheck="false"
-						>{ props.Values.Lyric }</textarea>
-					</label>
-				</div>
-				<div class="flex justify-end gap-4">
-					<a href="/" class="btn btn-ghost">Cancel</a>
-					<button type="submit" class="btn btn-primary">Save song</button>
-				</div>
-			</form>
 		</section>
-		<script>
-      document.addEventListener('DOMContentLoaded', function () {
-        const editor = document.getElementById('lyric-editor');
-        if (!editor) {
-          return;
-        }
-        editor.addEventListener('keydown', function (event) {
-          if (event.key === 'Tab') {
-            event.preventDefault();
-            const start = editor.selectionStart;
-            const end = editor.selectionEnd;
-            const value = editor.value;
-            editor.value = value.substring(0, start) + "\t" + value.substring(end);
-            editor.selectionStart = editor.selectionEnd = start + 1;
-          }
-        });
-      });
-    </script>
 	}
+}
+
+templ AdminSongCreatePage(props AdminSongCreateProps) {
+	@Layout(PageMeta{
+		Title:       "Create Song",
+		Description: "Add a new song to the catalogue.",
+		Path:        "/admin/songs/create",
+		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
+		ActiveNav:   "",
+		NoIndex:     true,
+	}) {
+		<section class="space-y-8">
+			@AdminHeader(AdminHeaderProps{
+				Title:       "New Song",
+				Description: "Fill in the details below to publish a song to the catalogue.",
+				CurrentUser: props.CurrentUser,
+			})
+			@AdminSongForm(AdminSongFormProps{
+				Values:      props.Values,
+				Errors:      props.Errors,
+				FieldErrors: props.FieldErrors,
+				Success:     props.Success,
+				SuccessText: props.SuccessText,
+				Artists:     props.Artists,
+				Writers:     props.Writers,
+				Albums:      props.Albums,
+				Levels:      props.Levels,
+				Languages:   props.Languages,
+				FormAction:  "/admin/songs/create",
+				SubmitLabel: "Create song",
+			})
+		</section>
+	}
+}
+
+templ AdminSongEditPage(props AdminSongEditProps) {
+	@Layout(PageMeta{
+		Title:       "Edit Song",
+		Description: "Update the selected song details.",
+		Path:        fmt.Sprintf("/admin/songs/%d/edit", props.SongID),
+		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
+		ActiveNav:   "",
+		NoIndex:     true,
+	}) {
+		<section class="space-y-8">
+			@AdminHeader(AdminHeaderProps{
+				Title:       "Edit Song",
+				Description: "Update the information below and save your changes.",
+				CurrentUser: props.CurrentUser,
+			})
+			@AdminSongForm(AdminSongFormProps{
+				Values:      props.Values,
+				Errors:      props.Errors,
+				FieldErrors: props.FieldErrors,
+				Success:     props.Success,
+				SuccessText: props.SuccessText,
+				Artists:     props.Artists,
+				Writers:     props.Writers,
+				Albums:      props.Albums,
+				Levels:      props.Levels,
+				Languages:   props.Languages,
+				FormAction:  fmt.Sprintf("/admin/songs/%d/edit", props.SongID),
+				SubmitLabel: "Save changes",
+			})
+		</section>
+	}
+}
+
+templ AdminSongForm(props AdminSongFormProps) {
+	if props.Success {
+		<div class="alert alert-success">
+			<span>
+				{ 
+				func() string {
+					if props.SuccessText != "" {
+						return props.SuccessText
+					}
+					return "Changes saved successfully."
+				}() }
+			</span>
+		</div>
+	}
+	for _, errorMsg := range props.Errors {
+		<div class="alert alert-error">
+			<span>{ errorMsg }</span>
+		</div>
+	}
+	<form method="post" action={ props.FormAction } class="space-y-6">
+		<div class="grid gap-6 md:grid-cols-2">
+			<div class="space-y-2">
+				<label class="form-control w-full">
+					<div class="label">
+						<span class="label-text">Title</span>
+					</div>
+					<input
+						type="text"
+						name="title"
+						class="input input-bordered w-full"
+						value={ props.Values.Title }
+						required
+					/>
+				</label>
+				if message, ok := props.FieldErrors["title"]; ok {
+					<p class="text-sm text-error">{ message }</p>
+				}
+			</div>
+			<div class="space-y-2">
+				<label class="form-control w-full">
+					<div class="label">
+						<span class="label-text">Key</span>
+					</div>
+					<input
+						type="text"
+						name="key"
+						class="input input-bordered w-full"
+						value={ props.Values.Key }
+						placeholder="C, G, D..."
+					/>
+				</label>
+			</div>
+		</div>
+		<div class="grid gap-6 md:grid-cols-2">
+			<div class="space-y-2">
+				<label class="form-control w-full">
+					<div class="label">
+						<span class="label-text">Level</span>
+					</div>
+					<select name="level" class="select select-bordered w-full">
+						<option value="">Choose level</option>
+						for _, option := range props.Levels {
+							<option value={ option.Value } selected={ option.Selected }>{ option.Label }</option>
+						}
+					</select>
+				</label>
+				if message, ok := props.FieldErrors["level"]; ok {
+					<p class="text-sm text-error">{ message }</p>
+				}
+			</div>
+			<div class="space-y-2">
+				<label class="form-control w-full">
+					<div class="label">
+						<span class="label-text">Language</span>
+					</div>
+					<select name="language" class="select select-bordered w-full">
+						<option value="">Choose language</option>
+						for _, option := range props.Languages {
+							<option value={ option.Value } selected={ option.Selected }>{ option.Label }</option>
+						}
+					</select>
+				</label>
+				if message, ok := props.FieldErrors["language"]; ok {
+					<p class="text-sm text-error">{ message }</p>
+				}
+			</div>
+		</div>
+		<div class="grid gap-6 md:grid-cols-2">
+			<div class="space-y-2">
+				<label class="form-control w-full">
+					<div class="label">
+						<span class="label-text">Release year</span>
+					</div>
+					<input
+						type="number"
+						name="release_year"
+						class="input input-bordered w-full"
+						value={ props.Values.ReleaseYear }
+						min="0"
+						placeholder="2024"
+					/>
+				</label>
+				if message, ok := props.FieldErrors["release_year"]; ok {
+					<p class="text-sm text-error">{ message }</p>
+				}
+			</div>
+			<div class="space-y-2">
+				<label class="form-control w-full">
+					<div class="label">
+						<span class="label-text">Album</span>
+					</div>
+					<select name="album_ids" multiple class="select select-bordered h-48 w-full">
+						<option value="">No album</option>
+						for _, option := range props.Albums {
+							if option.Selected {
+								<option value={ option.Value } selected>{ option.Label }</option>
+							} else {
+								<option value={ option.Value }>{ option.Label }</option>
+							}
+						}
+					</select>
+				</label>
+				if message, ok := props.FieldErrors["album_ids"]; ok {
+					<p class="text-sm text-error">{ message }</p>
+				}
+			</div>
+		</div>
+		<div class="grid gap-6 md:grid-cols-2">
+			<div class="space-y-2">
+				<label class="form-control w-full">
+					<div class="label">
+						<span class="label-text">Writers</span>
+						<span class="label-text-alt">Hold Cmd/Ctrl to select multiple</span>
+					</div>
+					<select name="writer_ids" multiple class="select select-bordered h-48 w-full" size="6">
+						<option value="">Unknown writer</option>
+						for _, option := range props.Writers {
+							if option.Selected {
+								<option value={ option.Value } selected>{ option.Label }</option>
+							} else {
+								<option value={ option.Value }>{ option.Label }</option>
+							}
+						}
+					</select>
+				</label>
+				if message, ok := props.FieldErrors["writer_ids"]; ok {
+					<p class="text-sm text-error">{ message }</p>
+				}
+			</div>
+			<div class="space-y-2">
+				<label class="form-control w-full">
+					<div class="label">
+						<span class="label-text">Artists</span>
+						<span class="label-text-alt">Hold Cmd/Ctrl to select multiple</span>
+					</div>
+					<select name="artist_ids" multiple class="select select-bordered h-48 w-full" size="6">
+						<option value="">Unknown artist</option>
+						for _, option := range props.Artists {
+							if option.Selected {
+								<option value={ option.Value } selected>{ option.Label }</option>
+							} else {
+								<option value={ option.Value }>{ option.Label }</option>
+							}
+						}
+					</select>
+				</label>
+				if message, ok := props.FieldErrors["artist_ids"]; ok {
+					<p class="text-sm text-error">{ message }</p>
+				}
+			</div>
+		</div>
+		<div class="space-y-2">
+			<label class="form-control">
+				<div class="label">
+					<span class="label-text">Lyric &amp; chords</span>
+					<span class="label-text-alt">Tab inserts a tab character</span>
+				</div>
+				<textarea
+					id="lyric-editor"
+					name="lyric"
+					class="textarea textarea-bordered h-80 w-full font-mono"
+					spellcheck="false"
+				>{ props.Values.Lyric }</textarea>
+			</label>
+		</div>
+		<div class="flex justify-end">
+			<button type="submit" class="btn btn-primary">
+				{ 
+				func() string {
+					if props.SubmitLabel != "" {
+						return props.SubmitLabel
+					}
+					return "Save song"
+				}() }
+			</button>
+		</div>
+	</form>
 }

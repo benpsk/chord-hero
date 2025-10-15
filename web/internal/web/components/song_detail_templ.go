@@ -53,7 +53,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(props.Song.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 22, Col: 86}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 22, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -71,7 +71,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(props.Song.Artist)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 25, Col: 81}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 25, Col: 75}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -90,7 +90,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(props.Song.Composer)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 28, Col: 85}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 28, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -109,7 +109,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(props.Song.Level)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 31, Col: 82}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 31, Col: 76}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -128,7 +128,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(props.Song.Key)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 34, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 34, Col: 78}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -147,7 +147,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(props.Song.Language)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 37, Col: 85}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 37, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -165,7 +165,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(strings.ToUpper(string(props.Mode)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 49, Col: 130}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 48, Col: 126}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -191,7 +191,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 					return strings.Title(string(props.Mode))
 				}())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 71, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 70, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -227,7 +227,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var13 templ.SafeURL
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(option.URL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 76, Col: 83}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 75, Col: 74}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -240,7 +240,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", option.Active))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 76, Col: 133}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 75, Col: 124}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -253,7 +253,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var15 string
 				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(option.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 76, Col: 150}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 75, Col: 141}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
@@ -271,7 +271,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(props.KeyDisplay)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 84, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 82, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -306,7 +306,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var19 templ.SafeURL
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs(props.TransposeDownURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 88, Col: 105}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 86, Col: 96}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -319,7 +319,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(props.TransposeDownAria)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 88, Col: 147}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 86, Col: 138}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
@@ -332,7 +332,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var21 string
 			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(props.TransposeDownTab)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 88, Col: 183}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 86, Col: 174}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {
@@ -345,7 +345,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(props.TransposeDisplay)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 89, Col: 106}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 87, Col: 97}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -380,7 +380,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var25 templ.SafeURL
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinURLErrs(props.TransposeUpURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 90, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 88, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
@@ -393,7 +393,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(props.TransposeUpAria)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 90, Col: 141}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 88, Col: 132}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -406,7 +406,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var27 string
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(props.TransposeUpTab)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 90, Col: 175}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 88, Col: 166}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -424,7 +424,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var28 templ.SafeURL
 				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinURLErrs(props.TransposeResetURL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 93, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 91, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 				if templ_7745c5c3_Err != nil {
@@ -464,7 +464,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var31 templ.SafeURL
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinURLErrs(props.OverGapDownURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 105, Col: 105}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 102, Col: 96}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -477,7 +477,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(boolToAria(!props.CanDecreaseOverGap))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 105, Col: 161}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 102, Col: 152}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
@@ -490,7 +490,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(tabIndex(props.CanDecreaseOverGap))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 105, Col: 209}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 102, Col: 200}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
@@ -503,7 +503,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var34 string
 			templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(props.OverGapDisplay)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 106, Col: 104}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 103, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 			if templ_7745c5c3_Err != nil {
@@ -538,7 +538,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var37 templ.SafeURL
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinURLErrs(props.OverGapUpURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 107, Col: 103}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 104, Col: 94}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -551,7 +551,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(boolToAria(!props.CanIncreaseOverGap))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 107, Col: 159}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 104, Col: 150}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -564,7 +564,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 			var templ_7745c5c3_Var39 string
 			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(tabIndex(props.CanIncreaseOverGap))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 107, Col: 207}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 104, Col: 198}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 			if templ_7745c5c3_Err != nil {
@@ -582,7 +582,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var40 templ.SafeURL
 				templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinURLErrs(props.OverGapResetURL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 110, Col: 78}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 107, Col: 69}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 				if templ_7745c5c3_Err != nil {
@@ -610,7 +610,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 					return "s"
 				}()))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 119, Col: 170}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 115, Col: 161}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 				if templ_7745c5c3_Err != nil {
@@ -646,7 +646,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 					var templ_7745c5c3_Var44 templ.SafeURL
 					templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinURLErrs(option.URL)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 123, Col: 85}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 119, Col: 75}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 					if templ_7745c5c3_Err != nil {
@@ -659,7 +659,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 					var templ_7745c5c3_Var45 string
 					templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", option.Active))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 123, Col: 135}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 119, Col: 125}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 					if templ_7745c5c3_Err != nil {
@@ -672,7 +672,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 					var templ_7745c5c3_Var46 string
 					templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(option.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 123, Col: 152}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 119, Col: 142}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 					if templ_7745c5c3_Err != nil {
@@ -711,7 +711,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var47 string
 						templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(line)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 139, Col: 95}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 133, Col: 86}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 						if templ_7745c5c3_Err != nil {
@@ -736,7 +736,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var48 string
 				templ_7745c5c3_Var48, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("column-count:%d; column-gap:2.5rem;", props.Columns))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 149, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 142, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 				if templ_7745c5c3_Err != nil {
@@ -755,7 +755,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var49 string
 						templ_7745c5c3_Var49, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("break-inside: avoid; height: calc(1.5rem + %dpx);", props.OverGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 152, Col: 112}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 145, Col: 102}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 						if templ_7745c5c3_Err != nil {
@@ -773,7 +773,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var50 string
 						templ_7745c5c3_Var50, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("break-inside: avoid; margin:0; line-height: calc(1.5rem + %dpx);", props.OverGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 154, Col: 220}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 147, Col: 210}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 						if templ_7745c5c3_Err != nil {
@@ -786,7 +786,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var51 string
 						templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(line.Lyric)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 154, Col: 235}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 147, Col: 225}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 						if templ_7745c5c3_Err != nil {
@@ -809,7 +809,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 							var templ_7745c5c3_Var52 string
 							templ_7745c5c3_Var52, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("margin:0; line-height: calc(1.5rem + %dpx);", props.OverGap))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 158, Col: 184}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 151, Col: 172}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 							if templ_7745c5c3_Err != nil {
@@ -822,7 +822,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 							var templ_7745c5c3_Var53 string
 							templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(line.ChordLine)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 158, Col: 203}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 151, Col: 191}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 							if templ_7745c5c3_Err != nil {
@@ -840,7 +840,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var54 string
 						templ_7745c5c3_Var54, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("margin:0; line-height: calc(1.5rem + %dpx);", props.OverGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 160, Col: 149}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 153, Col: 138}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 						if templ_7745c5c3_Err != nil {
@@ -853,7 +853,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var55 string
 						templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(line.Lyric)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 160, Col: 164}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 153, Col: 153}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 						if templ_7745c5c3_Err != nil {
@@ -877,7 +877,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var56 string
 				templ_7745c5c3_Var56, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("column-count:%d; column-gap:2.5rem;", props.Columns))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 170, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 163, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 				if templ_7745c5c3_Err != nil {
@@ -896,7 +896,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var57 string
 						templ_7745c5c3_Var57, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("break-inside: avoid; height: calc(1.2rem + %dpx);", props.OverGap+props.LineGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 173, Col: 128}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 166, Col: 116}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 						if templ_7745c5c3_Err != nil {
@@ -914,7 +914,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var58 string
 						templ_7745c5c3_Var58, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap+props.LineGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 175, Col: 135}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 168, Col: 123}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 						if templ_7745c5c3_Err != nil {
@@ -927,7 +927,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var59 string
 						templ_7745c5c3_Var59, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap+props.LineGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 176, Col: 207}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 169, Col: 194}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 						if templ_7745c5c3_Err != nil {
@@ -940,7 +940,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var60 string
 						templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(line.Raw)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 176, Col: 220}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 169, Col: 207}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 						if templ_7745c5c3_Err != nil {
@@ -958,7 +958,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var61 string
 						templ_7745c5c3_Var61, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap+props.LineGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 179, Col: 135}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 172, Col: 123}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 						if templ_7745c5c3_Err != nil {
@@ -971,7 +971,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var62 string
 						templ_7745c5c3_Var62, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap+props.LineGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 180, Col: 173}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 173, Col: 160}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 						if templ_7745c5c3_Err != nil {
@@ -984,7 +984,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var63 string
 						templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(line.Raw)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 180, Col: 186}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 173, Col: 173}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 						if templ_7745c5c3_Err != nil {
@@ -1002,7 +1002,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var64 string
 						templ_7745c5c3_Var64, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap+props.LineGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 183, Col: 135}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 176, Col: 123}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 						if templ_7745c5c3_Err != nil {
@@ -1015,7 +1015,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var65 string
 						templ_7745c5c3_Var65, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap+props.LineGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 184, Col: 178}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 177, Col: 165}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 						if templ_7745c5c3_Err != nil {
@@ -1034,7 +1034,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 								var templ_7745c5c3_Var66 string
 								templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(seg.Text)
 								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 187, Col: 80}
+									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 180, Col: 66}
 								}
 								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var66))
 								if templ_7745c5c3_Err != nil {
@@ -1052,7 +1052,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 								var templ_7745c5c3_Var67 string
 								templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(seg.Text)
 								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 189, Col: 44}
+									return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 182, Col: 30}
 								}
 								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 								if templ_7745c5c3_Err != nil {
@@ -1082,7 +1082,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 				var templ_7745c5c3_Var68 string
 				templ_7745c5c3_Var68, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("column-count:%d; column-gap:2.5rem;", props.Columns))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 202, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 195, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
 				if templ_7745c5c3_Err != nil {
@@ -1101,7 +1101,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var69 string
 						templ_7745c5c3_Var69, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("break-inside: avoid; height: calc(1.2rem + %dpx);", props.OverGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 205, Col: 112}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 198, Col: 102}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
 						if templ_7745c5c3_Err != nil {
@@ -1119,7 +1119,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var70 string
 						templ_7745c5c3_Var70, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 207, Col: 119}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 200, Col: 109}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 						if templ_7745c5c3_Err != nil {
@@ -1132,7 +1132,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var71 string
 						templ_7745c5c3_Var71, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 208, Col: 191}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 201, Col: 180}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 						if templ_7745c5c3_Err != nil {
@@ -1145,7 +1145,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var72 string
 						templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(line.Text)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 208, Col: 205}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 201, Col: 194}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 						if templ_7745c5c3_Err != nil {
@@ -1163,7 +1163,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var73 string
 						templ_7745c5c3_Var73, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 211, Col: 119}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 204, Col: 109}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
 						if templ_7745c5c3_Err != nil {
@@ -1176,7 +1176,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var74 string
 						templ_7745c5c3_Var74, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 212, Col: 162}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 205, Col: 151}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 						if templ_7745c5c3_Err != nil {
@@ -1189,7 +1189,7 @@ func SongDetail(props SongDetailProps) templ.Component {
 						var templ_7745c5c3_Var75 string
 						templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(line.Text)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 212, Col: 176}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/song_detail.templ`, Line: 205, Col: 165}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 						if templ_7745c5c3_Err != nil {

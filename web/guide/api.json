@@ -182,6 +182,7 @@
     {
       "id": 1,
       "name": "Album 1",
+      "total_plays": 10,
       "artists": [
         {
           "id": 1,
@@ -198,6 +199,7 @@
     {
       "id": 1,
       "name": "J Cole",
+      "total_plays": 10
     }
   ]
 }

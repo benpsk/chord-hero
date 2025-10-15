@@ -1,0 +1,25 @@
+package components
+
+type AdminHeaderProps struct {
+	Title       string
+	Description string
+	CurrentUser string
+}
+
+templ AdminHeader(props AdminHeaderProps) {
+	<div class="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+		<div>
+			<span class="badge badge-primary badge-outline mb-2">Admin</span>
+			<h1 class="text-3xl font-semibold">{ props.Title }</h1>
+			<p class="text-base-content/70">{ props.Description }</p>
+		</div>
+		<div class="flex items-center gap-4">
+			if props.CurrentUser != "" {
+				<span class="text-sm text-base-content/70">Signed in as <span class="font-medium text-base-content">{ props.CurrentUser }</span></span>
+			}
+			<form method="post" action="/admin/logout">
+				<button type="submit" class="btn btn-ghost btn-sm">Log out</button>
+			</form>
+		</div>
+	</div>
+}

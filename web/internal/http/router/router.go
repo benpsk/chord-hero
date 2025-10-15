@@ -68,8 +68,12 @@ func New(application *app.Application) chi.Router {
 
 		admin.Group(func(protected chi.Router) {
 			protected.Use(adminMiddleware.Require)
-			protected.Get("/song/create", adminSong.Show)
-			protected.Post("/song/create", adminSong.Create)
+			protected.Get("/songs", adminSong.Index)
+			protected.Get("/songs/create", adminSong.Show)
+			protected.Post("/songs/create", adminSong.Create)
+			protected.Get("/songs/{id}/edit", adminSong.Edit)
+			protected.Post("/songs/{id}/edit", adminSong.Update)
+			protected.Post("/songs/{id}/delete", adminSong.Delete)
 			protected.Post("/logout", adminLogin.Logout)
 		})
 	})

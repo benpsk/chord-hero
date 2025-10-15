@@ -30,18 +30,7 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 // Albums responds with trending albums.
 func (h Handler) Albums(w http.ResponseWriter, r *http.Request) {
-	validationErrors := map[string]string{}
-	limit := 0
-	if v := util.ParseOptionalPositiveInt(r.URL.Query().Get("limit"), "limit", validationErrors); v != nil {
-		limit = *v
-	}
-
-	if len(validationErrors) > 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": validationErrors})
-		return
-	}
-
-	albums, err := h.svc.TrendingAlbums(r.Context(), limit)
+	albums, err := h.svc.TrendingAlbums(r.Context())
 	if err != nil {
 		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list trending albums"}})
 		return
@@ -52,18 +41,7 @@ func (h Handler) Albums(w http.ResponseWriter, r *http.Request) {
 
 // Artists responds with trending artists.
 func (h Handler) Artists(w http.ResponseWriter, r *http.Request) {
-	validationErrors := map[string]string{}
-	limit := 0
-	if v := util.ParseOptionalPositiveInt(r.URL.Query().Get("limit"), "limit", validationErrors); v != nil {
-		limit = *v
-	}
-
-	if len(validationErrors) > 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": validationErrors})
-		return
-	}
-
-	artists, err := h.svc.TrendingArtists(r.Context(), limit)
+	artists, err := h.svc.TrendingArtists(r.Context())
 	if err != nil {
 		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list trending artists"}})
 		return

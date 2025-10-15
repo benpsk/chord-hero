@@ -1,61 +1,60 @@
 package components
 
 import (
-  "fmt"
-  "strings"
+	"fmt"
+	"strings"
 )
 
 templ SongDetail(props SongDetailProps) {
-  @Layout(PageMeta{
-    Title:       fmt.Sprintf("Lyric · %s", props.Song.Title),
-    Description: fmt.Sprintf("View chords and lyrics for %s with overlay, inline, and lyric modes.", props.Song.Title),
-    Path:        fmt.Sprintf("/songs/%s", props.Song.ID),
-    Canonical:   fmt.Sprintf("https://lyric.app/songs/%s", props.Song.ID),
-    ActiveNav:   "search",
-    MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8",
-    OGImage:     "/static/opengraph/search.png",
-    SchemaJSON:  WebPageSchema(props.Song.Title, fmt.Sprintf("Chords and lyrics for %s", props.Song.Title), fmt.Sprintf("https://lyric.app/songs/%s", props.Song.ID)),
-  }) {
-    <section class="grid gap-6 rounded-box bg-base-100 p-6 shadow-sm">
-      <div class="space-y-2">
-        <p class="text-sm font-semibold uppercase tracking-wide text-primary">Song detail</p>
-        <h1 class="text-3xl font-bold leading-tight tracking-tight">{ props.Song.Title }</h1>
-        <div class="flex flex-wrap items-center gap-3 text-sm text-base-content/70">
-          if strings.TrimSpace(props.Song.Artist) != "" {
-            <span class="badge badge-ghost whitespace-nowrap">{ props.Song.Artist }</span>
-          }
-          if strings.TrimSpace(props.Song.Composer) != "" {
-            <span class="badge badge-outline whitespace-nowrap">{ props.Song.Composer }</span>
-          }
-          if strings.TrimSpace(props.Song.Level) != "" {
-            <span class="badge badge-outline whitespace-nowrap">{ props.Song.Level }</span>
-          }
-          if strings.TrimSpace(props.Song.Key) != "" {
-            <span class="badge badge-outline whitespace-nowrap">Key { props.Song.Key }</span>
-          }
-          if strings.TrimSpace(string(props.Song.Language)) != "" {
-            <span class="badge badge-outline whitespace-nowrap">{ props.Song.Language }</span>
-          }
-        </div>
-      </div>
-    </section>
-
-    <section class="space-y-6">
-      <header class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="text-xl font-semibold">Arrangement</h2>
-          <p class="text-sm text-base-content/60">Switch modes to match overlay, inline, or lyric preferences.</p>
-        </div>
-        <span class="badge badge-ghost text-xs uppercase tracking-wide text-base-content/60">{ strings.ToUpper(string(props.Mode)) }</span>
-      </header>
-
-      <div class="flex flex-col gap-4">
-        <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-          <div class="space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Mode</p>
-                <p class="text-base font-semibold text-base-content">{
+	@Layout(PageMeta{
+		Title:       fmt.Sprintf("Lyric · %s", props.Song.Title),
+		Description: fmt.Sprintf("View chords and lyrics for %s with overlay, inline, and lyric modes.", props.Song.Title),
+		Path:        fmt.Sprintf("/songs/%s", props.Song.ID),
+		Canonical:   fmt.Sprintf("https://lyric.app/songs/%s", props.Song.ID),
+		ActiveNav:   "search",
+		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8",
+		OGImage:     "/static/opengraph/search.png",
+		SchemaJSON:  WebPageSchema(props.Song.Title, fmt.Sprintf("Chords and lyrics for %s", props.Song.Title), fmt.Sprintf("https://lyric.app/songs/%s", props.Song.ID)),
+	}) {
+		<section class="grid gap-6 rounded-box bg-base-100 p-6 shadow-sm">
+			<div class="space-y-2">
+				<p class="text-sm font-semibold uppercase tracking-wide text-primary">Song detail</p>
+				<h1 class="text-3xl font-bold leading-tight tracking-tight">{ props.Song.Title }</h1>
+				<div class="flex flex-wrap items-center gap-3 text-sm text-base-content/70">
+					if strings.TrimSpace(props.Song.Artist) != "" {
+						<span class="badge badge-ghost whitespace-nowrap">{ props.Song.Artist }</span>
+					}
+					if strings.TrimSpace(props.Song.Composer) != "" {
+						<span class="badge badge-outline whitespace-nowrap">{ props.Song.Composer }</span>
+					}
+					if strings.TrimSpace(props.Song.Level) != "" {
+						<span class="badge badge-outline whitespace-nowrap">{ props.Song.Level }</span>
+					}
+					if strings.TrimSpace(props.Song.Key) != "" {
+						<span class="badge badge-outline whitespace-nowrap">Key { props.Song.Key }</span>
+					}
+					if strings.TrimSpace(string(props.Song.Language)) != "" {
+						<span class="badge badge-outline whitespace-nowrap">{ props.Song.Language }</span>
+					}
+				</div>
+			</div>
+		</section>
+		<section class="space-y-6">
+			<header class="flex flex-wrap items-center justify-between gap-3">
+				<div>
+					<h2 class="text-xl font-semibold">Arrangement</h2>
+					<p class="text-sm text-base-content/60">Switch modes to match overlay, inline, or lyric preferences.</p>
+				</div>
+				<span class="badge badge-ghost text-xs uppercase tracking-wide text-base-content/60">{ strings.ToUpper(string(props.Mode)) }</span>
+			</header>
+			<div class="flex flex-col gap-4">
+				<div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
+					<div class="space-y-4">
+						<div class="flex flex-wrap items-center justify-between gap-3">
+							<div>
+								<p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Mode</p>
+								<p class="text-base font-semibold text-base-content">
+									{ 
                   func() string {
                     label := ""
                     for _, option := range props.ModeOptions {
@@ -68,156 +67,150 @@ templ SongDetail(props SongDetailProps) {
                       return label
                     }
                     return strings.Title(string(props.Mode))
-                  }()
-                }</p>
-              </div>
-              <div class="join">
-                for _, option := range props.ModeOptions {
-                  <a class={ songModeButtonClass(option.Active) } href={ option.URL } aria-current={ fmt.Sprintf("%t", option.Active) }>{ option.Label }</a>
-                }
-              </div>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div class="space-y-1">
-                <p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Key & transpose</p>
-                <p class="text-sm text-base-content/70">{ props.KeyDisplay }</p>
-              </div>
-              <div class="flex flex-wrap items-center gap-3">
-                <div class="join">
-                  <a class={ transposeButtonClass(props.CanTransposeDown) } href={ props.TransposeDownURL } aria-disabled={ props.TransposeDownAria } tabindex={ props.TransposeDownTab }>-</a>
-                  <span class="join-item badge badge-outline px-4 py-2 text-base">{ props.TransposeDisplay }</span>
-                  <a class={ transposeButtonClass(props.CanTransposeUp) } href={ props.TransposeUpURL } aria-disabled={ props.TransposeUpAria } tabindex={ props.TransposeUpTab }>+</a>
-                </div>
-                if props.Transpose != 0 {
-                  <a class="btn btn-ghost btn-sm" href={ props.TransposeResetURL }>Reset</a>
-                }
-              </div>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div class="space-y-1">
-                <p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Text spacing</p>
-                <p class="text-sm text-base-content/70">Adjust space between chords and lyrics everywhere.</p>
-              </div>
-              <div class="flex flex-wrap items-center gap-3">
-                <div class="join">
-                  <a class={ transposeButtonClass(props.CanDecreaseOverGap) } href={ props.OverGapDownURL } aria-disabled={ boolToAria(!props.CanDecreaseOverGap) } tabindex={ tabIndex(props.CanDecreaseOverGap) }>-</a>
-                  <span class="join-item badge badge-outline px-4 py-2 text-base">{ props.OverGapDisplay }</span>
-                  <a class={ transposeButtonClass(props.CanIncreaseOverGap) } href={ props.OverGapUpURL } aria-disabled={ boolToAria(!props.CanIncreaseOverGap) } tabindex={ tabIndex(props.CanIncreaseOverGap) }>+</a>
-                </div>
-                if props.OverGap != 2 {
-                  <a class="btn btn-ghost btn-sm" href={ props.OverGapResetURL }>Reset</a>
-                }
-              </div>
-            </div>
-
-            if len(props.ColumnOptions) > 0 {
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="space-y-1">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Column layout</p>
-                  <p class="text-sm text-base-content/70">{ fmt.Sprintf("%d column%s", props.Columns, func() string { if props.Columns == 1 { return "" }; return "s" }()) }</p>
-                </div>
-                <div class="join">
-                  for _, option := range props.ColumnOptions {
-                    <a class={ songModeButtonClass(option.Active) } href={ option.URL } aria-current={ fmt.Sprintf("%t", option.Active) }>{ option.Label }</a>
-                  }
-                </div>
-              </div>
-            }
-
-          </div>
-        </div>
-
-        if len(props.Prelude) > 0 {
-          <div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
-            <div class="space-y-3 overflow-x-auto p-5">
-              for _, line := range props.Prelude {
-                if strings.TrimSpace(line) == "" {
-                  <div class="h-4" aria-hidden="true"></div>
-                } else {
-                  <pre class="whitespace-pre-wrap font-mono text-base text-base-content">{ line }</pre>
-                }
-              }
-            </div>
-          </div>
-        }
-
-        if props.Mode == SongModeOverlay {
-          <div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
-            <div class="overflow-x-auto p-5">
-              <div style={ fmt.Sprintf("column-count:%d; column-gap:2.5rem;", props.Columns) }>
-                for _, line := range props.Overlay {
-                  if line.Kind == SongLineKindEmpty {
-                    <div style={ fmt.Sprintf("break-inside: avoid; height: calc(1.5rem + %dpx);", props.OverGap) } aria-hidden="true"></div>
-                  } else if line.Kind == SongLineKindSection {
-                    <p class="whitespace-pre-wrap text-sm font-semibold uppercase tracking-wide text-base-content/60" style={ fmt.Sprintf("break-inside: avoid; margin:0; line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.Lyric }</p>
-                  } else {
-                    <div class="font-mono text-base text-base-content" style="break-inside: avoid;">
-                      if strings.TrimSpace(line.ChordLine) != "" {
-                        <pre class="whitespace-pre font-semibold uppercase tracking-wide text-primary" style={ fmt.Sprintf("margin:0; line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.ChordLine }</pre>
-                      }
-                      <pre class="whitespace-pre text-base-content" style={ fmt.Sprintf("margin:0; line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.Lyric }</pre>
-                    </div>
-                  }
-                }
-              </div>
-            </div>
-          </div>
-        } else if props.Mode == SongModeInline {
-          <div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
-            <div class="overflow-x-auto p-5">
-              <div style={ fmt.Sprintf("column-count:%d; column-gap:2.5rem;", props.Columns) }>
-                for _, line := range props.Inline {
-                  if line.Kind == SongLineKindEmpty {
-                    <div style={ fmt.Sprintf("break-inside: avoid; height: calc(1.2rem + %dpx);", props.OverGap + props.LineGap) } aria-hidden="true"></div>
-                  } else if line.Kind == SongLineKindSection {
-                    <div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap + props.LineGap) }>
-                      <p class="whitespace-pre-wrap text-sm font-semibold uppercase tracking-wide text-base-content/60" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap + props.LineGap) }>{ line.Raw }</p>
-                    </div>
-                  } else if len(line.Segments) == 0 {
-                    <div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap + props.LineGap) }>
-                      <p class="whitespace-pre text-base font-mono text-base-content" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap + props.LineGap) }>{ line.Raw }</p>
-                    </div>
-                  } else {
-                    <div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap + props.LineGap) }>
-                      <p class="whitespace-pre-wrap text-base font-mono text-base-content" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap + props.LineGap) }>
-                        for _, seg := range line.Segments {
-                          if seg.IsChord {
-                            <span class="font-semibold text-primary">[{ seg.Text }]</span>
-                          } else {
-                            <span>{ seg.Text }</span>
-                          }
-                        }
-                      </p>
-                    </div>
-                  }
-                }
-              </div>
-            </div>
-          </div>
-        } else {
-          <div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
-            <div class="overflow-x-auto p-5">
-              <div style={ fmt.Sprintf("column-count:%d; column-gap:2.5rem;", props.Columns) }>
-                for _, line := range props.Lyrics {
-                  if line.Kind == SongLineKindEmpty {
-                    <div style={ fmt.Sprintf("break-inside: avoid; height: calc(1.2rem + %dpx);", props.OverGap) } aria-hidden="true"></div>
-                  } else if line.Kind == SongLineKindSection {
-                    <div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap) }>
-                      <p class="whitespace-pre-wrap text-sm font-semibold uppercase tracking-wide text-base-content/60" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.Text }</p>
-                    </div>
-                  } else {
-                    <div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap) }>
-                      <p class="whitespace-pre-wrap text-base font-mono text-base-content" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.Text }</p>
-                    </div>
-                  }
-                }
-              </div>
-            </div>
-          </div>
-        }
-      </div>
-    </section>
-  }
+                  }() }
+								</p>
+							</div>
+							<div class="join">
+								for _, option := range props.ModeOptions {
+									<a class={ songModeButtonClass(option.Active) } href={ option.URL } aria-current={ fmt.Sprintf("%t", option.Active) }>{ option.Label }</a>
+								}
+							</div>
+						</div>
+						<div class="flex flex-wrap items-center justify-between gap-3">
+							<div class="space-y-1">
+								<p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Key & transpose</p>
+								<p class="text-sm text-base-content/70">{ props.KeyDisplay }</p>
+							</div>
+							<div class="flex flex-wrap items-center gap-3">
+								<div class="join">
+									<a class={ transposeButtonClass(props.CanTransposeDown) } href={ props.TransposeDownURL } aria-disabled={ props.TransposeDownAria } tabindex={ props.TransposeDownTab }>-</a>
+									<span class="join-item badge badge-outline px-4 py-2 text-base">{ props.TransposeDisplay }</span>
+									<a class={ transposeButtonClass(props.CanTransposeUp) } href={ props.TransposeUpURL } aria-disabled={ props.TransposeUpAria } tabindex={ props.TransposeUpTab }>+</a>
+								</div>
+								if props.Transpose != 0 {
+									<a class="btn btn-ghost btn-sm" href={ props.TransposeResetURL }>Reset</a>
+								}
+							</div>
+						</div>
+						<div class="flex flex-wrap items-center justify-between gap-3">
+							<div class="space-y-1">
+								<p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Text spacing</p>
+								<p class="text-sm text-base-content/70">Adjust space between chords and lyrics everywhere.</p>
+							</div>
+							<div class="flex flex-wrap items-center gap-3">
+								<div class="join">
+									<a class={ transposeButtonClass(props.CanDecreaseOverGap) } href={ props.OverGapDownURL } aria-disabled={ boolToAria(!props.CanDecreaseOverGap) } tabindex={ tabIndex(props.CanDecreaseOverGap) }>-</a>
+									<span class="join-item badge badge-outline px-4 py-2 text-base">{ props.OverGapDisplay }</span>
+									<a class={ transposeButtonClass(props.CanIncreaseOverGap) } href={ props.OverGapUpURL } aria-disabled={ boolToAria(!props.CanIncreaseOverGap) } tabindex={ tabIndex(props.CanIncreaseOverGap) }>+</a>
+								</div>
+								if props.OverGap != 2 {
+									<a class="btn btn-ghost btn-sm" href={ props.OverGapResetURL }>Reset</a>
+								}
+							</div>
+						</div>
+						if len(props.ColumnOptions) > 0 {
+							<div class="flex flex-wrap items-center justify-between gap-3">
+								<div class="space-y-1">
+									<p class="text-xs font-semibold uppercase tracking-wide text-base-content/60">Column layout</p>
+									<p class="text-sm text-base-content/70">{ fmt.Sprintf("%d column%s", props.Columns, func() string { if props.Columns == 1 { return "" }; return "s" }()) }</p>
+								</div>
+								<div class="join">
+									for _, option := range props.ColumnOptions {
+										<a class={ songModeButtonClass(option.Active) } href={ option.URL } aria-current={ fmt.Sprintf("%t", option.Active) }>{ option.Label }</a>
+									}
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+				if len(props.Prelude) > 0 {
+					<div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
+						<div class="space-y-3 overflow-x-auto p-5">
+							for _, line := range props.Prelude {
+								if strings.TrimSpace(line) == "" {
+									<div class="h-4" aria-hidden="true"></div>
+								} else {
+									<pre class="whitespace-pre-wrap font-mono text-base text-base-content">{ line }</pre>
+								}
+							}
+						</div>
+					</div>
+				}
+				if props.Mode == SongModeOverlay {
+					<div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
+						<div class="overflow-x-auto p-5">
+							<div style={ fmt.Sprintf("column-count:%d; column-gap:2.5rem;", props.Columns) }>
+								for _, line := range props.Overlay {
+									if line.Kind == SongLineKindEmpty {
+										<div style={ fmt.Sprintf("break-inside: avoid; height: calc(1.5rem + %dpx);", props.OverGap) } aria-hidden="true"></div>
+									} else if line.Kind == SongLineKindSection {
+										<p class="whitespace-pre-wrap text-sm font-semibold uppercase tracking-wide text-base-content/60" style={ fmt.Sprintf("break-inside: avoid; margin:0; line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.Lyric }</p>
+									} else {
+										<div class="font-mono text-base text-base-content" style="break-inside: avoid;">
+											if strings.TrimSpace(line.ChordLine) != "" {
+												<pre class="whitespace-pre font-semibold uppercase tracking-wide text-primary" style={ fmt.Sprintf("margin:0; line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.ChordLine }</pre>
+											}
+											<pre class="whitespace-pre text-base-content" style={ fmt.Sprintf("margin:0; line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.Lyric }</pre>
+										</div>
+									}
+								}
+							</div>
+						</div>
+					</div>
+				} else if props.Mode == SongModeInline {
+					<div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
+						<div class="overflow-x-auto p-5">
+							<div style={ fmt.Sprintf("column-count:%d; column-gap:2.5rem;", props.Columns) }>
+								for _, line := range props.Inline {
+									if line.Kind == SongLineKindEmpty {
+										<div style={ fmt.Sprintf("break-inside: avoid; height: calc(1.2rem + %dpx);", props.OverGap+props.LineGap) } aria-hidden="true"></div>
+									} else if line.Kind == SongLineKindSection {
+										<div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap+props.LineGap) }>
+											<p class="whitespace-pre-wrap text-sm font-semibold uppercase tracking-wide text-base-content/60" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap+props.LineGap) }>{ line.Raw }</p>
+										</div>
+									} else if len(line.Segments) == 0 {
+										<div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap+props.LineGap) }>
+											<p class="whitespace-pre text-base font-mono text-base-content" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap+props.LineGap) }>{ line.Raw }</p>
+										</div>
+									} else {
+										<div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap+props.LineGap) }>
+											<p class="whitespace-pre-wrap text-base font-mono text-base-content" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap+props.LineGap) }>
+												for _, seg := range line.Segments {
+													if seg.IsChord {
+														<span class="font-semibold text-primary">[{ seg.Text }]</span>
+													} else {
+														<span>{ seg.Text }</span>
+													}
+												}
+											</p>
+										</div>
+									}
+								}
+							</div>
+						</div>
+					</div>
+				} else {
+					<div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
+						<div class="overflow-x-auto p-5">
+							<div style={ fmt.Sprintf("column-count:%d; column-gap:2.5rem;", props.Columns) }>
+								for _, line := range props.Lyrics {
+									if line.Kind == SongLineKindEmpty {
+										<div style={ fmt.Sprintf("break-inside: avoid; height: calc(1.2rem + %dpx);", props.OverGap) } aria-hidden="true"></div>
+									} else if line.Kind == SongLineKindSection {
+										<div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap) }>
+											<p class="whitespace-pre-wrap text-sm font-semibold uppercase tracking-wide text-base-content/60" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.Text }</p>
+										</div>
+									} else {
+										<div style={ fmt.Sprintf("break-inside: avoid; margin-bottom: calc(1.2rem + %dpx);", props.OverGap) }>
+											<p class="whitespace-pre-wrap text-base font-mono text-base-content" style={ fmt.Sprintf("line-height: calc(1.5rem + %dpx);", props.OverGap) }>{ line.Text }</p>
+										</div>
+									}
+								}
+							</div>
+						</div>
+					</div>
+				}
+			</div>
+		</section>
+	}
 }

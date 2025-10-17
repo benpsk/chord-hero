@@ -28,6 +28,11 @@ type ListResult struct {
 	Total   int     `json:"total"`
 }
 
+type Artist struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 // Album is the transport representation of an album row.
 type Album struct {
 	ID          int    `json:"id"`
@@ -35,6 +40,7 @@ type Album struct {
 	Total       int    `json:"total"`
 	ReleaseYear *int   `json:"release_year"`
 	IsBookmark  bool   `json:"is_bookmark"`
+	Artists    []Artist `json:"artists"`
 }
 
 // Repository abstracts data access for albums.

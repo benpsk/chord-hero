@@ -58,17 +58,34 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 	offsetPlaceholder := fmt.Sprintf("$%d", argPos+2)
 
 	listQuery := fmt.Sprintf(`
-        WITH album_totals AS (
-            SELECT s.album_id, COUNT(DISTINCT s.song_id) AS total_songs
-            FROM album_song s
-            GROUP BY s.album_id
-        )
-        SELECT a.id, a.name, a.release_year, COALESCE(at.total_songs, 0) AS total_songs
-        FROM albums a
-        LEFT JOIN album_totals at ON at.album_id = a.id
+        with album_totals as (
+            select s.album_id, count(distinct s.song_id) as total_songs
+            from album_song s
+            group by s.album_id
+        ),
+				album_artists_agg as (
+					-- step 3: aggregate artists into a json array for each album
+					select
+						aa.album_id,
+						jsonb_agg(
+							jsonb_build_object('id', ar.id, 'name', ar.name)
+							order by ar.name
+						) as artists
+					from
+						album_artist as aa
+					join
+						artists as ar on aa.artist_id = ar.id
+					group by
+						aa.album_id
+				)
+        select a.id, a.name, a.release_year, coalesce(at.total_songs, 0) as total_songs,
+					aaa.artists
+        from albums a
+        left join album_totals at on at.album_id = a.id
+				left join album_artists_agg as aaa on a.id = aaa.album_id
         %s
-        ORDER BY a.name ASC
-        LIMIT %s OFFSET %s
+        order by a.name asc
+        limit %s offset %s
     `, whereClause, limitPlaceholder, offsetPlaceholder)
 
 	listArgs := append([]any{}, args...)
@@ -91,9 +108,10 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 			name        string
 			releaseYear sql.NullInt32
 			totalSongs  int
+			artists []albumsvc.Artist
 		)
 
-		if err := rows.Scan(&id, &name, &releaseYear, &totalSongs); err != nil {
+		if err := rows.Scan(&id, &name, &releaseYear, &totalSongs, &artists); err != nil {
 			return result, fmt.Errorf("scan album: %w", err)
 		}
 
@@ -101,6 +119,7 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 			ID:    id,
 			Name:  name,
 			Total: totalSongs,
+			Artists: artists,
 		}
 
 		if releaseYear.Valid {

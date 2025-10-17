@@ -5,7 +5,7 @@ import { Button, Card, IconButton, Surface, Text, useTheme } from 'react-native-
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-import { POPULAR_ARTISTS, TRENDING_ALBUMS, WEEKLY_CHARTS } from '@/constants/home';
+import { useTrendingAlbums, useTrendingArtists, useTrendingSongs } from '@/hooks/useHomeQueries';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HORIZONTAL_CARD_WIDTH = Math.min(240, SCREEN_WIDTH * 0.7);
@@ -20,6 +20,41 @@ function getGreeting() {
 export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { data: trendingSongsData } = useTrendingSongs();
+  const { data: trendingAlbumsData } = useTrendingAlbums();
+  const { data: trendingArtistsData } = useTrendingArtists();
+
+  const weeklyCharts = useMemo(() => {
+    const songs = Array.isArray(trendingSongsData) ? trendingSongsData : [];
+    return songs
+      .filter((item) => item && item.id != null && item.name)
+      .map((item) => ({
+        id: String(item.id),
+        title: item.name,
+        subtitle: item.level ?? undefined,
+      }));
+  }, [trendingSongsData]);
+
+  const trendingAlbums = useMemo(() => {
+    const albums = Array.isArray(trendingAlbumsData) ? trendingAlbumsData : [];
+    return albums
+      .filter((item) => item && item.id != null && item.name)
+      .map((item) => ({
+        id: String(item.id),
+        title: item.name,
+        subtitle: item.artists?.[0]?.name,
+      }));
+  }, [trendingAlbumsData]);
+
+  const popularArtists = useMemo(() => {
+    const artists = Array.isArray(trendingArtistsData) ? trendingArtistsData : [];
+    return artists
+      .filter((item) => item && item.id != null && item.name)
+      .map((item) => ({
+        id: String(item.id),
+        name: item.name,
+      }));
+  }, [trendingArtistsData]);
 
   const styles = useMemo(
     () =>
@@ -180,16 +215,18 @@ export default function HomeScreen() {
             </Button>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-            {WEEKLY_CHARTS.map((item, index) => (
+            {weeklyCharts.map((item, index) => (
               <Animated.View key={item.id} entering={FadeInUp.delay(120 + index * 40).duration(320)}>
                 <Card
                   style={styles.chartCard}
                   mode="elevated"
                   onPress={() => router.push({ pathname: '/chart/[id]', params: { id: item.id } })}>
                   <Card.Content style={styles.cardContent}>
-                    <Text variant="labelLarge" style={{ color: theme.colors.secondary }}>
-                      {item.subtitle}
-                    </Text>
+                    {item.subtitle ? (
+                      <Text variant="labelLarge" style={{ color: theme.colors.secondary }}>
+                        {item.subtitle}
+                      </Text>
+                    ) : null}
                     <Text variant="headlineSmall" style={{ color: theme.colors.primary }} numberOfLines={1}>
                       {item.title}
                     </Text>
@@ -250,7 +287,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>Trending albums</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-            {TRENDING_ALBUMS.map((album, index) => (
+            {trendingAlbums.map((album, index) => (
               <Animated.View key={album.id} entering={FadeInUp.delay(240 + index * 40).duration(320)}>
                 <Card
                   style={styles.albumCard}
@@ -270,7 +307,7 @@ export default function HomeScreen() {
                         style={styles.cardFooterIcon}
                       />
                     </View>
-                    <Text style={styles.albumSubtitle}>by {album.subtitle}</Text>
+                    {album.subtitle ? <Text style={styles.albumSubtitle}>by {album.subtitle}</Text> : null}
                   </Card.Content>
                 </Card>
               </Animated.View>
@@ -281,7 +318,7 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInUp.delay(280).duration(360)}>
           <Surface style={styles.artistCard} elevation={1}>
             <Text style={styles.sectionTitle}>Popular artists</Text>
-            {POPULAR_ARTISTS.map((artist, index) => (
+            {popularArtists.map((artist, index) => (
               <Animated.View key={artist.id} style={styles.artistRow} entering={FadeInUp.delay(300 + index * 50).duration(320)}>
                 <View style={styles.artistAvatar}>
                   <Text style={{ color: theme.colors.onPrimary, fontWeight: '700' }}>

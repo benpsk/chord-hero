@@ -95,7 +95,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 	offsetPlaceholder := fmt.Sprintf("$%d", argPos+2)
 
 	listQuery := fmt.Sprintf(`
-        SELECT
+        select
             s.id,
             s.title,
             s.level,
@@ -103,10 +103,10 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
             s.language,
             s.lyric,
             s.release_year
-        FROM songs s
+        from songs s
         %s
-        ORDER BY s.title ASC
-        LIMIT %s OFFSET %s
+        order by s.id desc
+        limit %s offset %s
     `, whereClause, limitPlaceholder, offsetPlaceholder)
 
 	listArgs := append([]any{}, args...)
@@ -201,7 +201,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 // Get returns a single song by identifier including related entities.
 func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
 	query := `
-        SELECT
+        select
             s.id,
             s.title,
             s.level,
@@ -209,8 +209,8 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
             s.language,
             s.lyric,
             s.release_year
-        FROM songs s
-        WHERE s.id = $1
+        from songs s
+        where s.id = $1
     `
 
 	var (

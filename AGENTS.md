@@ -49,6 +49,7 @@
 ### Dependency
 - Use React Native Paper for UI components when possible (colors, components, icons, ...).
 - For colors always use the theme.colors.[already defined] value, and don't use too many different colors, 
+- Use tanstack-query for data fetching, caching strategy. 
 
 ## Web (`./web`)
 

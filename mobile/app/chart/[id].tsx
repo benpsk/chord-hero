@@ -185,7 +185,14 @@ export default function ChartDetailScreen() {
           fontSize: 16,
         },
       }),
-    [theme.colors.surfaceVariant, theme.colors.tertiary, theme.colors.primary, theme.colors.onSurface]
+    [
+      theme.colors.tertiary,
+      theme.colors.onSurface,
+      theme.colors.background,
+      theme.colors.onBackground,
+      theme.colors.onSecondary,
+      theme.colors.secondary
+    ]
   );
 
   return (

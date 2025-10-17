@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 
 	"github.com/lyricapp/lyric/web/internal/app"
 	adminloginhandler "github.com/lyricapp/lyric/web/internal/http/handler/admin/login"
@@ -30,11 +31,26 @@ import (
 // New instantiates the HTTP router and wires up handlers and middleware.
 func New(application *app.Application) chi.Router {
 	r := chi.NewRouter()
+	
+	var allowedOrigins []string
+	if application.Config.Api.AppEnv ==  "production" {
+		allowedOrigins = []string{application.Config.Api.FrontendUrl}
+	} else {
+    allowedOrigins = []string{"*"}
+	}
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   allowedOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
 
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 

@@ -39,6 +39,9 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if message == "" {
 		errorsMap["message"] = "message is required"
 	}
+	if len(message) > 225 {
+		errorsMap["message"] = "message is too long"
+	}
 	if userID <= 0 {
 		errorsMap["user_id"] = "user_id is required"
 	}

@@ -10,11 +10,34 @@ import {
   useTheme,
 } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useMutation } from '@tanstack/react-query';
+
+import { apiPost, ApiError } from '@/lib/api';
 
 export default function RequestChordScreen() {
   const theme = useTheme();
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [backendError, setBackendError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const feedbackMutation = useMutation<{ message?: string }, ApiError, { message: string }>({
+    mutationFn: (payload) => apiPost('/api/feedback', payload),
+    onSuccess: (data) => {
+      setMessage('');
+      setBackendError(null);
+      setSuccessMessage(data?.message ?? null);
+      setSubmitted(true);
+    },
+    onError: (error) => {
+      setSubmitted(false);
+      if (error instanceof ApiError) {
+        setBackendError(error.message);
+      } else {
+        setBackendError('Something went wrong. Please try again.');
+      }
+    },
+  });
 
   const styles = useMemo(
     () =>
@@ -67,12 +90,21 @@ export default function RequestChordScreen() {
 
   const trimmedMessage = message.trim();
   const isInvalid = trimmedMessage.length < 10;
+  const helperText = backendError
+    ? backendError
+    : isInvalid
+    ? 'Add a little more detail so we can help track it down (10+ characters).'
+    : "We'll follow up at the email tied to your account.";
+  const helperType = backendError || isInvalid ? 'error' : 'info';
 
   const handleSubmit = () => {
-    if (isInvalid) {
+    if (isInvalid || feedbackMutation.isPending) {
       return;
     }
-    setSubmitted(true);
+    setSubmitted(false);
+    setBackendError(null);
+    setSuccessMessage(null);
+    feedbackMutation.mutate({ message: trimmedMessage });
   };
 
   return (
@@ -104,6 +136,12 @@ export default function RequestChordScreen() {
                     if (submitted) {
                       setSubmitted(false);
                     }
+                    if (backendError) {
+                      setBackendError(null);
+                    }
+                    if (successMessage) {
+                      setSuccessMessage(null);
+                    }
                   }}
                   mode="outlined"
                   multiline
@@ -111,24 +149,23 @@ export default function RequestChordScreen() {
                   textAlignVertical="top"
                   placeholder="Share the song title, artist, and any details that will help us build the chart."
                 />
-                <HelperText type={isInvalid ? 'error' : 'info'} visible style={styles.helperText}>
-                  {isInvalid
-                    ? 'Add a little more detail so we can help track it down (10+ characters).'
-                    : "We'll follow up at the email tied to your account."}
+                <HelperText type={helperType} visible style={styles.helperText}>
+                  {helperText}
                 </HelperText>
               </View>
 
               <Button
                 mode="contained"
                 style={styles.submitButton}
-                disabled={isInvalid}
+                disabled={isInvalid || feedbackMutation.isPending}
+                loading={feedbackMutation.isPending}
                 onPress={handleSubmit}>
                 Submit request
               </Button>
 
-              {submitted && !isInvalid ? (
+              {submitted ? (
                 <Text style={styles.confirmation}>
-                  Thanks! We'll review your request shortly.
+                  {successMessage ?? "Thanks! We'll review your request shortly."}
                 </Text>
               ) : null}
             </Surface>

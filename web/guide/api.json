@@ -76,6 +76,12 @@
       "total": 12,
       "release_year": 2000
       "is_bookmark": false, -- true only when all of the album are added into current user playlists
+      "artists": [
+        {
+          "id": 1,
+          "name": "J J"
+        }
+      ]
     }
   ],
   "page": 1,

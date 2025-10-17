@@ -16,6 +16,8 @@ const (
 	defaultDBConnIdleTime     = 5 * time.Minute
 	defaultAdminSessionCookie = "admin_session"
 	defaultAdminSessionTTL    = 24 * time.Hour
+	defaultAppEnv             = "production"
+	defaultFrontendUrl        = "http://localhost:8080"
 )
 
 // Config collects runtime configuration for the web service.
@@ -24,6 +26,7 @@ type Config struct {
 	ShutdownTimeout time.Duration
 	Database        DatabaseConfig
 	Admin           AdminConfig
+	Api             ApiConfig
 }
 
 // DatabaseConfig holds PostgreSQL connection settings.
@@ -42,6 +45,11 @@ type AdminConfig struct {
 	SessionSecure bool
 }
 
+type ApiConfig struct {
+	AppEnv      string
+	FrontendUrl string
+}
+
 // Load reads configuration from environment variables and applies sane defaults.
 func Load() (Config, error) {
 	cfg := Config{
@@ -56,6 +64,10 @@ func Load() (Config, error) {
 			SessionCookie: defaultAdminSessionCookie,
 			SessionTTL:    defaultAdminSessionTTL,
 			SessionSecure: false,
+		},
+		Api: ApiConfig{
+			AppEnv:      defaultAppEnv,
+			FrontendUrl: defaultFrontendUrl,
 		},
 	}
 
@@ -132,6 +144,13 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("parse WEB_ADMIN_SESSION_SECURE: %w", err)
 		}
 		cfg.Admin.SessionSecure = secure
+	}
+
+	if v, ok := os.LookupEnv("APP_ENV"); ok && v != "" {
+		cfg.Api.AppEnv = v
+	}
+	if v, ok := os.LookupEnv("FRONTEND_URL"); ok && v != "" {
+		cfg.Api.FrontendUrl = v
 	}
 
 	return cfg, nil

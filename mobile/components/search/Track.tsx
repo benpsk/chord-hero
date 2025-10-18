@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
 export type SearchTrackItem = {
@@ -16,7 +16,6 @@ type TrackItemProps = {
   bookmarkedItems: Set<string>,
   onToggleBookmark: (key: string) => void;
   onPressTrack: (id: string) => void;
-  styles: any
 };
 
 // We pass the styles object as a prop for performance
@@ -25,24 +24,61 @@ export function Track({
   bookmarkedItems,
   onToggleBookmark,
   onPressTrack,
-  styles,
 }: TrackItemProps) {
   const theme = useTheme();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        trackRipple: {
+          paddingVertical: 10,
+        },
+        trackRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+        },
+        trackInfo: {
+          flex: 1,
+          gap: 4,
+        },
+        metaGroup: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        },
+        metaBadge: {
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: 999,
+          backgroundColor: theme.colors.secondary,
+        },
+        metaText: {
+          color: theme.colors.onSecondary,
+          fontWeight: '600',
+        },
+        iconButton: {
+          margin: -8,
+        },
+      }),
+    [theme.colors.onSecondary, theme.colors.secondary]
+  );
 
   const trackKey = `track-${item.id}`;
   const isBookmarked = bookmarkedItems.has(trackKey);
   return (
-    <Surface style={styles.trackCard} elevation={0}>
+    <Surface elevation={0} >
       <Pressable
         style={styles.trackRipple}
         onPress={() => onPressTrack(item.id)}
         accessibilityLabel={`View details for ${item.title}`}>
         <View style={styles.trackRow}>
           <View style={styles.trackInfo}>
-            <Text variant="titleSmall" style={styles.trackTitle} numberOfLines={1}>
+            <Text variant="titleSmall" numberOfLines={1}>
               {item.title}
             </Text>
-            <Text variant="bodySmall" style={styles.trackMetaLine} numberOfLines={1}>
+            <Text variant="bodySmall" numberOfLines={1}>
               {item.artist}
               {item.composer ? ` | ${item.composer}` : ''}
             </Text>

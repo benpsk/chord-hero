@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, FlatList } from 'react-native';
+import { StyleSheet, FlatList, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from 'react-native-paper';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { Divider, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Track, type SearchTrackItem } from '@/components/search/Track';
 import { Album, type SearchAlbumItem } from '@/components/search/Album';
@@ -38,6 +39,8 @@ export default function SearchScreen() {
   const [bookmarkedItems, setBookmarkedItems] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<SearchTabKey>('tracks');
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
   const trimmedQuery = query.trim();
 
   const {
@@ -82,29 +85,10 @@ export default function SearchScreen() {
           flexGrow: 1,
           paddingHorizontal: 24,
           paddingTop: 16,
+          marginBottom: tabBarHeight + insets.bottom + 8,
         },
         headingGroup: {
           gap: 4,
-        },
-        headingTitle: {
-          fontSize: 28,
-          fontWeight: '700',
-        },
-        headingSubtitle: {
-          color: theme.colors.secondary,
-          fontSize: 15,
-        },
-        sectionHeader: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        },
-        sectionTitle: {
-          fontSize: 18,
-          fontWeight: '700',
-        },
-        sectionSubtitle: {
-          fontSize: 14,
         },
         loadingMore: {
           paddingVertical: 16,
@@ -113,50 +97,11 @@ export default function SearchScreen() {
           borderBottomWidth: 1,
           borderBottomColor: theme.colors.tertiary,
         },
-        trackRipple: {
-          paddingVertical: 16,
-        },
-        trackRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-        },
-        trackInfo: {
-          flex: 1,
-          gap: 4,
-        },
-        trackTitle: {
-          fontSize: 16,
-          fontWeight: '700',
-        },
-        trackMetaLine: {
-          fontSize: 13,
-        },
-        metaGroup: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-        },
-        metaBadge: {
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-          borderRadius: 999,
-          backgroundColor: theme.colors.secondary,
-        },
-        metaText: {
-          color: theme.colors.onSecondary,
-          fontSize: 12,
-          fontWeight: '600',
-        },
-        iconButton: {
-          margin: -8,
-        },
         loadingText: {
           textAlign: 'center',
         },
       }),
-    [theme.colors.background, theme.colors.secondary]
+    [theme.colors.background, theme.colors.tertiary, tabBarHeight, insets.bottom]
   );
 
   const songsRecords = useMemo(
@@ -251,7 +196,6 @@ export default function SearchScreen() {
             bookmarkedItems={bookmarkedItems}
             onToggleBookmark={toggleBookmark}
             onPressTrack={handleTrackPress}
-            styles={styles}
           />
         );
       case 'artists':
@@ -284,7 +228,6 @@ export default function SearchScreen() {
     bookmarkedItems,
     toggleBookmark,
     handleTrackPress,
-    styles,
   ]);
 
   const isFetchingNext = useMemo(() => {
@@ -316,6 +259,13 @@ export default function SearchScreen() {
     <ListFooter isLoading={isFetchingNext} />
   ), [isFetchingNext]);
 
+  const listContentStyle = useMemo(
+    () => ({
+      paddingBottom: insets.bottom + tabBarHeight + 24,
+    }),
+    [insets.bottom, tabBarHeight]
+  );
+
   // ✅ This is the memoized listData
   const listData: any = useMemo(() => {
     let pagesData;
@@ -343,6 +293,7 @@ export default function SearchScreen() {
   }, [
     // 3. List all dependencies. The calculation will only re-run if one of these changes.
     activeTab,
+    tracks,
     albums,
     artists,
     writers,
@@ -402,7 +353,6 @@ export default function SearchScreen() {
         style={styles.content}
       >
         <ListHeader
-          styles={styles}
           query={query}
           setQuery={setQuery}
           selectedLanguages={selectedLanguages}
@@ -417,8 +367,13 @@ export default function SearchScreen() {
           keyExtractor={item => item.id}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
+          contentContainerStyle={listContentStyle}
           ListFooterComponent={renderFooter}
           ListEmptyComponent={SearchEmptyState}
+          ItemSeparatorComponent={() =>
+                <Divider/>
+          }
+          showsVerticalScrollIndicator={false}
         />
       </Animated.View>
     </SafeAreaView>

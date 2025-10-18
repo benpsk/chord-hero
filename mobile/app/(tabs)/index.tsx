@@ -25,7 +25,7 @@ export default function HomeScreen() {
   const { data: trendingArtistsData } = useTrendingArtists();
 
   const weeklyCharts = useMemo(() => {
-    const songs = Array.isArray(trendingSongsData) ? trendingSongsData : [];
+    const songs = trendingSongsData?.data ?? [];
     return songs
       .filter((item) => item && item.id != null && item.name)
       .map((item) => ({
@@ -36,7 +36,7 @@ export default function HomeScreen() {
   }, [trendingSongsData]);
 
   const trendingAlbums = useMemo(() => {
-    const albums = Array.isArray(trendingAlbumsData) ? trendingAlbumsData : [];
+    const albums = trendingAlbumsData?.data ?? [];
     return albums
       .filter((item) => item && item.id != null && item.name)
       .map((item) => ({
@@ -47,7 +47,7 @@ export default function HomeScreen() {
   }, [trendingAlbumsData]);
 
   const popularArtists = useMemo(() => {
-    const artists = Array.isArray(trendingArtistsData) ? trendingArtistsData : [];
+    const artists = trendingArtistsData?.data ?? [];
     return artists
       .filter((item) => item && item.id != null && item.name)
       .map((item) => ({
@@ -74,11 +74,10 @@ export default function HomeScreen() {
         },
         greetingText: {
           color: theme.colors.secondary,
-          fontSize: 16,
           fontWeight: '500',
         },
         greetingName: {
-          fontSize: 32,
+          fontSize: 24,
           fontWeight: '700',
         },
         sectionHeader: {
@@ -87,7 +86,7 @@ export default function HomeScreen() {
           justifyContent: 'space-between',
         },
         sectionTitle: {
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: '500',
         },
         horizontalList: {
@@ -108,7 +107,7 @@ export default function HomeScreen() {
         },
         cardFooterText: {
           color: theme.colors.secondary,
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: '600',
         },
         cardFooterIcon: {
@@ -124,11 +123,7 @@ export default function HomeScreen() {
           alignItems: 'center',
           justifyContent: 'space-between',
         },
-        insightLabel: {
-          fontSize: 14,
-        },
         insightValue: {
-          fontSize: 18,
           fontWeight: '700',
           color: theme.colors.tertiary,
         },
@@ -159,11 +154,10 @@ export default function HomeScreen() {
         },
         albumTitle: {
           color: theme.colors.secondary,
-          fontSize: 18,
           fontWeight: '700',
         },
         albumSubtitle: {
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: '500',
         },
         artistCard: {
@@ -185,12 +179,11 @@ export default function HomeScreen() {
           backgroundColor: theme.colors.primary,
         },
         artistName: {
-          fontSize: 16,
           fontWeight: '600',
         },
         mutedSubtitle: {
           color: theme.colors.secondary,
-          fontSize: 13,
+          fontSize: 12,
         },
       }),
     [theme.colors.background, theme.colors.primary, theme.colors.secondary, theme.colors.tertiary]
@@ -263,7 +256,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.insightRow}>
               <View>
-                <Text style={styles.insightLabel}>Hours rehearsed</Text>
+                <Text>Hours rehearsed</Text>
                 <Text style={styles.insightValue}>12h 45m</Text>
               </View>
               <Button icon="arrow-up-bold" mode="text" textColor={theme.colors.tertiary} compact>
@@ -272,7 +265,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.insightRow}>
               <View>
-                <Text style={styles.insightLabel}>Most requested key</Text>
+                <Text>Most requested key</Text>
                 <Text style={styles.insightValue}>G Major</Text>
               </View>
               <Button icon="music-clef-treble" mode="text" textColor={theme.colors.tertiary} compact>
@@ -327,7 +320,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.artistName}>{artist.name}</Text>
-                  <Text style={styles.mutedSubtitle}>Tap to explore arrangements and harmonies</Text>
+                  <Text style={styles.mutedSubtitle}>Tap to explore songs</Text>
                 </View>
                 <IconButton
                   icon="chevron-right"

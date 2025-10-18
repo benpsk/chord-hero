@@ -60,11 +60,7 @@ export default function ProfileScreen() {
           gap: 4,
         },
         userName: {
-          fontSize: 22,
           fontWeight: '700',
-        },
-        userEmail: {
-          fontSize: 14,
         },
         card: {
           borderRadius: 24,
@@ -78,17 +74,15 @@ export default function ProfileScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 20,
-          paddingVertical: 18,
+          paddingVertical: 10,
           gap: 16,
         },
         rowText: {
           flex: 1,
-          fontSize: 16,
           fontWeight: '600',
         },
         rowMeta: {
           color: theme.colors.primary,
-          fontSize: 14,
           fontWeight: '600',
         },
         chevron: {
@@ -117,7 +111,6 @@ export default function ProfileScreen() {
           gap: 16,
         },
         preferenceTitle: {
-          fontSize: 16,
           fontWeight: '600',
         },
         segmentedGroup: {
@@ -125,15 +118,6 @@ export default function ProfileScreen() {
         },
         segmentButton: {
           flex: 1,
-        },
-        logoutContainer: {
-          paddingHorizontal: 24,
-          paddingBottom: 24,
-          paddingTop: 12,
-        },
-        logoutButton: {
-          borderRadius: 16,
-          width: '100%',
         },
         deleteCard: {
           borderRadius: 24,
@@ -143,7 +127,6 @@ export default function ProfileScreen() {
         deleteText: {
           flex: 1,
           color: theme.colors.error,
-          fontSize: 16,
           fontWeight: '600',
         },
       }),
@@ -179,13 +162,13 @@ export default function ProfileScreen() {
           <Animated.View style={styles.profileHeader} entering={FadeInDown.duration(320)}>
             <Avatar.Text
               label="JC"
-              size={72}
+              size={54}
               style={{ backgroundColor: accentColor }}
               color={theme.colors.onPrimary}
             />
             <View style={styles.userInfo}>
               <Text style={styles.userName}>Jeff Clay</Text>
-              <Text style={styles.userEmail}>jeffclay@gmail.com</Text>
+              <Text>jeffclay@gmail.com</Text>
             </View>
           </Animated.View>
 
@@ -287,13 +270,14 @@ export default function ProfileScreen() {
               </TouchableRipple>
             </Surface>
           </Animated.View>
+
+          <Animated.View entering={FadeInUp.delay(260).duration(320)}>
+            <Button mode="contained" onPress={() => { }}>
+              LOGOUT
+            </Button>
+          </Animated.View>
         </Animated.ScrollView>
 
-        <Animated.View entering={FadeInUp.delay(260).duration(320)} style={styles.logoutContainer}>
-          <Button mode="contained" style={styles.logoutButton} onPress={() => { }}>
-            LOGOUT
-          </Button>
-        </Animated.View>
       </View>
     </SafeAreaView>
   );

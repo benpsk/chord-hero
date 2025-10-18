@@ -1,13 +1,11 @@
-import { memo } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { SearchFilterBar } from "./SearchFilterBar";
 import { SearchTabBar } from "./SearchTabBar";
 import { type FilterLanguage } from '@/constants/home';
 
 type ListHeaderProps = {
-  styles: any; // Or a more specific style type
   query: string;
   setQuery: (q: string) => void;
   selectedLanguages: FilterLanguage[];
@@ -27,7 +25,6 @@ const SEARCH_TABS: { key: SearchTabKey; label: string }[] = [
 ];
 
 export default function ListHeader({
-  styles,
   query,
   setQuery,
   selectedLanguages,
@@ -62,10 +59,21 @@ export default function ListHeader({
         <Text variant="titleMedium" style={styles.sectionTitle}>
           {SEARCH_TABS.find((tab) => tab.key === activeTab)?.label}
         </Text>
-        <Text variant="bodySmall" style={styles.sectionSubtitle}>
+        <Text variant="bodySmall">
           {activeResultsCount} result{activeResultsCount === 1 ? '' : 's'}
         </Text>
       </Animated.View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionTitle: {
+    fontWeight: '600',
+  },
+});

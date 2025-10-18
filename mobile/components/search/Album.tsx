@@ -39,20 +39,11 @@ export function Album({
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: 16,
-          paddingVertical: 16,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.colors.tertiary,
+          paddingVertical: 10,
         },
         trackInfo: {
           flex: 1,
           gap: 4,
-        },
-        trackTitle: {
-          fontSize: 16,
-          fontWeight: '700',
-        },
-        trackMetaLine: {
-          fontSize: 13,
         },
         albumMeta: {
           flexDirection: 'row',
@@ -80,7 +71,7 @@ export function Album({
           textAlign: 'center',
         },
       }),
-    [theme.colors.onSecondary, theme.colors.secondary, theme.colors.tertiary]
+    [theme.colors.onSecondary, theme.colors.secondary]
   );
 
   return (
@@ -89,10 +80,10 @@ export function Album({
       style={styles.albumRow}
       entering={FadeInUp.delay(baseDelay + 40).duration(300)}>
       <View style={styles.trackInfo}>
-        <Text variant="titleSmall" style={styles.trackTitle} numberOfLines={1}>
+        <Text variant="titleSmall" numberOfLines={1}>
           {album.title}
         </Text>
-        <Text variant="bodySmall" style={styles.trackMetaLine} numberOfLines={1}>
+        <Text variant="bodySmall" numberOfLines={1}>
           {album.artist}
         </Text>
       </View>

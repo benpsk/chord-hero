@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
@@ -25,16 +25,10 @@ export function Stat({
     () =>
       StyleSheet.create({
         row: {
-          paddingVertical: 16,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.colors.tertiary,
+          paddingVertical: 10,
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-        },
-        name: {
-          fontSize: 16,
-          fontWeight: '700',
         },
         meta: {
           marginTop: 6,
@@ -55,7 +49,7 @@ export function Stat({
       key={item.id}
       style={styles.row}
       entering={FadeInUp.delay(baseDelay + 40).duration(300)}>
-      <Text variant="titleSmall" style={styles.name} numberOfLines={1}>
+      <Text variant="titleSmall" numberOfLines={1}>
         {item.name}
       </Text>
       <Text variant="bodySmall" style={styles.meta}>

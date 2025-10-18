@@ -53,7 +53,7 @@ export default function LibraryScreen() {
           paddingHorizontal: 24,
           paddingTop: 16,
           paddingBottom: 80,
-          gap: 24,
+          gap: 12,
         },
         headerRow: {
           flexDirection: 'row',
@@ -61,7 +61,7 @@ export default function LibraryScreen() {
           justifyContent: 'space-between',
         },
         headingTitle: {
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: '700',
         },
         searchButton: {
@@ -70,7 +70,6 @@ export default function LibraryScreen() {
         libraryRow: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingVertical: 12,
         },
         rowSpacing: {
           height: 12,
@@ -87,7 +86,6 @@ export default function LibraryScreen() {
           gap: 6,
         },
         libraryTitle: {
-          fontSize: 16,
           fontWeight: '700',
         },
         librarySubtitleRow: {
@@ -96,7 +94,7 @@ export default function LibraryScreen() {
           gap: 6,
         },
         librarySubtitle: {
-          fontSize: 13,
+          fontSize: 12,
         },
         chevronButton: {
           margin: 0,
@@ -111,11 +109,11 @@ export default function LibraryScreen() {
           paddingHorizontal: 24,
         },
         emptyTitle: {
-          fontSize: 18,
+          fontSize: 16,
           fontWeight: '700',
         },
         emptySubtitle: {
-          fontSize: 14,
+          fontSize: 12,
           textAlign: 'center',
         },
         fab: {
@@ -135,11 +133,12 @@ export default function LibraryScreen() {
           gap: 4,
         },
         modalTitle: {
-          fontSize: 20,
+          fontSize: 16,
           fontWeight: '700',
         },
         modalSubtitle: {
-          fontSize: 14,
+          fontSize: 12,
+          marginBottom: 12,
         },
         modalActions: {
           flexDirection: 'row',
@@ -168,7 +167,7 @@ export default function LibraryScreen() {
           paddingTop: 8,
         },
         selectionCounter: {
-          fontSize: 14,
+          fontSize: 12,
         },
       }),
     [theme.colors.tertiary, theme.colors.background, theme.colors.primary, theme.colors.surface]
@@ -312,6 +311,7 @@ export default function LibraryScreen() {
       </Animated.ScrollView>
 
       <FAB
+        size='small'
         icon="plus"
         style={styles.fab}
         onPress={openAddModal}

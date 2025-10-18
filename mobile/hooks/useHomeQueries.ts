@@ -2,6 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 
 import { apiGet } from '@/lib/api';
 
+export type Response<T> = {
+  data: T;
+}
+
 export type TrendingSong = {
   id: number;
   name: string;
@@ -30,7 +34,7 @@ const staleTime = 5 * 60 * 1000;
 export function useTrendingSongs() {
   return useQuery({
     queryKey: ['trending-songs'],
-    queryFn: () => apiGet<TrendingSong[]>('/api/trending-songs'),
+    queryFn: () => apiGet<Response<TrendingSong[]>>('/api/trending-songs'),
     staleTime,
   });
 }
@@ -38,7 +42,7 @@ export function useTrendingSongs() {
 export function useTrendingAlbums() {
   return useQuery({
     queryKey: ['trending-albums'],
-    queryFn: () => apiGet<TrendingAlbum[]>('/api/trending-albums'),
+    queryFn: () => apiGet<Response<TrendingAlbum[]>>('/api/trending-albums'),
     staleTime,
   });
 }
@@ -46,7 +50,7 @@ export function useTrendingAlbums() {
 export function useTrendingArtists() {
   return useQuery({
     queryKey: ['trending-artists'],
-    queryFn: () => apiGet<TrendingArtist[]>('/api/trending-artists'),
+    queryFn: () => apiGet<Response<TrendingArtist[]>>('/api/trending-artists'),
     staleTime,
   });
 }

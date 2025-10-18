@@ -39,7 +39,6 @@ export function SearchTabBar<T extends string>({
           justifyContent: 'flex-start',
         },
         tabLabel: {
-          fontSize: 16,
           fontWeight: '600',
         },
         tabLabelActive: {
@@ -82,3 +81,4 @@ export function SearchTabBar<T extends string>({
     </ScrollView>
   );
 }
+

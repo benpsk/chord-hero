@@ -60,7 +60,7 @@ export function SearchFilterBar({
             mode="outlined"
             value={query}
             onChangeText={onQueryChange}
-            placeholder="Search songs, artists, or albums"
+            placeholder="Search..."
             left={<TextInput.Icon icon="magnify" />}
             right={
               <TextInput.Icon
@@ -84,7 +84,7 @@ export function SearchFilterBar({
             />
           );
         })}
-        <Menu.Item onPress={onClearLanguages} title="Clear languages" leadingIcon="close" />
+        <Menu.Item onPress={onClearLanguages} title="Clear" leadingIcon="close" />
       </Menu>
       {selectedLanguages.length > 0 && (
         <View style={styles.filtersRow}>

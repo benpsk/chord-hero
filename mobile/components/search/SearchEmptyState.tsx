@@ -11,8 +11,8 @@ type SearchEmptyStateProps = {
 };
 
 export function SearchEmptyState({
-  title = 'No matches yet',
-  subtitle = 'Try adjusting your search or removing filters to see more songs.',
+  title = 'No data found!',
+  subtitle = 'Unable to load data, please come back',
   delay = 200,
   style,
 }: SearchEmptyStateProps) {

@@ -4,7 +4,7 @@ import { apiGet } from '@/lib/api';
 
 export type ReleaseYearRecord = {
   id: number;
-  name: number | string;
+  name: string;
   total?: number | null;
 };
 

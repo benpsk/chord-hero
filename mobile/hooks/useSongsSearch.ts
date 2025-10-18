@@ -18,16 +18,16 @@ export type SongRecord = {
 
 type PaginatedResponse<T> = {
   data: T[];
-  page?: number;
-  per_page?: number;
-  total?: number;
+  page: number;
+  per_page: number;
+  total: number;
 };
 
 export type UseSongsSearchParams = {
   search?: string;
 };
 
-type SongsPage = PaginatedResponse<SongRecord> | SongRecord[];
+type SongsPage = PaginatedResponse<SongRecord>;
 
 function isPaginatedResponse(page: SongsPage): page is PaginatedResponse<SongRecord> {
   return !!page && !Array.isArray(page);
@@ -53,36 +53,10 @@ export function useSongsSearch(params?: UseSongsSearchParams) {
   return useInfiniteQuery({
     queryKey: ['songs', params?.search ?? ''],
     initialPageParam: 1,
-    queryFn: ({ pageParam }) => apiGet<SongsPage>(buildPath(params, pageParam)),
+    queryFn: ({ pageParam }) => apiGet<PaginatedResponse<SongsPage>>(buildPath(params, pageParam)),
     getNextPageParam: (lastPage, allPages) => {
-      const data = extractPageData(lastPage);
-      if (data.length === 0) {
-        return undefined;
-      }
-
-      if (isPaginatedResponse(lastPage)) {
-        const perPage = lastPage.per_page ?? data.length;
-        const total = lastPage.total;
-
-        if (typeof total === 'number') {
-          const accumulated = allPages.reduce(
-            (sum, page) => sum + extractPageData(page).length,
-            0
-          );
-          if (accumulated >= total) {
-            return undefined;
-          }
-        }
-
-        if (data.length < perPage) {
-          return undefined;
-        }
-
-        return (lastPage.page ?? allPages.length) + 1;
-      }
-
-      // Fallback for plain array responses: increment page by list length if we still receive data
-      return allPages.length + 1;
+      const next = (lastPage.page * lastPage.per_page) < lastPage.total;
+      return next ? lastPage.page + 1 : null;
     },
   });
 }

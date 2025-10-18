@@ -62,11 +62,7 @@ async function request<T>(path: string, options?: RequestOptions): Promise<T> {
       const errors = payload.errors as ErrorBag;
       throw new ApiError(extractMessage(errors), response.status, errors);
     }
-    if ('data' in payload) {
-      return payload.data as T;
-    }
   }
-
   return payload as T;
 }
 

@@ -22,7 +22,7 @@
 
 ## songs table 
 - title => string[255]
-- level => enum[easy, medium, hard]
+- level_id => foreign key to levels table
 - key => string[20]
 - language => enum [english, burmese]
 - lyric text
@@ -71,10 +71,19 @@
 - user_id => foreign key to users table
 - message => text 
 
-## trendings table
+## trending_songs table
 - name => string[100]
-- level => enum[easy, medium, hard]
+- level_id => foreign key to levels table
 - description => string[400]
+
+## levels table
+- name => string[100]
+
+## level_song table
+- song_id => foreign key to songs table 
+- level_id => foreign key to levels table 
+- user_id  => foreign key to users table 
+- unique this pair [song_id, level_id, user_id]
 
 * for all of the table add the below - 
 * add id => auto increment

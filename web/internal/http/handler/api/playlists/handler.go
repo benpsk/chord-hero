@@ -1,7 +1,14 @@
 package playlists
 
 import (
+	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	playlistsvc "github.com/lyricapp/lyric/web/internal/services/playlists"
@@ -46,4 +53,124 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	util.RespondJSON(w, http.StatusOK, result)
+}
+
+// Create stores a playlist for the default user.
+func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Name string `json:"name"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
+		return
+	}
+
+	name := strings.TrimSpace(payload.Name)
+	errorsMap := map[string]string{}
+	if name == "" {
+		errorsMap["name"] = "name is required"
+	}
+	if len(errorsMap) > 0 {
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
+		return
+	}
+
+	const userID = 1
+
+	playlistID, err := h.svc.Create(r.Context(), playlistsvc.CreateParams{
+		Name:   name,
+		UserID: userID,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, playlistsvc.ErrNameRequired):
+			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"name": "name is required"}})
+			return
+		case errors.Is(err, playlistsvc.ErrInvalidUser):
+			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
+			return
+		default:
+			log.Println(err)
+			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to create playlist"}})
+			return
+		}
+	}
+
+	util.RespondJSON(w, http.StatusCreated, map[string]any{
+		"data": map[string]any{
+			"message":     "Playlist created successfully",
+			"playlist_id": playlistID,
+		},
+	})
+}
+
+// AddSongs attaches the provided songs to the playlist.
+func (h Handler) AddSongs(w http.ResponseWriter, r *http.Request) {
+	playlistParam := strings.TrimSpace(chi.URLParam(r, "playlist_id"))
+	playlistID, err := strconv.Atoi(playlistParam)
+	if err != nil || playlistID <= 0 {
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "playlist_id must be a positive integer"}})
+		return
+	}
+
+	rawSongIDs := strings.TrimSpace(chi.URLParam(r, "song_ids"))
+	if rawSongIDs == "" {
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must be provided as comma separated integers"}})
+		return
+	}
+
+	ids, parseErr := parseSongIDs(rawSongIDs)
+	if parseErr != nil {
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": parseErr.Error()}})
+		return
+	}
+
+	if err := h.svc.AddSongs(r.Context(), playlistID, ids); err != nil {
+		switch {
+		case errors.Is(err, playlistsvc.ErrPlaylistNotFound):
+			util.RespondJSON(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
+			return
+		case errors.Is(err, playlistsvc.ErrSongsRequired):
+			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must include at least one positive integer"}})
+			return
+		case errors.Is(err, playlistsvc.ErrSongNotFound):
+			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "one or more songs were not found"}})
+			return
+		default:
+			log.Println(err)
+			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to add songs to playlist"}})
+			return
+		}
+	}
+
+	util.RespondJSON(w, http.StatusOK, map[string]any{
+		"data": map[string]any{
+			"message": "Songs added to playlist successfully",
+		},
+	})
+}
+
+func parseSongIDs(raw string) ([]int, error) {
+	parts := strings.Split(raw, ",")
+	ids := make([]int, 0, len(parts))
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		if value == "" {
+			continue
+		}
+		id, err := strconv.Atoi(value)
+		if err != nil || id <= 0 {
+			return nil, errors.New("song_ids must be positive integers separated by commas")
+		}
+		ids = append(ids, id)
+	}
+
+	if len(ids) == 0 {
+		return nil, errors.New("song_ids must include at least one positive integer")
+	}
+
+	return ids, nil
 }

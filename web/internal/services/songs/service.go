@@ -16,6 +16,7 @@ type Service interface {
 	Create(ctx context.Context, params CreateParams) (int, error)
 	Update(ctx context.Context, id int, params UpdateParams) error
 	Delete(ctx context.Context, id int) error
+	AssignLevel(ctx context.Context, songID, levelID, userID int) error
 }
 
 // ListParams captures filtering options accepted by the list endpoint.
@@ -34,7 +35,7 @@ type ListParams struct {
 // MutationParams captures shared song fields used across create and update flows.
 type MutationParams struct {
 	Title       string
-	Level       *string
+	LevelID     *int
 	Key         *string
 	Language    *string
 	Lyric       *string
@@ -67,7 +68,7 @@ type ListResult struct {
 type Song struct {
 	ID          int      `json:"id"`
 	Title       string   `json:"title"`
-	Level       *string  `json:"level,omitempty"`
+	Level       *Level   `json:"level,omitempty"`
 	Key         *string  `json:"key,omitempty"`
 	Language    *string  `json:"language,omitempty"`
 	Lyric       *string  `json:"lyric,omitempty"`
@@ -91,6 +92,12 @@ type Album struct {
 	ReleaseYear *int   `json:"release_year"`
 }
 
+// Level captures structured difficulty metadata.
+type Level struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 // Repository encapsulates storage for songs.
 type Repository interface {
 	List(ctx context.Context, params ListParams) (ListResult, error)
@@ -98,6 +105,7 @@ type Repository interface {
 	Get(ctx context.Context, id int) (Song, error)
 	Update(ctx context.Context, id int, params UpdateParams) error
 	Delete(ctx context.Context, id int) error
+	AssignLevel(ctx context.Context, songID, levelID, userID int) error
 }
 
 type service struct {
@@ -117,11 +125,6 @@ func (s *service) List(ctx context.Context, params ListParams) (ListResult, erro
 }
 
 var (
-	allowedLevels = map[string]struct{}{
-		"easy":   {},
-		"medium": {},
-		"hard":   {},
-	}
 	allowedLanguages = map[string]struct{}{
 		"english": {},
 		"burmese": {},
@@ -133,6 +136,12 @@ var ErrTitleRequired = errors.New("songs: title is required")
 
 // ErrNotFound indicates a requested song does not exist.
 var ErrNotFound = errors.New("songs: not found")
+
+// ErrInvalidLevel indicates the supplied level is missing or invalid.
+var ErrInvalidLevel = errors.New("songs: invalid level")
+
+// ErrInvalidUser indicates the supplied user is missing or invalid.
+var ErrInvalidUser = errors.New("songs: invalid user")
 
 func (s *service) Create(ctx context.Context, params CreateParams) (int, error) {
 	if err := normaliseMutation(&params.MutationParams); err != nil {
@@ -175,6 +184,22 @@ func (s *service) Delete(ctx context.Context, id int) error {
 	return s.repo.Delete(ctx, id)
 }
 
+// AssignLevel updates the associated level for a song.
+func (s *service) AssignLevel(ctx context.Context, songID, levelID, userID int) error {
+	if songID <= 0 {
+		return ErrNotFound
+	}
+	if levelID <= 0 {
+		return fmt.Errorf("songs: invalid level id %d", levelID)
+	}
+
+	if userID <= 0 {
+		return ErrInvalidUser
+	}
+
+	return s.repo.AssignLevel(ctx, songID, levelID, userID)
+}
+
 func normaliseMutation(params *MutationParams) error {
 	title := strings.TrimSpace(params.Title)
 	if title == "" {
@@ -182,15 +207,9 @@ func normaliseMutation(params *MutationParams) error {
 	}
 	params.Title = title
 
-	if params.Level != nil {
-		value := strings.ToLower(strings.TrimSpace(*params.Level))
-		if value == "" {
-			params.Level = nil
-		} else {
-			if _, ok := allowedLevels[value]; !ok {
-				return fmt.Errorf("songs: invalid level %q", value)
-			}
-			params.Level = ptr(value)
+	if params.LevelID != nil {
+		if *params.LevelID <= 0 {
+			return fmt.Errorf("songs: invalid level id %d", *params.LevelID)
 		}
 	}
 

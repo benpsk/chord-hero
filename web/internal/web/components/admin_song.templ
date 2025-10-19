@@ -217,14 +217,14 @@ templ AdminSongForm(props AdminSongFormProps) {
 					<div class="label">
 						<span class="label-text">Level</span>
 					</div>
-					<select name="level" class="select select-bordered w-full">
+					<select name="level_id" class="select select-bordered w-full">
 						<option value="">Choose level</option>
 						for _, option := range props.Levels {
 							<option value={ option.Value } selected={ option.Selected }>{ option.Label }</option>
 						}
 					</select>
 				</label>
-				if message, ok := props.FieldErrors["level"]; ok {
+				if message, ok := props.FieldErrors["level_id"]; ok {
 					<p class="text-sm text-error">{ message }</p>
 				}
 			</div>

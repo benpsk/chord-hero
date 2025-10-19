@@ -14,6 +14,7 @@ import (
 	adminctx "github.com/lyricapp/lyric/web/internal/http/context/admin"
 	albumsvc "github.com/lyricapp/lyric/web/internal/services/albums"
 	artistsvc "github.com/lyricapp/lyric/web/internal/services/artists"
+	levelsvc "github.com/lyricapp/lyric/web/internal/services/levels"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 	writersvc "github.com/lyricapp/lyric/web/internal/services/writers"
 	"github.com/lyricapp/lyric/web/internal/web/components"
@@ -25,16 +26,14 @@ type Handler struct {
 	albums  albumsvc.Service
 	artists artistsvc.Service
 	writers writersvc.Service
+	levels  levelsvc.Service
 }
 
-var (
-	allowedLevels    = map[string]struct{}{"easy": {}, "medium": {}, "hard": {}}
-	allowedLanguages = map[string]struct{}{"english": {}, "burmese": {}}
-)
+var allowedLanguages = map[string]struct{}{"english": {}, "burmese": {}}
 
 // New constructs a song admin handler with the required dependencies.
-func New(songs songsvc.Service, albums albumsvc.Service, artists artistsvc.Service, writers writersvc.Service) *Handler {
-	return &Handler{songs: songs, albums: albums, artists: artists, writers: writers}
+func New(songs songsvc.Service, albums albumsvc.Service, artists artistsvc.Service, writers writersvc.Service, levels levelsvc.Service) *Handler {
+	return &Handler{songs: songs, albums: albums, artists: artists, writers: writers, levels: levels}
 }
 
 // Index renders the admin song list with optional search.
@@ -64,7 +63,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 			Title:       song.Title,
 			Artists:     joinNames(song.Artists),
 			Writers:     joinNames(song.Writers),
-			Level:       pointerToHuman(song.Level),
+			Level:       levelNameOrDash(song.Level),
 			Language:    pointerToHuman(song.Language),
 			ReleaseYear: releaseYearOrDash(song.ReleaseYear),
 		})
@@ -106,7 +105,7 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 		Artists:     lookups.artists,
 		Writers:     lookups.writers,
 		Albums:      lookups.albums,
-		Levels:      buildLevelOptions(""),
+		Levels:      lookups.levels,
 		Languages:   buildLanguageOptions(""),
 		CurrentUser: user.Username,
 	}
@@ -143,7 +142,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
-			Levels:      buildLevelOptions(payload.Values.Level),
+			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
 			Languages:   buildLanguageOptions(payload.Values.Language),
 			CurrentUser: user.Username,
 		}
@@ -159,7 +158,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
-			Levels:      buildLevelOptions(payload.Values.Level),
+			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
 			Languages:   buildLanguageOptions(payload.Values.Language),
 			CurrentUser: user.Username,
 		}
@@ -176,9 +175,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	if payload.Values.Level != "" {
-		level := payload.Values.Level
-		params.Level = &level
+	if payload.LevelID != nil {
+		params.LevelID = payload.LevelID
 	}
 	if payload.Values.Key != "" {
 		key := payload.Values.Key
@@ -208,7 +206,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
-			Levels:      buildLevelOptions(payload.Values.Level),
+			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
 			Languages:   buildLanguageOptions(payload.Values.Language),
 			CurrentUser: user.Username,
 		}
@@ -259,7 +257,7 @@ func (h *Handler) Edit(w http.ResponseWriter, r *http.Request) {
 		Artists:     markSelected(lookups.artists, values.ArtistIDs),
 		Writers:     markSelected(lookups.writers, values.WriterIDs),
 		Albums:      markSelected(lookups.albums, values.AlbumIDs),
-		Levels:      buildLevelOptions(values.Level),
+		Levels:      markSelected(lookups.levels, []string{values.LevelID}),
 		Languages:   buildLanguageOptions(values.Language),
 		CurrentUser: user.Username,
 	}
@@ -304,7 +302,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
-			Levels:      buildLevelOptions(payload.Values.Level),
+			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
 			Languages:   buildLanguageOptions(payload.Values.Language),
 			CurrentUser: user.Username,
 		}
@@ -321,7 +319,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			Artists:     markSelected(lookups.artists, payload.Values.ArtistIDs),
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
-			Levels:      buildLevelOptions(payload.Values.Level),
+			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
 			Languages:   buildLanguageOptions(payload.Values.Language),
 			CurrentUser: user.Username,
 		}
@@ -338,9 +336,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	if payload.Values.Level != "" {
-		level := payload.Values.Level
-		params.Level = &level
+	if payload.LevelID != nil {
+		params.LevelID = payload.LevelID
 	}
 	if payload.Values.Key != "" {
 		key := payload.Values.Key
@@ -403,6 +400,7 @@ type songFormPayload struct {
 	Values      components.AdminSongFormValues
 	FieldErrors map[string]string
 	Errors      []string
+	LevelID     *int
 	ReleaseYear *int
 	AlbumIDs    []int
 	ArtistIDs   []int
@@ -425,7 +423,7 @@ func parseSongForm(r *http.Request) (songFormPayload, error) {
 	}
 
 	payload.Values.Title = strings.TrimSpace(r.FormValue("title"))
-	payload.Values.Level = strings.ToLower(strings.TrimSpace(r.FormValue("level")))
+	payload.Values.LevelID = strings.TrimSpace(r.FormValue("level_id"))
 	payload.Values.Key = strings.TrimSpace(r.FormValue("key"))
 	payload.Values.Language = strings.ToLower(strings.TrimSpace(r.FormValue("language")))
 	payload.Values.ReleaseYear = strings.TrimSpace(r.FormValue("release_year"))
@@ -438,9 +436,14 @@ func parseSongForm(r *http.Request) (songFormPayload, error) {
 		payload.FieldErrors["title"] = "Title is required."
 	}
 
-	if payload.Values.Level != "" {
-		if _, ok := allowedLevels[payload.Values.Level]; !ok {
-			payload.FieldErrors["level"] = "Choose a valid level."
+	if payload.Values.LevelID == "" {
+		payload.FieldErrors["level_id"] = "Level is required."
+	} else {
+		levelID, err := strconv.Atoi(payload.Values.LevelID)
+		if err != nil || levelID <= 0 {
+			payload.FieldErrors["level_id"] = "Choose a valid level."
+		} else {
+			payload.LevelID = &levelID
 		}
 	}
 
@@ -482,6 +485,7 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 	artists []components.AdminSongOption
 	writers []components.AdminSongOption
 	albums  []components.AdminSongOption
+	levels  []components.AdminSongOption
 }, error) {
 	ctx := r.Context()
 
@@ -491,6 +495,7 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 			artists []components.AdminSongOption
 			writers []components.AdminSongOption
 			albums  []components.AdminSongOption
+			levels  []components.AdminSongOption
 		}{}, err
 	}
 
@@ -500,6 +505,7 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 			artists []components.AdminSongOption
 			writers []components.AdminSongOption
 			albums  []components.AdminSongOption
+			levels  []components.AdminSongOption
 		}{}, err
 	}
 
@@ -509,6 +515,17 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 			artists []components.AdminSongOption
 			writers []components.AdminSongOption
 			albums  []components.AdminSongOption
+			levels  []components.AdminSongOption
+		}{}, err
+	}
+
+	levelsResult, err := h.levels.List(ctx)
+	if err != nil {
+		return struct {
+			artists []components.AdminSongOption
+			writers []components.AdminSongOption
+			albums  []components.AdminSongOption
+			levels  []components.AdminSongOption
 		}{}, err
 	}
 
@@ -516,10 +533,12 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 		artists []components.AdminSongOption
 		writers []components.AdminSongOption
 		albums  []components.AdminSongOption
+		levels  []components.AdminSongOption
 	}{
 		artists: make([]components.AdminSongOption, 0, len(artistsResult.Data)),
 		writers: make([]components.AdminSongOption, 0, len(writersResult.Data)),
 		albums:  make([]components.AdminSongOption, 0, len(albumsResult.Data)),
+		levels:  make([]components.AdminSongOption, 0, len(levelsResult)),
 	}
 
 	for _, artist := range artistsResult.Data {
@@ -547,13 +566,21 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 		})
 	}
 
+	for _, level := range levelsResult {
+		label := formatLevelLabel(level.Name)
+		lookups.levels = append(lookups.levels, components.AdminSongOption{
+			Value: strconv.Itoa(level.ID),
+			Label: label,
+		})
+	}
+
 	return lookups, nil
 }
 
 func buildValuesFromSong(song songsvc.Song) components.AdminSongFormValues {
 	values := components.AdminSongFormValues{
 		Title:       song.Title,
-		Level:       "",
+		LevelID:     "",
 		Key:         "",
 		Language:    "",
 		ReleaseYear: "",
@@ -564,7 +591,7 @@ func buildValuesFromSong(song songsvc.Song) components.AdminSongFormValues {
 	}
 
 	if song.Level != nil {
-		values.Level = strings.ToLower(strings.TrimSpace(*song.Level))
+		values.LevelID = strconv.Itoa(song.Level.ID)
 	}
 	if song.Key != nil {
 		values.Key = strings.TrimSpace(*song.Key)
@@ -650,17 +677,13 @@ func markSelected(options []components.AdminSongOption, selectedValues []string)
 	return marked
 }
 
-func buildLevelOptions(selected string) []components.AdminSongOption {
-	levels := []components.AdminSongOption{
-		{Value: "easy", Label: "Easy"},
-		{Value: "medium", Label: "Medium"},
-		{Value: "hard", Label: "Hard"},
+func formatLevelLabel(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
 	}
-	selected = strings.ToLower(strings.TrimSpace(selected))
-	for i, option := range levels {
-		levels[i].Selected = option.Value == selected
-	}
-	return levels
+	lower := strings.ToLower(trimmed)
+	return strings.ToUpper(lower[:1]) + lower[1:]
 }
 
 func buildLanguageOptions(selected string) []components.AdminSongOption {
@@ -716,6 +739,17 @@ func toStringIDsFromAlbums(albums []songsvc.Album) []string {
 		ids = append(ids, strconv.Itoa(album.ID))
 	}
 	return ids
+}
+
+func levelNameOrDash(level *songsvc.Level) string {
+	if level == nil {
+		return "—"
+	}
+	name := strings.TrimSpace(level.Name)
+	if name == "" {
+		return "—"
+	}
+	return formatLevelLabel(name)
 }
 
 func pointerToHuman(value *string) string {

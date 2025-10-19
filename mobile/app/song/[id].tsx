@@ -30,22 +30,22 @@ import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-import { getSongById } from '@/constants/songs';
 import { ChordProView } from '@/components/ChordProView';
 import { ChordDiagramCarousel } from '@/components/ChordDiagramCarousel';
 import { getChordByName, type GuitarChord } from '@/constants/chords';
 import { extractMeta, toDisplayLines, transposeChordPro, transposeChordToken } from '@/lib/chord';
 import SongHeaderTitle from '@/components/SongHeaderTitle';
+import { SongRecord } from '@/hooks/useSongsSearch';
 
 export default function SongDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const song = getSongById(String(id));
+  const { item } = useLocalSearchParams<{ id: string, item: string}>();
+  const song: SongRecord = JSON.parse(item);
   const theme = useTheme();
   const nav = useNavigation();
   const [transpose, setTranspose] = useState(0);
   const [mode, setMode] = useState<'inline' | 'over' | 'lyrics'>('over');
-  const [fontSize, setFontSize] = useState(16);
-  const [overGap, setOverGap] = useState(2);
+  const [fontSize, setFontSize] = useState(14);
+  const [overGap, setOverGap] = useState(0);
   const [lineGap, setLineGap] = useState(0);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(false);
   const [autoScrollSpeed, setAutoScrollSpeed] = useState(30);
@@ -322,19 +322,19 @@ export default function SongDetailScreen() {
   const AUTOSCROLL_MAX_DELAY_MS = 4000;
 
   const transposedBody = useMemo(() => {
-    return song ? transposeChordPro(song.body, transpose) : '';
+    return song ? transposeChordPro(song.lyric, transpose) : '';
   }, [song, transpose]);
 
   const lines = useMemo(() => toDisplayLines(transposedBody), [transposedBody]);
-  const meta = useMemo(() => (song ? extractMeta(song.body) : {}), [song]);
+  const meta = useMemo(() => (song ? extractMeta(song.lyric) : {}), [song]);
   const metaKeyRaw = (meta as any).key as string | undefined;
-  const bodyKey = useMemo(() => extractKeyFromBody(song?.body), [song?.body]);
+  const bodyKey = useMemo(() => extractKeyFromBody(song.lyric), [song.lyric]);
   const songKey = useMemo(() => normalizeKeyValue(song?.key), [song?.key]);
   const metaKey = useMemo(() => normalizeKeyValue(metaKeyRaw), [metaKeyRaw]);
   const baseKey = songKey ?? metaKey ?? bodyKey;
   const effectiveKey = useMemo(() => (baseKey ? transposeChordToken(baseKey, transpose) : undefined), [baseKey, transpose]);
-  const singer = song?.artist || (meta as any).artist;
-  const composer = song?.composer || ((meta as any).composer as string | undefined);
+  const singer = song.artists?.map((artist) => artist?.name).filter(Boolean).join(', ') || 'Unknown artist';
+  const composer = song.writers?.map((writer) => writer?.name).filter(Boolean).join(', ') || undefined;
   useLayoutEffect(() => {
     if (!song) return;
     nav.setOptions({

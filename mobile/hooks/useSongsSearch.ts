@@ -5,10 +5,10 @@ import { apiGet } from '@/lib/api';
 export type SongRecord = {
   id: number;
   title: string;
-  level?: string | null;
+  level?: { id: number; name: string | null } | null;
   key?: string | null;
   language?: string | null;
-  lyric?: string | null;
+  lyric: string;
   release_year?: number | null;
   is_bookmark?: boolean;
   artists?: Array<{ id: number; name: string | null }>;

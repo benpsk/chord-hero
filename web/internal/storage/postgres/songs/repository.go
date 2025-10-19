@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -98,12 +100,14 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
         select
             s.id,
             s.title,
-            s.level,
+            l.name,
+            s.level_id,
             s.key,
             s.language,
             s.lyric,
             s.release_year
         from songs s
+        left join levels l on l.id = s.level_id
         %s
         order by s.id desc
         limit %s offset %s
@@ -126,14 +130,15 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		var (
 			id          int
 			title       string
-			level       sql.NullString
+			levelName   sql.NullString
+			levelID     sql.NullInt32
 			songKey     sql.NullString
 			language    sql.NullString
 			lyric       sql.NullString
 			releaseYear sql.NullInt32
 		)
 
-		if err := rows.Scan(&id, &title, &level, &songKey, &language, &lyric, &releaseYear); err != nil {
+		if err := rows.Scan(&id, &title, &levelName, &levelID, &songKey, &language, &lyric, &releaseYear); err != nil {
 			return result, fmt.Errorf("scan song: %w", err)
 		}
 
@@ -146,9 +151,14 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 			IsBookmark: false,
 		}
 
-		if level.Valid {
-			value := titleCase(level.String)
-			song.Level = &value
+		if levelID.Valid {
+			level := songsvc.Level{
+				ID: int(levelID.Int32),
+			}
+			if levelName.Valid {
+				level.Name = titleCase(levelName.String)
+			}
+			song.Level = &level
 		}
 		if songKey.Valid {
 			value := songKey.String
@@ -204,17 +214,20 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
         select
             s.id,
             s.title,
-            s.level,
+            l.name,
+            s.level_id,
             s.key,
             s.language,
             s.lyric,
             s.release_year
         from songs s
+        left join levels l on l.id = s.level_id
         where s.id = $1
     `
 
 	var (
-		level       sql.NullString
+		levelName   sql.NullString
+		levelID     sql.NullInt32
 		songKey     sql.NullString
 		language    sql.NullString
 		lyric       sql.NullString
@@ -225,7 +238,8 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
 	if err := r.db.QueryRow(ctx, query, id).Scan(
 		&song.ID,
 		&song.Title,
-		&level,
+		&levelName,
+		&levelID,
 		&songKey,
 		&language,
 		&lyric,
@@ -237,9 +251,14 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
 		return songsvc.Song{}, fmt.Errorf("get song: %w", err)
 	}
 
-	if level.Valid {
-		value := titleCase(level.String)
-		song.Level = &value
+	if levelID.Valid {
+		level := songsvc.Level{
+			ID: int(levelID.Int32),
+		}
+		if levelName.Valid {
+			level.Name = titleCase(levelName.String)
+		}
+		song.Level = &level
 	}
 	if songKey.Valid {
 		value := songKey.String
@@ -289,12 +308,12 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 
 	var songID int
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO songs (title, level, key, language, lyric, release_year, created_by)
+		INSERT INTO songs (title, level_id, key, language, lyric, release_year, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`,
 		params.Title,
-		nullableString(params.Level),
+		nullableInt(params.LevelID),
 		nullableString(params.Key),
 		nullableString(params.Language),
 		nullableString(params.Lyric),
@@ -349,14 +368,14 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 	cmdTag, err := tx.Exec(ctx, `
 		UPDATE songs
 		SET title = $1,
-		    level = $2,
+		    level_id = $2,
 		    key = $3,
 		    language = $4,
 		    lyric = $5,
 		    release_year = $6
 		WHERE id = $7
 	`, params.Title,
-		nullableString(params.Level),
+		nullableInt(params.LevelID),
 		nullableString(params.Key),
 		nullableString(params.Language),
 		nullableString(params.Lyric),
@@ -421,6 +440,58 @@ func (r *Repository) Delete(ctx context.Context, id int) error {
 	if cmdTag.RowsAffected() == 0 {
 		return songsvc.ErrNotFound
 	}
+	return nil
+}
+
+// AssignLevel updates the level association for a song.
+func (r *Repository) AssignLevel(ctx context.Context, songID, levelID, userID int) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin assign level: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	cmdTag, err := tx.Exec(ctx, `
+        UPDATE songs
+        SET level_id = $1
+        WHERE id = $2
+    `, levelID, songID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+			return songsvc.ErrInvalidLevel
+		}
+		return fmt.Errorf("assign level update song: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return songsvc.ErrNotFound
+	}
+
+	if _, err := tx.Exec(ctx, `
+        INSERT INTO level_song (song_id, level_id, user_id)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (song_id, level_id, user_id) DO UPDATE
+        SET updated_at = NOW()
+    `, songID, levelID, userID); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+			switch pgErr.ConstraintName {
+			case "level_song_song_id_fkey":
+				return songsvc.ErrNotFound
+			case "level_song_level_id_fkey":
+				return songsvc.ErrInvalidLevel
+			case "level_song_user_id_fkey":
+				return songsvc.ErrInvalidUser
+			}
+			return songsvc.ErrInvalidLevel
+		}
+		return fmt.Errorf("assign level insert relation: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit assign level: %w", err)
+	}
+
 	return nil
 }
 

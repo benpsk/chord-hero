@@ -13,6 +13,7 @@ type Service interface {
 type Trending struct {
 	ID          int     `json:"id"`
 	Name        string  `json:"name"`
+	LevelID     *int    `json:"level_id,omitempty"`
 	Level       *string `json:"level,omitempty"`
 	Description *string `json:"description,omitempty"`
 }

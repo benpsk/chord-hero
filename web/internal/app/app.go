@@ -13,6 +13,7 @@ import (
 	chordsvc "github.com/lyricapp/lyric/web/internal/services/chords"
 	feedbacksvc "github.com/lyricapp/lyric/web/internal/services/feedback"
 	healthsvc "github.com/lyricapp/lyric/web/internal/services/health"
+	levelsvc "github.com/lyricapp/lyric/web/internal/services/levels"
 	playlistsvc "github.com/lyricapp/lyric/web/internal/services/playlists"
 	releaseyearsvc "github.com/lyricapp/lyric/web/internal/services/releaseyear"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
@@ -24,6 +25,7 @@ import (
 	chordrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/chords"
 	feedbackrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/feedback"
 	healthrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/health"
+	levelrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/levels"
 	playlistrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/playlists"
 	releaseyearrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/releaseyear"
 	songrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/songs"
@@ -52,6 +54,7 @@ type Services struct {
 	Chords      chordsvc.Service
 	Feedback    feedbacksvc.Service
 	AdminAuth   adminauthsvc.Service
+	Levels      levelsvc.Service
 }
 
 // New constructs a new Application instance with default implementations.
@@ -67,6 +70,7 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 	feedbackRepository := feedbackrepo.NewRepository(db)
 	healthRepository := healthrepo.NewRepository(db)
 	adminRepository := adminrepo.NewRepository(db)
+	levelRepository := levelrepo.NewRepository(db)
 
 	adminAuthRepository := adminAuthRepoAdapter{repo: adminRepository}
 	adminAuthService := adminauthsvc.NewService(adminAuthRepository)
@@ -92,6 +96,7 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 			Chords:      chordsvc.NewService(chordRepository),
 			Feedback:    feedbacksvc.NewService(feedbackRepository),
 			AdminAuth:   adminAuthService,
+			Levels:      levelsvc.NewService(levelRepository),
 		},
 		AdminSessions: adminSessions,
 	}

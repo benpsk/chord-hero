@@ -1,10 +1,24 @@
 package songs
 
 import (
+	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
+)
+
+var (
+	allowedLanguages = map[string]struct{}{
+		"english": {},
+		"burmese": {},
+	}
 )
 
 // Handler exposes song catalogue endpoints.
@@ -53,3 +67,186 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	util.RespondJSON(w, http.StatusOK, result)
 }
+
+// Create stores a new song using the shared admin schema.
+func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Title       string `json:"title"`
+		LevelID     *int   `json:"level_id"`
+		Key         string `json:"key"`
+		Language    string `json:"language"`
+		ReleaseYear *int   `json:"release_year"`
+		AlbumIDs    []int  `json:"album_ids"`
+		ArtistIDs   []int  `json:"artist_ids"`
+		WriterIDs   []int  `json:"writer_ids"`
+		Lyric       string `json:"lyric"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
+		return
+	}
+
+	title := strings.TrimSpace(payload.Title)
+	key := strings.TrimSpace(payload.Key)
+	language := strings.ToLower(strings.TrimSpace(payload.Language))
+	lyricTrimmed := strings.TrimSpace(payload.Lyric)
+
+	errorsMap := map[string]string{}
+
+	if title == "" {
+		errorsMap["title"] = "title is required"
+	}
+
+	if payload.LevelID == nil {
+		errorsMap["level_id"] = "level_id is required"
+	} else if *payload.LevelID <= 0 {
+		errorsMap["level_id"] = "level_id must be a positive integer"
+	}
+
+	if language == "" {
+		errorsMap["language"] = "language is required"
+	} else if _, ok := allowedLanguages[language]; !ok {
+		errorsMap["language"] = "language must be english or burmese"
+	}
+
+	if lyricTrimmed == "" {
+		errorsMap["lyric"] = "lyric is required"
+	}
+
+	var releaseYear *int
+	if payload.ReleaseYear != nil {
+		if *payload.ReleaseYear <= 0 {
+			errorsMap["release_year"] = "release_year must be a positive integer"
+		} else {
+			releaseYear = payload.ReleaseYear
+		}
+	}
+
+	validateIDs := func(values []int, field string) []int {
+		if len(values) == 0 {
+			return []int{}
+		}
+
+		valid := make([]int, 0, len(values))
+		for _, id := range values {
+			if id <= 0 {
+				errorsMap[field] = field + " must contain positive integers"
+				return []int{}
+			}
+			valid = append(valid, id)
+		}
+		return valid
+	}
+
+	albumIDs := validateIDs(payload.AlbumIDs, "album_ids")
+	artistIDs := validateIDs(payload.ArtistIDs, "artist_ids")
+	writerIDs := validateIDs(payload.WriterIDs, "writer_ids")
+
+	if len(errorsMap) > 0 {
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
+		return
+	}
+
+	params := songsvc.CreateParams{
+		MutationParams: songsvc.MutationParams{
+			Title:     title,
+			AlbumIDs:  albumIDs,
+			ArtistIDs: artistIDs,
+			WriterIDs: writerIDs,
+			LevelID:   payload.LevelID,
+		},
+	}
+
+	if key != "" {
+		params.Key = &key
+	}
+	if language != "" {
+		params.Language = &language
+	}
+	lyric := payload.Lyric
+	params.Lyric = &lyric
+	if releaseYear != nil {
+		params.ReleaseYear = releaseYear
+	}
+
+	songID, err := h.svc.Create(r.Context(), params)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, songsvc.ErrTitleRequired):
+			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"title": "title is required"}})
+			return
+		default:
+			msg := err.Error()
+			switch {
+			case strings.Contains(msg, "invalid level id"):
+				util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"level_id": "level_id must reference a valid level"}})
+				return
+			case strings.Contains(msg, "invalid language"):
+				util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"language": "language must be english or burmese"}})
+				return
+			default:
+				util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to create song"}})
+				return
+			}
+		}
+	}
+
+	util.RespondJSON(w, http.StatusCreated, map[string]any{
+		"data": map[string]any{
+			"message": "Song created successfully",
+			"song_id": songID,
+		},
+	})
+}
+
+// AssignLevel associates a level with the specified song.
+func (h Handler) AssignLevel(w http.ResponseWriter, r *http.Request) {
+	songIDValue := chi.URLParam(r, "song_id")
+	levelIDValue := chi.URLParam(r, "level_id")
+
+	songID, err := strconv.Atoi(strings.TrimSpace(songIDValue))
+	if err != nil || songID <= 0 {
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "song_id must be a positive integer"}})
+		return
+	}
+
+	levelID, err := strconv.Atoi(strings.TrimSpace(levelIDValue))
+	if err != nil || levelID <= 0 {
+		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "level_id must be a positive integer"}})
+		return
+	}
+	userID := 1
+	if err := h.svc.AssignLevel(r.Context(), songID, levelID, userID); err != nil {
+		switch {
+		case errors.Is(err, songsvc.ErrNotFound):
+			util.RespondJSON(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "song not found"}})
+			return
+		case errors.Is(err, songsvc.ErrInvalidLevel):
+			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "level not found"}})
+			return
+		case errors.Is(err, songsvc.ErrInvalidUser):
+			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
+			return
+		default:
+			msg := err.Error()
+			if strings.Contains(msg, "invalid level id") {
+				util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "level_id must be a positive integer"}})
+				return
+			}
+			log.Println(err)
+			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to assign level"}})
+			return
+		}
+	}
+
+	util.RespondJSON(w, http.StatusOK, map[string]any{
+		"data": map[string]any{
+			"message": "Level assigned successfully",
+		},
+	})
+}
+

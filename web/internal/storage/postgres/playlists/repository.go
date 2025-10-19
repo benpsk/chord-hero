@@ -2,9 +2,12 @@ package playlists
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	playlistsvc "github.com/lyricapp/lyric/web/internal/services/playlists"
@@ -101,6 +104,60 @@ func (r *Repository) List(ctx context.Context, params playlistsvc.ListParams) (p
 
 	result.Data = playlists
 	return result, nil
+}
+
+// Create stores a new playlist record.
+func (r *Repository) Create(ctx context.Context, params playlistsvc.CreateParams) (int, error) {
+	var playlistID int
+	if err := r.db.QueryRow(ctx, `
+        INSERT INTO playlists (name, user_id)
+        VALUES ($1, $2)
+        RETURNING id
+    `, params.Name, params.UserID).Scan(&playlistID); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+			return 0, playlistsvc.ErrInvalidUser
+		}
+		return 0, fmt.Errorf("create playlist: %w", err)
+	}
+
+	return playlistID, nil
+}
+
+// AddSongs associates songs with the provided playlist.
+func (r *Repository) AddSongs(ctx context.Context, playlistID int, songIDs []int) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin add songs to playlist: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	for _, songID := range songIDs {
+		if _, err := tx.Exec(ctx, `
+            INSERT INTO playlist_song (playlist_id, song_id)
+            VALUES ($1, $2)
+            ON CONFLICT (playlist_id, song_id) DO UPDATE
+            SET updated_at = NOW()
+        `, playlistID, songID); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+				switch pgErr.ConstraintName {
+				case "playlist_song_playlist_id_fkey":
+					return playlistsvc.ErrPlaylistNotFound
+				case "playlist_song_song_id_fkey":
+					return playlistsvc.ErrSongNotFound
+				}
+				return playlistsvc.ErrSongNotFound
+			}
+			return fmt.Errorf("add songs to playlist: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit add songs to playlist: %w", err)
+	}
+
+	return nil
 }
 
 func offset(page, perPage int) int {

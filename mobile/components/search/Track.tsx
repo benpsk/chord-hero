@@ -1,21 +1,13 @@
+import { SongRecord } from '@/hooks/useSongsSearch';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
-export type SearchTrackItem = {
-  id: string;
-  title: string;
-  artist: string;
-  composer?: string;
-  key?: string;
-  level?: string;
-};
-
 type TrackItemProps = {
-  item: SearchTrackItem;
+  item: SongRecord;
   bookmarkedItems: Set<string>,
   onToggleBookmark: (key: string) => void;
-  onPressTrack: (id: string) => void;
+  onPressTrack: (item: SongRecord) => void;
 };
 
 // We pass the styles object as a prop for performance
@@ -56,7 +48,6 @@ export function Track({
         },
         metaText: {
           color: theme.colors.onSecondary,
-          fontWeight: '600',
         },
         iconButton: {
           margin: -8,
@@ -71,7 +62,7 @@ export function Track({
     <Surface elevation={0} >
       <Pressable
         style={styles.trackRipple}
-        onPress={() => onPressTrack(item.id)}
+        onPress={() => onPressTrack(item)}
         accessibilityLabel={`View details for ${item.title}`}>
         <View style={styles.trackRow}>
           <View style={styles.trackInfo}>
@@ -79,8 +70,9 @@ export function Track({
               {item.title}
             </Text>
             <Text variant="bodySmall" numberOfLines={1}>
-              {item.artist}
-              {item.composer ? ` | ${item.composer}` : ''}
+              {item.artists?.map((artist) => artist?.name).filter(Boolean).join(', ') || 'Unknown artist'}
+              {item.writers?.length || 0 > 0 ? " | " : ""}
+              {item.writers?.map((writer) => writer?.name).filter(Boolean).join(', ') || undefined}
             </Text>
           </View>
           <View style={styles.metaGroup}>
@@ -88,7 +80,7 @@ export function Track({
               <Text style={styles.metaText}>{item.key ?? '—'}</Text>
             </View>
             <View style={styles.metaBadge}>
-              <Text style={styles.metaText}>{item.level ?? '—'}</Text>
+              <Text style={styles.metaText}>{item.level?.name ?? '—'}</Text>
             </View>
             <IconButton
               icon={isBookmarked ? 'bookmark' : 'bookmark-outline'}

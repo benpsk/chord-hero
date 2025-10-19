@@ -44,11 +44,14 @@
     {
       "id": 1,
       "title": "Amazing Grace",
-      "level": "Easy",
       "key": "G",
       "language": "english",
       "lyric": "Intro: [G]... \n Amazing...",
-      "release_year": null
+      "release_year": null,
+      "level": {
+        "id" 1,
+        "name": "Easy"
+      }
       "artists": [
         {"id": 1, "name": "John"}
       ],
@@ -64,6 +67,19 @@
   "page": 1,
   "per_page": 10,
   "total": 30
+}
+
+-- POST /api/songs
+{
+  "title": "Amazing Grace",
+  "level_id": 1,
+  "key": "G",
+  "language": "english",
+  "lyric": "Intro: [G]\nAmazing grace, how sweet the sound",
+  "release_year": 1779,
+  "album_ids": [1, 2],
+  "artist_ids": [1],
+  "writer_ids": [4]
 }
 
 -- GET /api/albums
@@ -209,3 +225,22 @@
     }
   ]
 }
+
+-- GET /api/levels
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Easy",
+    }
+  ]
+}
+
+-- POST /api/songs/{song_id}/levels/{level_id}
+
+-- POST /api/playlists/create
+{
+  "name": "My Playlist 01"
+}
+
+-- POST /api/playlists/{playlist_id}/songs/{song_ids}

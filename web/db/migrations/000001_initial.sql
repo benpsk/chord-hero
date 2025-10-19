@@ -98,10 +98,26 @@ EXECUTE PROCEDURE update_updated_at_column();
 
 --bun:split
 
+CREATE TABLE IF NOT EXISTS levels (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+--bun:split
+
+CREATE TRIGGER update_levels_updated_at
+BEFORE UPDATE ON levels
+FOR EACH ROW
+EXECUTE PROCEDURE update_updated_at_column();
+
+--bun:split
+
 CREATE TABLE IF NOT EXISTS songs (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    level VARCHAR(50) CHECK (level IN ('easy', 'medium', 'hard')),
+    level_id INT,
     key VARCHAR(20),
     language VARCHAR(50) CHECK (language IN ('english', 'burmese')),
     lyric TEXT,
@@ -109,6 +125,7 @@ CREATE TABLE IF NOT EXISTS songs (
     created_by INT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (level_id) REFERENCES levels(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -116,6 +133,28 @@ CREATE TABLE IF NOT EXISTS songs (
 
 CREATE TRIGGER update_songs_updated_at
 BEFORE UPDATE ON songs
+FOR EACH ROW
+EXECUTE PROCEDURE update_updated_at_column();
+
+--bun:split
+
+CREATE TABLE IF NOT EXISTS level_song (
+    id SERIAL PRIMARY KEY,
+    song_id INT NOT NULL,
+    level_id INT NOT NULL,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (song_id, level_id, user_id),
+    FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
+    FOREIGN KEY (level_id) REFERENCES levels(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+--bun:split
+
+CREATE TRIGGER update_level_song_updated_at
+BEFORE UPDATE ON level_song
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
@@ -293,10 +332,11 @@ EXECUTE PROCEDURE update_updated_at_column();
 CREATE TABLE IF NOT EXISTS trending_songs (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    level VARCHAR(50) CHECK (level IN ('easy', 'medium', 'hard')),
+    level_id INT,
     description VARCHAR(400),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (level_id) REFERENCES levels(id) ON DELETE SET NULL
 );
 
 --bun:split
@@ -305,6 +345,3 @@ CREATE TRIGGER update_trending_songs_updated_at
 BEFORE UPDATE ON trending_songs
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
-
-
-

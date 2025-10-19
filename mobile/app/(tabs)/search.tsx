@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Divider, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Track, type SearchTrackItem } from '@/components/search/Track';
+import { Track } from '@/components/search/Track';
 import { Album, type SearchAlbumItem } from '@/components/search/Album';
 import { Stat } from '@/components/search/Stat';
 import { SearchEmptyState } from '@/components/search/SearchEmptyState';
@@ -19,7 +19,6 @@ import ListHeader from '@/components/search/ListHeader';
 import ListFooter from '@/components/search/ListFooter';
 
 type SearchTabKey = 'tracks' | 'albums' | 'artists' | 'writers' | 'releaseYears';
-type SearchTrack = SearchTrackItem & { language?: FilterLanguage };
 
 function extractPageData<T>(page: unknown): T[] {
   if (!page) return [];
@@ -125,35 +124,6 @@ export default function SearchScreen() {
     [releaseYearsPages]
   );
 
-  const tracks = useMemo<SearchTrack[]>(() => {
-    if (songsRecords.length === 0) return [];
-    const normalizeLanguage = (value?: string | null): FilterLanguage | undefined => {
-      if (!value) return undefined;
-      const normalized = value.trim().toLowerCase();
-      if (normalized === 'english') return 'English';
-      if (normalized === 'burmese') return 'Burmese';
-      if (normalized === 'zomi') return 'Zomi';
-      return undefined;
-    };
-    return songsRecords
-      .filter((song) => song && song.id != null && song.title)
-      .map((song) => {
-        const artistNames =
-          song.artists?.map((artist) => artist?.name).filter(Boolean).join(', ') || 'Unknown artist';
-        const composerNames =
-          song.writers?.map((writer) => writer?.name).filter(Boolean).join(', ') || undefined;
-        return {
-          id: String(song.id),
-          title: song.title,
-          artist: artistNames,
-          composer: composerNames,
-          key: song.key ?? undefined,
-          level: song.level ?? undefined,
-          language: normalizeLanguage(song.language),
-        };
-      });
-  }, [songsRecords]);
-
   const albums = useMemo<SearchAlbumItem[]>(() => {
     if (albumsRecords.length === 0) return [];
     return albumsRecords
@@ -179,8 +149,8 @@ export default function SearchScreen() {
   }, []);
 
   const handleTrackPress = useCallback(
-    (trackId: string) => {
-      router.push({ pathname: '/song/[id]', params: { id: trackId } });
+    (track: SongRecord) => {
+      router.push({ pathname: '/song/[id]', params: { id: track.id, item: JSON.stringify(track)} });
     },
     [router]
   );
@@ -272,7 +242,7 @@ export default function SearchScreen() {
     // 1. Select the correct data source based on the active tab
     switch (activeTab) {
       case 'tracks':
-        pagesData = tracks
+        pagesData = songsRecords
         break;
       case 'albums':
         pagesData = albums;
@@ -293,7 +263,7 @@ export default function SearchScreen() {
   }, [
     // 3. List all dependencies. The calculation will only re-run if one of these changes.
     activeTab,
-    tracks,
+    songsRecords,
     albums,
     artists,
     writers,

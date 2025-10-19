@@ -14,6 +14,7 @@ import (
 	artistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/artists"
 	chordsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/chords"
 	feedbackapi "github.com/lyricapp/lyric/web/internal/http/handler/api/feedback"
+	levelsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/levels"
 	playlistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/playlists"
 	releaseyearapi "github.com/lyricapp/lyric/web/internal/http/handler/api/releaseyear"
 	songsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/songs"
@@ -31,12 +32,12 @@ import (
 // New instantiates the HTTP router and wires up handlers and middleware.
 func New(application *app.Application) chi.Router {
 	r := chi.NewRouter()
-	
+
 	var allowedOrigins []string
-	if application.Config.Api.AppEnv ==  "production" {
+	if application.Config.Api.AppEnv == "production" {
 		allowedOrigins = []string{application.Config.Api.FrontendUrl}
 	} else {
-    allowedOrigins = []string{"*"}
+		allowedOrigins = []string{"*"}
 	}
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   allowedOrigins,
@@ -50,7 +51,6 @@ func New(application *app.Application) chi.Router {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-
 
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
@@ -73,7 +73,7 @@ func New(application *app.Application) chi.Router {
 	r.Handle("/songs/{id}", songs)
 
 	adminLogin := adminloginhandler.New(application.Services.AdminAuth, application.AdminSessions)
-	adminSong := adminsonghandler.New(application.Services.Songs, application.Services.Albums, application.Services.Artists, application.Services.Writers)
+	adminSong := adminsonghandler.New(application.Services.Songs, application.Services.Albums, application.Services.Artists, application.Services.Writers, application.Services.Levels)
 	adminMiddleware := adminmw.Middleware{Sessions: application.AdminSessions, LoginPath: "/admin/login"}
 
 	r.Route("/admin", func(admin chi.Router) {
@@ -101,18 +101,24 @@ func New(application *app.Application) chi.Router {
 	apiReleaseYear := releaseyearapi.New(application.Services.ReleaseYear)
 	apiPlaylists := playlistsapi.New(application.Services.Playlists)
 	apiTrending := trendingapi.New(application.Services.Trendings)
+	apiLevels := levelsapi.New(application.Services.Levels)
 	apiChords := chordsapi.New(application.Services.Chords)
 	apiFeedback := feedbackapi.New(application.Services.Feedback)
 	r.Route("/api", func(api chi.Router) {
 		api.Get("/songs", apiSongs.List)
+		api.Post("/songs", apiSongs.Create)
+		api.Post("/songs/{song_id}/levels/{level_id}", apiSongs.AssignLevel)
 		api.Get("/albums", apiAlbums.List)
 		api.Get("/artists", apiArtists.List)
 		api.Get("/writers", apiWriters.List)
 		api.Get("/release-year", apiReleaseYear.List)
 		api.Get("/playlists", apiPlaylists.List)
+		api.Post("/playlists/create", apiPlaylists.Create)
+		api.Post("/playlists/{playlist_id}/songs/{song_ids}", apiPlaylists.AddSongs)
 		api.Get("/trending-songs", apiTrending.List)
 		api.Get("/trending-albums", apiTrending.Albums)
 		api.Get("/trending-artists", apiTrending.Artists)
+		api.Get("/levels", apiLevels.List)
 		api.Get("/chords/{name}", apiChords.Show)
 		api.Post("/feedback", apiFeedback.Create)
 	})

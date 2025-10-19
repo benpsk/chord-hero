@@ -575,7 +575,7 @@ func AdminSongForm(props AdminSongFormProps) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\" placeholder=\"C, G, D...\"></label></div></div><div class=\"grid gap-6 md:grid-cols-2\"><div class=\"space-y-2\"><label class=\"form-control w-full\"><div class=\"label\"><span class=\"label-text\">Level</span></div><select name=\"level\" class=\"select select-bordered w-full\"><option value=\"\">Choose level</option> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\" placeholder=\"C, G, D...\"></label></div></div><div class=\"grid gap-6 md:grid-cols-2\"><div class=\"space-y-2\"><label class=\"form-control w-full\"><div class=\"label\"><span class=\"label-text\">Level</span></div><select name=\"level_id\" class=\"select select-bordered w-full\"><option value=\"\">Choose level</option> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -628,7 +628,7 @@ func AdminSongForm(props AdminSongFormProps) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if message, ok := props.FieldErrors["level"]; ok {
+		if message, ok := props.FieldErrors["level_id"]; ok {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<p class=\"text-sm text-error\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

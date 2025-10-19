@@ -28,6 +28,7 @@
 - Files: Components in `components/` (PascalCase), hooks start with `use`.
 - Routing: Place screens in `app/` per Expo Router (e.g., `app/(tabs)/index.tsx`).
 - Linting: ESLint via `eslint.config.js`; fix warnings before PR.
+- Don't over engineer. Make simple as possible.
 
 ### Testing Guidelines
 - Current status: No automated tests configured.
@@ -92,5 +93,3 @@
 - Use go templ for templating language [https://templ.guide].
 - Use DaisyUI for every ui components, icons, themes, everything.
 - If there's no built-in in DaisyUI you can use tailwindcss.
-
-

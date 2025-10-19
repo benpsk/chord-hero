@@ -70,7 +70,7 @@ type AdminSongFormProps struct {
 // AdminSongFormValues captures submitted form values for re-rendering the page.
 type AdminSongFormValues struct {
 	Title           string
-	Level           string
+	LevelID         string
 	Key             string
 	Language        string
 	ReleaseYear     string

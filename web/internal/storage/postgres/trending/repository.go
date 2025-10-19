@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -23,9 +24,10 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // TrendingSets retrieves curated trending collections.
 func (r *Repository) TrendingSets(ctx context.Context) ([]trendingsvc.Trending, error) {
 	rows, err := r.db.Query(ctx, `
-        SELECT id, name, level, description
-        FROM trending_songs
-        ORDER BY id ASC
+        SELECT ts.id, ts.name, ts.level_id, l.name, ts.description
+        FROM trending_songs ts
+        LEFT JOIN levels l ON l.id = ts.level_id
+        ORDER BY ts.id ASC
     `)
 	if err != nil {
 		return nil, fmt.Errorf("list trendings: %w", err)
@@ -36,17 +38,22 @@ func (r *Repository) TrendingSets(ctx context.Context) ([]trendingsvc.Trending, 
 
 	for rows.Next() {
 		var (
-			item  trendingsvc.Trending
-			level sql.NullString
-			desc  sql.NullString
+			item      trendingsvc.Trending
+			levelID   sql.NullInt32
+			levelName sql.NullString
+			desc      sql.NullString
 		)
 
-		if err := rows.Scan(&item.ID, &item.Name, &level, &desc); err != nil {
+		if err := rows.Scan(&item.ID, &item.Name, &levelID, &levelName, &desc); err != nil {
 			return nil, fmt.Errorf("scan trending: %w", err)
 		}
 
-		if level.Valid {
-			value := level.String
+		if levelID.Valid {
+			value := int(levelID.Int32)
+			item.LevelID = &value
+		}
+		if levelName.Valid {
+			value := titleCase(levelName.String)
 			item.Level = &value
 		}
 
@@ -190,4 +197,13 @@ func (r *Repository) TrendingArtists(ctx context.Context) ([]trendingsvc.Trendin
 	}
 
 	return artists, nil
+}
+
+func titleCase(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+	lower := strings.ToLower(trimmed)
+	return strings.ToUpper(lower[:1]) + lower[1:]
 }

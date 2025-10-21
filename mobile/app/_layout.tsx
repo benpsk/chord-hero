@@ -41,6 +41,7 @@ function RootLayoutContent() {
             <Stack.Screen name="profile/request-chord" options={{ title: 'Request Chord' }} />
             <Stack.Screen name="song/[id]" options={{ title: 'Song' }} />
             <Stack.Screen name="+not-found" />
+            <Stack.Screen name="song/create" options={{ title: 'Add Track' }} />
           </Stack>
           <StatusBar
             style={statusBarStyle}

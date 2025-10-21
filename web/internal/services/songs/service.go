@@ -73,6 +73,7 @@ type Song struct {
 	Language    *string  `json:"language,omitempty"`
 	Lyric       *string  `json:"lyric,omitempty"`
 	ReleaseYear *int     `json:"release_year"`
+	Status      string   `json:"status"`
 	Artists     []Person `json:"artists"`
 	Writers     []Person `json:"writers"`
 	Albums      []Album  `json:"albums"`

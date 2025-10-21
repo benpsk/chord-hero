@@ -13,7 +13,6 @@ $$ language 'plpgsql';
 
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'user', 'editor')),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -123,6 +122,7 @@ CREATE TABLE IF NOT EXISTS songs (
     lyric TEXT,
     release_year INT,
     created_by INT,
+    status VARCHAR(50) CHECK (language IN ('created', 'pending', 'approved', 'declined')) DEFAULT 'created',
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     FOREIGN KEY (level_id) REFERENCES levels(id) ON DELETE SET NULL,
@@ -343,5 +343,20 @@ CREATE TABLE IF NOT EXISTS trending_songs (
 
 CREATE TRIGGER update_trending_songs_updated_at
 BEFORE UPDATE ON trending_songs
+FOR EACH ROW
+EXECUTE PROCEDURE update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS user_login_codes (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    code VARCHAR(12) NOT NULL CHECK (char_length(code) = 6),
+    used_at TIMESTAMPTZ NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TRIGGER update_user_login_codes_updated_at
+BEFORE UPDATE ON user_login_codes
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();

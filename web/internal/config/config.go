@@ -18,6 +18,11 @@ const (
 	defaultAdminSessionTTL    = 24 * time.Hour
 	defaultAppEnv             = "production"
 	defaultFrontendUrl        = "http://localhost:8080"
+	defaultAuthOTPLength      = 6
+	defaultAuthOTPTTL         = 5 * time.Minute
+	defaultSMTPPort           = 587
+	defaultAuthTokenSecret    = "change-me"
+	defaultAuthTokenTTL       = 24 * time.Hour
 )
 
 // Config collects runtime configuration for the web service.
@@ -27,6 +32,7 @@ type Config struct {
 	Database        DatabaseConfig
 	Admin           AdminConfig
 	Api             ApiConfig
+	Auth            AuthConfig
 }
 
 // DatabaseConfig holds PostgreSQL connection settings.
@@ -50,6 +56,24 @@ type ApiConfig struct {
 	FrontendUrl string
 }
 
+// AuthConfig contains settings for login OTP generation and delivery.
+type AuthConfig struct {
+	OTPLength   int
+	OTPTTL      time.Duration
+	TokenSecret string
+	TokenTTL    time.Duration
+	SMTP        SMTPConfig
+}
+
+// SMTPConfig encapsulates email transport configuration.
+type SMTPConfig struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	From     string
+}
+
 // Load reads configuration from environment variables and applies sane defaults.
 func Load() (Config, error) {
 	cfg := Config{
@@ -68,6 +92,15 @@ func Load() (Config, error) {
 		Api: ApiConfig{
 			AppEnv:      defaultAppEnv,
 			FrontendUrl: defaultFrontendUrl,
+		},
+		Auth: AuthConfig{
+			OTPLength:   defaultAuthOTPLength,
+			OTPTTL:      defaultAuthOTPTTL,
+			TokenSecret: defaultAuthTokenSecret,
+			TokenTTL:    defaultAuthTokenTTL,
+			SMTP: SMTPConfig{
+				Port: defaultSMTPPort,
+			},
 		},
 	}
 
@@ -151,6 +184,58 @@ func Load() (Config, error) {
 	}
 	if v, ok := os.LookupEnv("FRONTEND_URL"); ok && v != "" {
 		cfg.Api.FrontendUrl = v
+	}
+
+	if v, ok := os.LookupEnv("WEB_AUTH_OTP_LENGTH"); ok && v != "" {
+		length, err := strconv.Atoi(v)
+		if err != nil || length <= 0 {
+			return Config{}, fmt.Errorf("parse WEB_AUTH_OTP_LENGTH: %w", err)
+		}
+		cfg.Auth.OTPLength = length
+	}
+
+	if v, ok := os.LookupEnv("WEB_AUTH_OTP_TTL"); ok && v != "" {
+		d, err := parseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("parse WEB_AUTH_OTP_TTL: %w", err)
+		}
+		cfg.Auth.OTPTTL = d
+	}
+
+	if v, ok := os.LookupEnv("WEB_SMTP_HOST"); ok && v != "" {
+		cfg.Auth.SMTP.Host = v
+	}
+
+	if v, ok := os.LookupEnv("WEB_SMTP_PORT"); ok && v != "" {
+		port, err := strconv.Atoi(v)
+		if err != nil || port <= 0 {
+			return Config{}, fmt.Errorf("parse WEB_SMTP_PORT: %w", err)
+		}
+		cfg.Auth.SMTP.Port = port
+	}
+
+	if v, ok := os.LookupEnv("WEB_SMTP_USERNAME"); ok {
+		cfg.Auth.SMTP.Username = v
+	}
+
+	if v, ok := os.LookupEnv("WEB_SMTP_PASSWORD"); ok {
+		cfg.Auth.SMTP.Password = v
+	}
+
+	if v, ok := os.LookupEnv("WEB_SMTP_FROM"); ok && v != "" {
+		cfg.Auth.SMTP.From = v
+	}
+
+	if v, ok := os.LookupEnv("WEB_AUTH_TOKEN_SECRET"); ok && v != "" {
+		cfg.Auth.TokenSecret = v
+	}
+
+	if v, ok := os.LookupEnv("WEB_AUTH_TOKEN_TTL"); ok && v != "" {
+		d, err := parseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("parse WEB_AUTH_TOKEN_TTL: %w", err)
+		}
+		cfg.Auth.TokenTTL = d
 	}
 
 	return cfg, nil

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -14,6 +15,7 @@ import (
 	feedbacksvc "github.com/lyricapp/lyric/web/internal/services/feedback"
 	healthsvc "github.com/lyricapp/lyric/web/internal/services/health"
 	levelsvc "github.com/lyricapp/lyric/web/internal/services/levels"
+	loginsvc "github.com/lyricapp/lyric/web/internal/services/login"
 	playlistsvc "github.com/lyricapp/lyric/web/internal/services/playlists"
 	releaseyearsvc "github.com/lyricapp/lyric/web/internal/services/releaseyear"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
@@ -26,6 +28,7 @@ import (
 	feedbackrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/feedback"
 	healthrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/health"
 	levelrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/levels"
+	loginrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/login"
 	playlistrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/playlists"
 	releaseyearrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/releaseyear"
 	songrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/songs"
@@ -55,6 +58,7 @@ type Services struct {
 	Feedback    feedbacksvc.Service
 	AdminAuth   adminauthsvc.Service
 	Levels      levelsvc.Service
+	Login       loginsvc.Service
 }
 
 // New constructs a new Application instance with default implementations.
@@ -71,6 +75,7 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 	healthRepository := healthrepo.NewRepository(db)
 	adminRepository := adminrepo.NewRepository(db)
 	levelRepository := levelrepo.NewRepository(db)
+	loginRepository := loginrepo.NewRepository(db)
 
 	adminAuthRepository := adminAuthRepoAdapter{repo: adminRepository}
 	adminAuthService := adminauthsvc.NewService(adminAuthRepository)
@@ -79,6 +84,30 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 		[]byte(cfg.Admin.SessionSecret),
 		cfg.Admin.SessionTTL,
 		cfg.Admin.SessionSecure,
+	)
+
+	var loginMailer loginsvc.Mailer
+	if strings.EqualFold(cfg.Api.AppEnv, "production") && cfg.Auth.SMTP.Host != "" && cfg.Auth.SMTP.From != "" {
+		loginMailer = loginsvc.NewSMTPMailer(loginsvc.SMTPSettings{
+			Host:     cfg.Auth.SMTP.Host,
+			Port:     cfg.Auth.SMTP.Port,
+			Username: cfg.Auth.SMTP.Username,
+			Password: cfg.Auth.SMTP.Password,
+			From:     cfg.Auth.SMTP.From,
+		})
+	} else {
+		loginMailer = loginsvc.NewConsoleMailer(cfg.Auth.SMTP.From)
+	}
+
+	loginService := loginsvc.NewService(
+		loginRepository,
+		loginMailer,
+		loginsvc.Config{
+			CodeLength:  cfg.Auth.OTPLength,
+			TTL:         cfg.Auth.OTPTTL,
+			TokenSecret: cfg.Auth.TokenSecret,
+			TokenTTL:    cfg.Auth.TokenTTL,
+		},
 	)
 
 	return &Application{
@@ -97,6 +126,7 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 			Feedback:    feedbacksvc.NewService(feedbackRepository),
 			AdminAuth:   adminAuthService,
 			Levels:      levelsvc.NewService(levelRepository),
+			Login:       loginService,
 		},
 		AdminSessions: adminSessions,
 	}

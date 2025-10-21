@@ -11,6 +11,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { PasswordlessLogin } from '@/components/login/PasswordlessLogin';
 
 
 const SSO_OPTIONS = [
@@ -72,10 +73,19 @@ export default function LoginScreen() {
         ssoButton: {
           borderRadius: 14,
         },
+        emailSurface: {
+          padding: 22,
+          borderRadius: 24,
+          gap: 16,
+        },
         ssoSurface: {
           padding: 22,
           borderRadius: 24,
           gap: 16,
+        },
+        cardTitle: {
+          fontSize: 18,
+          fontWeight: '600',
         },
         ssoLabel: {
           fontSize: 13,
@@ -113,17 +123,22 @@ export default function LoginScreen() {
           </Animated.View>
 
           <Animated.View style={styles.contentStack} entering={FadeInUp.delay(120).duration(360)}>
+            <Surface style={styles.emailSurface} elevation={1}>
+              <Text style={styles.cardTitle}>Sign in with email</Text>
+              <PasswordlessLogin />
+            </Surface>
             <Surface style={styles.ssoSurface} elevation={1}>
-              <Divider />
               <Text variant="labelLarge" style={styles.ssoLabel}>
                 Continue with a connected account
               </Text>
+              <Divider />
               {SSO_OPTIONS.map((option) => (
                 <Button
                   key={option.key}
                   mode={option.buttonColor === '#FFFFFF' ? 'contained-tonal' : 'contained'}
                   icon={option.icon}
-                  onPress={() => { }}
+                  onPress={() => {}}
+                  disabled
                   style={styles.ssoButton}
                   contentStyle={{ justifyContent: 'center' }}
                   buttonColor={option.buttonColor}

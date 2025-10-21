@@ -6,7 +6,7 @@ import { IconButton, Surface, Text, useTheme } from 'react-native-paper';
 type TrackItemProps = {
   item: SongRecord;
   bookmarkedItems: Set<string>,
-  onToggleBookmark: (key: string) => void;
+  onPressBookmark: (track: SongRecord) => void;
   onPressTrack: (item: SongRecord) => void;
 };
 
@@ -14,7 +14,7 @@ type TrackItemProps = {
 export function Track({
   item,
   bookmarkedItems,
-  onToggleBookmark,
+  onPressBookmark,
   onPressTrack,
 }: TrackItemProps) {
   const theme = useTheme();
@@ -87,8 +87,8 @@ export function Track({
               size={20}
               iconColor={isBookmarked ? theme.colors.primary : theme.colors.secondary}
               style={styles.iconButton}
-              onPress={() => onToggleBookmark(trackKey)}
-              accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+              onPress={() => onPressBookmark(item)}
+              accessibilityLabel="Manage playlists"
             />
           </View>
         </View>

@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/jwtauth/v5"
 
 	"github.com/lyricapp/lyric/web/internal/app"
 	adminloginhandler "github.com/lyricapp/lyric/web/internal/http/handler/admin/login"
@@ -15,6 +16,7 @@ import (
 	chordsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/chords"
 	feedbackapi "github.com/lyricapp/lyric/web/internal/http/handler/api/feedback"
 	levelsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/levels"
+	loginapi "github.com/lyricapp/lyric/web/internal/http/handler/api/login"
 	playlistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/playlists"
 	releaseyearapi "github.com/lyricapp/lyric/web/internal/http/handler/api/releaseyear"
 	songsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/songs"
@@ -27,6 +29,7 @@ import (
 	searchhandler "github.com/lyricapp/lyric/web/internal/http/handler/search"
 	songspagehandler "github.com/lyricapp/lyric/web/internal/http/handler/songs"
 	adminmw "github.com/lyricapp/lyric/web/internal/http/middleware/adminauth"
+	authmw "github.com/lyricapp/lyric/web/internal/http/middleware/auth"
 )
 
 // New instantiates the HTTP router and wires up handlers and middleware.
@@ -104,7 +107,16 @@ func New(application *app.Application) chi.Router {
 	apiLevels := levelsapi.New(application.Services.Levels)
 	apiChords := chordsapi.New(application.Services.Chords)
 	apiFeedback := feedbackapi.New(application.Services.Feedback)
+	apiLogin := loginapi.New(application.Services.Login)
+	tokenAuth := application.Services.Login.TokenAuth()
 	r.Route("/api", func(api chi.Router) {
+		api.Post("/login", apiLogin.Request)
+		api.Post("/code", apiLogin.Verify)
+		api.Group(func(protected chi.Router) {
+			protected.Use(jwtauth.Verifier(tokenAuth))
+			protected.Use(authmw.Authenticator(tokenAuth))
+			protected.Post("/me", apiLogin.Me)
+		})
 		api.Get("/songs", apiSongs.List)
 		api.Post("/songs", apiSongs.Create)
 		api.Post("/songs/{song_id}/levels/{level_id}", apiSongs.AssignLevel)

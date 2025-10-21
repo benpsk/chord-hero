@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, FlatList, View } from 'react-native';
+import { StyleSheet, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -9,7 +9,9 @@ import { Track } from '@/components/search/Track';
 import { Album, type SearchAlbumItem } from '@/components/search/Album';
 import { Stat } from '@/components/search/Stat';
 import { SearchEmptyState } from '@/components/search/SearchEmptyState';
+import { PlaylistSelectionModal } from '@/components/search/PlaylistSelectionModal';
 import { type FilterLanguage } from '@/constants/home';
+import { MOCK_PLAYLISTS } from '@/constants/playlists';
 import { SongRecord, useSongsSearch } from '@/hooks/useSongsSearch';
 import { AlbumRecord, useAlbumsSearch } from '@/hooks/useAlbumsSearch';
 import { ArtistRecord, useArtistsSearch } from '@/hooks/useArtistsSearch';
@@ -36,6 +38,10 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [selectedLanguages, setSelectedLanguages] = useState<FilterLanguage[]>([]);
   const [bookmarkedItems, setBookmarkedItems] = useState<Set<string>>(new Set());
+  const [trackPlaylistMap, setTrackPlaylistMap] = useState<Record<string, string[]>>({});
+  const [isPlaylistModalVisible, setPlaylistModalVisible] = useState(false);
+  const [activeTrack, setActiveTrack] = useState<SongRecord | null>(null);
+  const [draftSelectedPlaylists, setDraftSelectedPlaylists] = useState<Set<string>>(() => new Set());
   const [activeTab, setActiveTab] = useState<SearchTabKey>('tracks');
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -136,6 +142,7 @@ export default function SearchScreen() {
         trackCount: typeof album.total === 'number' ? album.total : 0,
       }));
   }, [albumsRecords]);
+  const playlists = useMemo(() => MOCK_PLAYLISTS, []);
   const toggleBookmark = useCallback((itemId: string) => {
     setBookmarkedItems((prev) => {
       const next = new Set(prev);
@@ -147,6 +154,65 @@ export default function SearchScreen() {
       return next;
     });
   }, []);
+  const handleClosePlaylistModal = useCallback(() => {
+    setPlaylistModalVisible(false);
+    setActiveTrack(null);
+    setDraftSelectedPlaylists(() => new Set());
+  }, []);
+
+  const handleOpenPlaylistModal = useCallback(
+    (track: SongRecord) => {
+      const trackKey = `track-${track.id}`;
+      const existingSelections = trackPlaylistMap[trackKey] ?? [];
+      setDraftSelectedPlaylists(() => new Set(existingSelections));
+      setActiveTrack(track);
+      setPlaylistModalVisible(true);
+    },
+    [trackPlaylistMap]
+  );
+
+  const handleTogglePlaylistSelection = useCallback((playlistId: string) => {
+    setDraftSelectedPlaylists((prev) => {
+      const next = new Set(prev);
+      if (next.has(playlistId)) {
+        next.delete(playlistId);
+      } else {
+        next.add(playlistId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleConfirmPlaylists = useCallback(() => {
+    if (!activeTrack) {
+      handleClosePlaylistModal();
+      return;
+    }
+    const trackKey = `track-${activeTrack.id}`;
+    const selectedArray = Array.from(draftSelectedPlaylists);
+
+    setTrackPlaylistMap((prev) => {
+      const next = { ...prev };
+      if (selectedArray.length > 0) {
+        next[trackKey] = selectedArray;
+      } else {
+        delete next[trackKey];
+      }
+      return next;
+    });
+
+    setBookmarkedItems((prev) => {
+      const next = new Set(prev);
+      if (selectedArray.length > 0) {
+        next.add(trackKey);
+      } else {
+        next.delete(trackKey);
+      }
+      return next;
+    });
+
+    handleClosePlaylistModal();
+  }, [activeTrack, draftSelectedPlaylists, handleClosePlaylistModal]);
 
   const handleTrackPress = useCallback(
     (track: SongRecord) => {
@@ -164,7 +230,7 @@ export default function SearchScreen() {
           <Track
             item={item} // Pass the item as a 'track' prop
             bookmarkedItems={bookmarkedItems}
-            onToggleBookmark={toggleBookmark}
+            onPressBookmark={handleOpenPlaylistModal}
             onPressTrack={handleTrackPress}
           />
         );
@@ -197,6 +263,7 @@ export default function SearchScreen() {
     activeTab,
     bookmarkedItems,
     toggleBookmark,
+    handleOpenPlaylistModal,
     handleTrackPress,
   ]);
 
@@ -346,6 +413,15 @@ export default function SearchScreen() {
           showsVerticalScrollIndicator={false}
         />
       </Animated.View>
+      <PlaylistSelectionModal
+        visible={isPlaylistModalVisible}
+        trackTitle={activeTrack?.title}
+        playlists={playlists}
+        selectedIds={draftSelectedPlaylists}
+        onTogglePlaylist={handleTogglePlaylistSelection}
+        onConfirm={handleConfirmPlaylists}
+        onCancel={handleClosePlaylistModal}
+      />
     </SafeAreaView>
   );
 }

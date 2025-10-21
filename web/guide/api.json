@@ -244,3 +244,30 @@
 }
 
 -- POST /api/playlists/{playlist_id}/songs/{song_ids}
+
+- POST /api/login
+  -- request
+{
+  "username": "abc@mail.com"
+}
+
+- POST /api/code
+  -- request
+{
+  "code": 10292
+}
+  -- response 
+{
+  "data": {
+    "access_token": "eyDdkda..."
+  }
+}
+
+- POST /api/me => auth protected
+  -- response
+{
+  "username": "abc@mail.com",
+  "role": "Contributor"
+}
+
+

@@ -105,7 +105,8 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
             s.key,
             s.language,
             s.lyric,
-            s.release_year
+            s.release_year,
+						s.status
         from songs s
         left join levels l on l.id = s.level_id
         %s
@@ -136,9 +137,10 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 			language    sql.NullString
 			lyric       sql.NullString
 			releaseYear sql.NullInt32
+			status      string
 		)
 
-		if err := rows.Scan(&id, &title, &levelName, &levelID, &songKey, &language, &lyric, &releaseYear); err != nil {
+		if err := rows.Scan(&id, &title, &levelName, &levelID, &songKey, &language, &lyric, &releaseYear, &status); err != nil {
 			return result, fmt.Errorf("scan song: %w", err)
 		}
 
@@ -149,6 +151,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 			Writers:    []songsvc.Person{},
 			Albums:     []songsvc.Album{},
 			IsBookmark: false,
+			Status:     status,
 		}
 
 		if levelID.Valid {

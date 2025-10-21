@@ -17,6 +17,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 
 import { SONGS } from '@/constants/songs';
 
@@ -31,6 +32,7 @@ type ModalStep = 'name' | 'songs';
 
 export default function LibraryScreen() {
   const theme = useTheme();
+  const router = useRouter();
 
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -64,7 +66,7 @@ export default function LibraryScreen() {
           fontSize: 20,
           fontWeight: '700',
         },
-        searchButton: {
+        headerAction: {
           margin: 0,
         },
         libraryRow: {
@@ -233,6 +235,10 @@ export default function LibraryScreen() {
     resetModalState();
   }, [draftName, resetModalState, selectedSongIds]);
 
+  const handleFabPress = useCallback(() => {
+    router.push('/song/create');
+  }, [router]);
+
   const libraryContent = useMemo(() => {
     if (libraries.length === 0) {
       return (
@@ -241,7 +247,7 @@ export default function LibraryScreen() {
           <Text style={styles.emptySubtitle}>
             Create a custom library to organize songs for your next performance or study session.
           </Text>
-          <Button mode="contained" icon="plus" onPress={openAddModal}>
+          <Button mode="contained" icon="playlist-plus" onPress={openAddModal}>
             Create a library
           </Button>
         </Animated.View>
@@ -300,10 +306,10 @@ export default function LibraryScreen() {
         <Animated.View style={styles.headerRow} entering={FadeInDown.duration(320)}>
           <Text style={styles.headingTitle}>Your Library</Text>
           <IconButton
-            icon="magnify"
+            icon="playlist-plus"
             size={22}
-            onPress={() => {}}
-            style={styles.searchButton}
+            onPress={openAddModal}
+            style={styles.headerAction}
           />
         </Animated.View>
 
@@ -311,10 +317,10 @@ export default function LibraryScreen() {
       </Animated.ScrollView>
 
       <FAB
-        size='small'
-        icon="plus"
+        size="small"
+        icon="compass"
         style={styles.fab}
-        onPress={openAddModal}
+        onPress={handleFabPress}
         color="white"
       />
 

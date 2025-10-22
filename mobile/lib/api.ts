@@ -1,4 +1,5 @@
 const baseUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
+let authToken: string | null = null;
 
 type ErrorBag = Record<string, unknown>;
 
@@ -28,6 +29,10 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
 };
 
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
 async function request<T>(path: string, options?: RequestOptions): Promise<T> {
   const { body, headers, ...rest } = options ?? {};
   const response = await fetch(`${baseUrl}${path}`, {
@@ -35,6 +40,7 @@ async function request<T>(path: string, options?: RequestOptions): Promise<T> {
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...(headers ?? {}),
     },
     body:

@@ -10,6 +10,7 @@ import { Album, type SearchAlbumItem } from '@/components/search/Album';
 import { Stat } from '@/components/search/Stat';
 import { SearchEmptyState } from '@/components/search/SearchEmptyState';
 import { PlaylistSelectionModal } from '@/components/search/PlaylistSelectionModal';
+import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
 import { type FilterLanguage } from '@/constants/home';
 import { MOCK_PLAYLISTS } from '@/constants/playlists';
 import { SongRecord, useSongsSearch } from '@/hooks/useSongsSearch';
@@ -17,6 +18,7 @@ import { AlbumRecord, useAlbumsSearch } from '@/hooks/useAlbumsSearch';
 import { ArtistRecord, useArtistsSearch } from '@/hooks/useArtistsSearch';
 import { useWritersSearch, WriterRecord } from '@/hooks/useWritersSearch';
 import { ReleaseYearRecord, useReleaseYearsSearch } from '@/hooks/useReleaseYearsSearch';
+import { useAuth } from '@/hooks/useAuth';
 import ListHeader from '@/components/search/ListHeader';
 import ListFooter from '@/components/search/ListFooter';
 
@@ -35,6 +37,7 @@ function extractPageData<T>(page: unknown): T[] {
 }
 export default function SearchScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [query, setQuery] = useState('');
   const [selectedLanguages, setSelectedLanguages] = useState<FilterLanguage[]>([]);
   const [bookmarkedItems, setBookmarkedItems] = useState<Set<string>>(new Set());
@@ -43,6 +46,7 @@ export default function SearchScreen() {
   const [activeTrack, setActiveTrack] = useState<SongRecord | null>(null);
   const [draftSelectedPlaylists, setDraftSelectedPlaylists] = useState<Set<string>>(() => new Set());
   const [activeTab, setActiveTab] = useState<SearchTabKey>('tracks');
+  const [loginPromptVisible, setLoginPromptVisible] = useState(false);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
@@ -162,13 +166,17 @@ export default function SearchScreen() {
 
   const handleOpenPlaylistModal = useCallback(
     (track: SongRecord) => {
+      if (!isAuthenticated) {
+        setLoginPromptVisible(true);
+        return;
+      }
       const trackKey = `track-${track.id}`;
       const existingSelections = trackPlaylistMap[trackKey] ?? [];
       setDraftSelectedPlaylists(() => new Set(existingSelections));
       setActiveTrack(track);
       setPlaylistModalVisible(true);
     },
-    [trackPlaylistMap]
+    [isAuthenticated, trackPlaylistMap]
   );
 
   const handleTogglePlaylistSelection = useCallback((playlistId: string) => {
@@ -213,6 +221,15 @@ export default function SearchScreen() {
 
     handleClosePlaylistModal();
   }, [activeTrack, draftSelectedPlaylists, handleClosePlaylistModal]);
+
+  const handleDismissLoginPrompt = useCallback(() => {
+    setLoginPromptVisible(false);
+  }, []);
+
+  const handleNavigateToLogin = useCallback(() => {
+    setLoginPromptVisible(false);
+    router.push('/login');
+  }, [router]);
 
   const handleTrackPress = useCallback(
     (track: SongRecord) => {
@@ -421,6 +438,11 @@ export default function SearchScreen() {
         onTogglePlaylist={handleTogglePlaylistSelection}
         onConfirm={handleConfirmPlaylists}
         onCancel={handleClosePlaylistModal}
+      />
+      <LoginRequiredDialog
+        visible={loginPromptVisible}
+        onDismiss={handleDismissLoginPrompt}
+        onLogin={handleNavigateToLogin}
       />
     </SafeAreaView>
   );

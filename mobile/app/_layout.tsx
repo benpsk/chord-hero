@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { PreferencesProvider, usePreferences } from '@/hooks/usePreferences';
+import { AuthProvider } from '@/hooks/useAuth';
 import { DarkTheme, LightTheme } from '@/constants/Theme';
 import { PaperProvider } from 'react-native-paper';
 import { AppStateStatus, Platform } from 'react-native';
@@ -65,7 +66,9 @@ export default function RootLayout() {
 
   return (
     <PreferencesProvider>
-      <RootLayoutContent />
+      <AuthProvider>
+        <RootLayoutContent />
+      </AuthProvider>
     </PreferencesProvider>
   );
 }

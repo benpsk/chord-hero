@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
@@ -21,6 +21,17 @@ import {
   ThemePreference,
   usePreferences,
 } from '@/hooks/usePreferences';
+import { useAuth } from '@/hooks/useAuth';
+import LoginRequiredDialog from '@/components/auth/LoginRequiredDialog';
+
+function getInitials(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return 'CH';
+  const words = trimmed.split(/\s+/).slice(0, 2);
+  const chars = words.map((word) => word[0]?.toUpperCase() ?? '').join('');
+  if (chars) return chars;
+  return trimmed.slice(0, 2).toUpperCase();
+}
 export default function ProfileScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -30,6 +41,8 @@ export default function ProfileScreen() {
     language,
     setLanguage,
   } = usePreferences();
+  const { user, isAuthenticated, status, logout, loggingOut } = useAuth();
+  const [loginPromptVisible, setLoginPromptVisible] = useState(false);
 
   const styles = useMemo(
     () =>
@@ -138,6 +151,38 @@ export default function ProfileScreen() {
   const appVersion =
     Constants.expoConfig?.version ??
     '0.0.0';
+  const isCheckingSession = status === 'checking';
+  const isSignedIn = isAuthenticated;
+  const displayName = isSignedIn
+    ? (user?.name?.trim() ||
+        user?.username?.split('@')[0]?.trim() ||
+        user?.email?.split('@')[0]?.trim() ||
+        'Musician')
+    : isCheckingSession
+    ? 'Checking session...'
+    : 'Guest musician';
+  const identityLabel = isSignedIn
+    ? (user?.username ?? user?.email ?? 'Signed in')
+    : isCheckingSession
+    ? 'Please wait while we verify your account.'
+    : 'Tap login to sync your charts.';
+  const avatarLabel = isSignedIn ? getInitials(displayName) : 'CH';
+  const handleLoginNavigate = useCallback(() => {
+    router.push('/login');
+  }, [router]);
+
+  const handleDismissLoginPrompt = useCallback(() => {
+    setLoginPromptVisible(false);
+  }, []);
+
+  const handlePromptLogin = useCallback(() => {
+    setLoginPromptVisible(true);
+  }, []);
+
+  const handleNavigateToLogin = useCallback(() => {
+    setLoginPromptVisible(false);
+    router.push('/login');
+  }, [router]);
 
   const handleThemeChange = (value: string) => {
     if (value === 'light' || value === 'dark' || value === 'system') {
@@ -161,14 +206,14 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}>
           <Animated.View style={styles.profileHeader} entering={FadeInDown.duration(320)}>
             <Avatar.Text
-              label="JC"
+              label={avatarLabel}
               size={54}
               style={{ backgroundColor: accentColor }}
               color={theme.colors.onPrimary}
             />
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>Jeff Clay</Text>
-              <Text>jeffclay@gmail.com</Text>
+              <Text style={styles.userName}>{displayName}</Text>
+              <Text>{identityLabel}</Text>
             </View>
           </Animated.View>
 
@@ -190,6 +235,10 @@ export default function ProfileScreen() {
               <Divider />
               <TouchableRipple
                 onPress={() => {
+                  if (!isAuthenticated) {
+                    handlePromptLogin();
+                    return;
+                  }
                   router.push('/profile/request-chord');
                 }}
                 style={styles.rowRipple}>
@@ -257,27 +306,47 @@ export default function ProfileScreen() {
             </Surface>
           </Animated.View>
 
-          <Animated.View entering={FadeInUp.delay(200).duration(320)}>
-            <Surface style={styles.deleteCard} elevation={1}>
-              <TouchableRipple onPress={() => { }} style={styles.rowRipple}>
-                <View style={styles.row}>
-                  <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
-                    <Icon source="trash-can-outline" color={theme.colors.error} size={22} />
-                  </View>
-                  <Text style={styles.deleteText}>Delete Account</Text>
-                  <Icon source="chevron-right" color={theme.colors.error} size={20} />
-                </View>
-              </TouchableRipple>
-            </Surface>
-          </Animated.View>
+          {isCheckingSession ? (
+            <Animated.View entering={FadeInUp.delay(200).duration(320)}>
+              <Button mode="contained" loading disabled>
+                Checking account...
+              </Button>
+            </Animated.View>
+          ) : isSignedIn ? (
+            <>
+              <Animated.View entering={FadeInUp.delay(200).duration(320)}>
+                <Surface style={styles.deleteCard} elevation={1}>
+                  <TouchableRipple onPress={() => { }} style={styles.rowRipple}>
+                    <View style={styles.row}>
+                      <View style={[styles.iconContainer, { backgroundColor: mutedIconBackground }]}>
+                        <Icon source="trash-can-outline" color={theme.colors.error} size={22} />
+                      </View>
+                      <Text style={styles.deleteText}>Delete Account</Text>
+                      <Icon source="chevron-right" color={theme.colors.error} size={20} />
+                    </View>
+                  </TouchableRipple>
+                </Surface>
+              </Animated.View>
 
-          <Animated.View entering={FadeInUp.delay(260).duration(320)}>
-            <Button mode="contained" onPress={() => { }}>
-              LOGOUT
-            </Button>
-          </Animated.View>
+              <Animated.View entering={FadeInUp.delay(260).duration(320)}>
+                <Button mode="contained" onPress={() => { void logout(); }} loading={loggingOut} disabled={loggingOut}>
+                  LOGOUT
+                </Button>
+              </Animated.View>
+            </>
+          ) : (
+            <Animated.View entering={FadeInUp.delay(200).duration(320)}>
+              <Button mode="contained" onPress={handleLoginNavigate} disabled={isCheckingSession}>
+                Login
+              </Button>
+            </Animated.View>
+          )}
         </Animated.ScrollView>
-
+        <LoginRequiredDialog
+          visible={loginPromptVisible}
+          onDismiss={handleDismissLoginPrompt}
+          onLogin={handleNavigateToLogin}
+        />
       </View>
     </SafeAreaView>
   );

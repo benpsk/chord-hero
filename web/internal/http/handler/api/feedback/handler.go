@@ -3,7 +3,6 @@ package feedback
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
@@ -22,9 +21,14 @@ func New(svc feedbacksvc.Service) Handler {
 
 // Create stores a feedback entry.
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
+	userID, authErr := util.CurrentUserID(r)
+	if authErr != nil {
+		util.RespondUnauthorized(w)
+		return
+	}
+
 	var payload struct {
 		Message string `json:"message"`
-		UserID  *int   `json:"user_id,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -32,7 +36,6 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := resolveUserID(r.Header.Get("X-User-ID"), payload.UserID)
 	message := strings.TrimSpace(payload.Message)
 
 	errorsMap := map[string]string{}
@@ -41,9 +44,6 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(message) > 225 {
 		errorsMap["message"] = "message is too long"
-	}
-	if userID <= 0 {
-		errorsMap["user_id"] = "user_id is required"
 	}
 
 	if len(errorsMap) > 0 {
@@ -61,19 +61,4 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	util.RespondJSON(w, http.StatusCreated, map[string]any{"data": map[string]any{"message": "Feedback submitted", "feedback": feedback}})
-}
-
-func resolveUserID(headerValue string, payloadValue *int) int {
-	if payloadValue != nil && *payloadValue > 0 {
-		return *payloadValue
-	}
-
-	headerValue = strings.TrimSpace(headerValue)
-	if headerValue != "" {
-		if value, err := strconv.Atoi(headerValue); err == nil && value > 0 {
-			return value
-		}
-	}
-
-	return 1
 }

@@ -219,7 +219,12 @@ func (h Handler) AssignLevel(w http.ResponseWriter, r *http.Request) {
 		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "level_id must be a positive integer"}})
 		return
 	}
-	userID := 1
+	userID, authErr := util.CurrentUserID(r)
+	if authErr != nil {
+		util.RespondUnauthorized(w)
+		return
+	}
+
 	if err := h.svc.AssignLevel(r.Context(), songID, levelID, userID); err != nil {
 		switch {
 		case errors.Is(err, songsvc.ErrNotFound):
@@ -249,4 +254,3 @@ func (h Handler) AssignLevel(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
-

@@ -27,18 +27,22 @@ import {
   Switch,
 } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { ChordProView } from '@/components/ChordProView';
 import { ChordDiagramCarousel } from '@/components/ChordDiagramCarousel';
+import LoginRequiredDialog from '@/components/auth/LoginRequiredDialog';
 import { getChordByName, type GuitarChord } from '@/constants/chords';
 import { extractMeta, toDisplayLines, transposeChordPro, transposeChordToken } from '@/lib/chord';
 import SongHeaderTitle from '@/components/SongHeaderTitle';
 import { SongRecord } from '@/hooks/useSongsSearch';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SongDetailScreen() {
-  const { item } = useLocalSearchParams<{ id: string, item: string}>();
+  const { item } = useLocalSearchParams<{ id: string; item: string }>();
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const song: SongRecord = JSON.parse(item);
   const theme = useTheme();
   const nav = useNavigation();
@@ -54,6 +58,7 @@ export default function SongDetailScreen() {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [peekVisible, setPeekVisible] = useState(true);
   const [chordModal, setChordModal] = useState<{ name: string; chord?: GuitarChord } | null>(null);
+  const [loginPromptVisible, setLoginPromptVisible] = useState(false);
   const peekOpacity = useRef(new RNAnimated.Value(0)).current;
   const sheetAnim = useRef(new RNAnimated.Value(0)).current; // 0 hidden, 1 shown
   const dragY = useRef(new RNAnimated.Value(0)).current; // gesture-driven translate
@@ -84,8 +89,12 @@ export default function SongDetailScreen() {
   }, [hidePeek]);
 
   const openGuide = useCallback(() => {
+    if (!isAuthenticated) {
+      setLoginPromptVisible(true);
+      return;
+    }
     setGuideVisible(true);
-  }, []);
+  }, [isAuthenticated]);
 
   const closeGuide = useCallback(() => {
     setGuideVisible(false);
@@ -114,6 +123,15 @@ export default function SongDetailScreen() {
   const closeChordModal = useCallback(() => {
     setChordModal(null);
   }, []);
+
+  const handleDismissLoginPrompt = useCallback(() => {
+    setLoginPromptVisible(false);
+  }, []);
+
+  const handleNavigateToLogin = useCallback(() => {
+    setLoginPromptVisible(false);
+    router.push('/login');
+  }, [router]);
 
   const clearAutoScrollTimer = useCallback(() => {
     if (autoScrollTimerRef.current) {
@@ -648,6 +666,11 @@ export default function SongDetailScreen() {
           </>
         ) : null}
       </Portal>
+      <LoginRequiredDialog
+        visible={loginPromptVisible}
+        onDismiss={handleDismissLoginPrompt}
+        onLogin={handleNavigateToLogin}
+      />
       </View>
     </SafeAreaView>
   );

@@ -4,6 +4,11 @@ import { LayoutChangeEvent, Platform, StyleSheet, Text, View } from 'react-nativ
 // Simple inline ChordPro renderer: renders [C] chords with accent color
 // and monospaced font, leaves lyrics as normal text.
 
+type AnnotatedLine = {
+  text: string;
+  overlay: boolean;
+};
+
 type Props = {
   lines: string[];
   chordColor?: string;
@@ -36,12 +41,16 @@ export const ChordProView: React.FC<Props> = ({
     return Math.max(8, Math.floor(containerWidth / charWidth));
   }, [containerWidth, charWidth]);
 
+  const annotatedLines = useMemo(() => annotateOverlayModes(lines), [lines]);
   const dynamicLine = { fontSize, lineHeight: Math.round(fontSize * 1.3) + lineGap } as const;
-  const hasModeMarker = useMemo(() => lines.some((line) => line.trim() === '||'), [lines]);
+  const hasModeMarker = useMemo(
+    () => annotatedLines.some((line) => line.text.trim() === '||'),
+    [annotatedLines]
+  );
   const rendered: React.ReactNode[] = [];
   let modeActive = !hasModeMarker;
 
-  lines.forEach((line, idx) => {
+  annotatedLines.forEach(({ text: line, overlay }, idx) => {
     if (line.trim() === '||') {
       modeActive = true;
       return;
@@ -75,6 +84,14 @@ export const ChordProView: React.FC<Props> = ({
       return;
     }
     if (lineMode === 'over') {
+      if (!overlay) {
+        rendered.push(
+          <Text key={`over-inline-${idx}`} style={[styles.line, dynamicLine, { color: lyricColor }]}>
+            {renderInlineWithoutBrackets(line, chordColor, onChordPress)}
+          </Text>
+        );
+        return;
+      }
       const { chordLine, lyric } = toOverLine(line);
       const trimmedChord = chordLine.trim();
       if (!trimmedChord) {
@@ -125,6 +142,25 @@ export const ChordProView: React.FC<Props> = ({
     </View>
   );
 };
+
+function annotateOverlayModes(lines: string[]): AnnotatedLine[] {
+  let overlay = true;
+  const out: AnnotatedLine[] = [];
+  for (const raw of lines) {
+    const match = /^\s*@([aA][lL]?|[lL])\s*:(.*)$/.exec(raw);
+    if (match) {
+      const tag = match[1].toLowerCase();
+      overlay = tag === 'a' ? false : true;
+      const rest = (match[2] ?? '').replace(/^\s+/, '');
+      if (rest.length > 0) {
+        out.push({ text: rest, overlay });
+      }
+      continue;
+    }
+    out.push({ text: raw, overlay });
+  }
+  return out;
+}
 
 function renderInline(line: string, chordColor: string, onChordPress?: (chord: string) => void) {
   if (line.trim().length === 0) return '\u200B';

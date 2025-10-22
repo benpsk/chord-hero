@@ -3,13 +3,24 @@ import { StyleSheet, View } from 'react-native';
 import { Button, TextInput, Text, useTheme } from 'react-native-paper';
 
 type PasswordlessLoginProps = {
-  onRequestCode?: (email: string) => void;
-  onConfirmCode?: (params: { email: string; code: string }) => void;
+  onRequestCode?: (email: string) => Promise<void> | void;
+  onConfirmCode?: (params: { email: string; code: string }) => Promise<void> | void;
+  requesting?: boolean;
+  confirming?: boolean;
 };
+
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Something went wrong. Please try again.';
+}
 
 export function PasswordlessLogin({
   onRequestCode,
   onConfirmCode,
+  requesting = false,
+  confirming = false,
 }: PasswordlessLoginProps) {
   const theme = useTheme();
   const [email, setEmail] = useState('');
@@ -66,27 +77,42 @@ export function PasswordlessLogin({
     }
   }, [isSendingCooldown, secondsRemaining]);
 
-  const handleSendCode = () => {
+  const handleSendCode = async () => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setHelper('Enter your email to receive a login code.');
       return;
     }
-    setHelper('We sent a 6-digit code to your inbox.');
-    setIsSendingCooldown(true);
-    setCanConfirm(true);
-    setSecondsRemaining(60);
-    onRequestCode?.(trimmedEmail);
+    setHelper(undefined);
+    try {
+      await onRequestCode?.(trimmedEmail);
+      setHelper('We sent a 6-digit code to your inbox.');
+      setIsSendingCooldown(true);
+      setCanConfirm(true);
+      setSecondsRemaining(60);
+    } catch (error) {
+      setHelper(toErrorMessage(error));
+    }
   };
 
-  const handleConfirmCode = () => {
+  const handleConfirmCode = async () => {
     const trimmedCode = code.trim();
     if (!trimmedCode) {
       setHelper('Enter the code to continue.');
       return;
     }
-    setHelper('Code confirmed. You are ready to continue.');
-    onConfirmCode?.({ email: email.trim(), code: trimmedCode });
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setHelper('Enter your email to receive a login code.');
+      return;
+    }
+    setHelper(undefined);
+    try {
+      await onConfirmCode?.({ email: trimmedEmail, code: trimmedCode });
+      setHelper('Code confirmed. You are ready to continue.');
+    } catch (error) {
+      setHelper(toErrorMessage(error));
+    }
   };
 
   return (
@@ -107,8 +133,8 @@ export function PasswordlessLogin({
         </Text>
         <Button
           mode="contained"
-          onPress={handleSendCode}
-          disabled={isSendingCooldown}
+          onPress={() => { void handleSendCode(); }}
+          disabled={isSendingCooldown || requesting}
         >
           Send code
         </Button>
@@ -124,8 +150,8 @@ export function PasswordlessLogin({
       />
       <Button
         mode="contained"
-        onPress={handleConfirmCode}
-        disabled={!canConfirm}
+        onPress={() => { void handleConfirmCode(); }}
+        disabled={!canConfirm || confirming}
         style={styles.actionButton}
       >
         Confirm

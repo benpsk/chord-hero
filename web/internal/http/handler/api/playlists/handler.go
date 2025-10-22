@@ -26,6 +26,12 @@ func New(svc playlistsvc.Service) Handler {
 
 // List provides a paginated playlist payload.
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
+	userID, authErr := util.CurrentUserID(r)
+	if authErr != nil {
+		util.RespondUnauthorized(w)
+		return
+	}
+
 	query := r.URL.Query()
 	params := playlistsvc.ListParams{}
 	validationErrors := map[string]string{}
@@ -39,7 +45,7 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params.Search = util.ParseOptionalSearch(query.Get("search"))
-	params.UserID = util.ParseOptionalPositiveInt(query.Get("user_id"), "user_id", validationErrors)
+	params.UserID = &userID
 
 	if len(validationErrors) > 0 {
 		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": validationErrors})
@@ -57,6 +63,12 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 // Create stores a playlist for the default user.
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
+	userID, authErr := util.CurrentUserID(r)
+	if authErr != nil {
+		util.RespondUnauthorized(w)
+		return
+	}
+
 	var payload struct {
 		Name string `json:"name"`
 	}
@@ -77,8 +89,6 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
 		return
 	}
-
-	const userID = 1
 
 	playlistID, err := h.svc.Create(r.Context(), playlistsvc.CreateParams{
 		Name:   name,

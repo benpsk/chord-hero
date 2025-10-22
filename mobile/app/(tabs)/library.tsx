@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -20,6 +20,8 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 
 import { SONGS } from '@/constants/songs';
+import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 type Library = {
   id: string;
@@ -33,6 +35,7 @@ type ModalStep = 'name' | 'songs';
 export default function LibraryScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -40,8 +43,15 @@ export default function LibraryScreen() {
   const [draftName, setDraftName] = useState('');
   const [nameError, setNameError] = useState('');
   const [selectedSongIds, setSelectedSongIds] = useState<Set<string>>(() => new Set<string>());
+  const [loginPromptVisible, setLoginPromptVisible] = useState(false);
 
   const songMap = useMemo(() => new Map(SONGS.map((song) => [song.id, song])), []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setAddModalVisible(false);
+    }
+  }, [isAuthenticated]);
 
   const styles = useMemo(
     () =>
@@ -171,8 +181,25 @@ export default function LibraryScreen() {
         selectionCounter: {
           fontSize: 12,
         },
+        authRequired: {
+          flex: 1,
+          alignItems: 'center',
+          gap: 16,
+          paddingHorizontal: 24,
+          paddingTop: 120,
+        },
+        authTitle: {
+          fontSize: 20,
+          fontWeight: '700',
+          textAlign: 'center',
+        },
+        authSubtitle: {
+          fontSize: 14,
+          textAlign: 'center',
+          color: theme.colors.onSurfaceVariant,
+        },
       }),
-    [theme.colors.tertiary, theme.colors.background, theme.colors.primary, theme.colors.surface]
+    [theme.colors.tertiary, theme.colors.background, theme.colors.primary, theme.colors.surface, theme.colors.onSurfaceVariant]
   );
 
   const resetModalState = useCallback(() => {
@@ -184,12 +211,16 @@ export default function LibraryScreen() {
   }, []);
 
   const openAddModal = useCallback(() => {
+    if (!isAuthenticated) {
+      setLoginPromptVisible(true);
+      return;
+    }
     setAddModalVisible(true);
     setModalStep('name');
     setDraftName('');
     setNameError('');
     setSelectedSongIds(new Set<string>());
-  }, []);
+  }, [isAuthenticated]);
 
   const handleNameContinue = useCallback(() => {
     const trimmed = draftName.trim();
@@ -236,10 +267,37 @@ export default function LibraryScreen() {
   }, [draftName, resetModalState, selectedSongIds]);
 
   const handleFabPress = useCallback(() => {
+    if (!isAuthenticated) {
+      setLoginPromptVisible(true);
+      return;
+    }
     router.push('/song/create');
+  }, [isAuthenticated, router]);
+
+  const handleDismissLoginPrompt = useCallback(() => {
+    setLoginPromptVisible(false);
+  }, []);
+
+  const handleNavigateToLogin = useCallback(() => {
+    setLoginPromptVisible(false);
+    router.push('/login');
   }, [router]);
 
   const libraryContent = useMemo(() => {
+    if (!isAuthenticated) {
+      return (
+        <Animated.View style={styles.authRequired} entering={FadeInUp.delay(100).duration(320)}>
+          <Text style={styles.authTitle}>Sign in to manage your libraries</Text>
+          <Text style={styles.authSubtitle}>
+            Create custom song collections, organize set lists, and sync them across your devices once you log in.
+          </Text>
+          <Button mode="contained" onPress={() => router.push('/login') }>
+            Go to login
+          </Button>
+        </Animated.View>
+      );
+    }
+
     if (libraries.length === 0) {
       return (
         <Animated.View style={styles.emptyState} entering={FadeInUp.delay(120).duration(360)}>
@@ -292,7 +350,7 @@ export default function LibraryScreen() {
         })}
       </Animated.View>
     );
-  }, [libraries, openAddModal, songMap, styles]);
+  }, [isAuthenticated, libraries, openAddModal, songMap, styles]);
 
   const selectedCount = selectedSongIds.size;
 
@@ -412,6 +470,12 @@ export default function LibraryScreen() {
           )}
         </Modal>
       </Portal>
+
+      <LoginRequiredDialog
+        visible={loginPromptVisible}
+        onDismiss={handleDismissLoginPrompt}
+        onLogin={handleNavigateToLogin}
+      />
     </SafeAreaView>
   );
 }

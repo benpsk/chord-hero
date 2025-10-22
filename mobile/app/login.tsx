@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -11,7 +11,9 @@ import {
   useTheme,
 } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { PasswordlessLogin } from '@/components/login/PasswordlessLogin';
+import { useAuth } from '@/hooks/useAuth';
 
 
 const SSO_OPTIONS = [
@@ -33,6 +35,21 @@ const SSO_OPTIONS = [
 
 export default function LoginScreen() {
   const theme = useTheme();
+  const router = useRouter();
+  const {
+    requestCode,
+    confirmCode,
+    isAuthenticated,
+    isChecking,
+    requestingCode,
+    confirmingCode,
+  } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/(tabs)/profile');
+    }
+  }, [isAuthenticated, router]);
 
   const styles = useMemo(
     () =>
@@ -125,7 +142,12 @@ export default function LoginScreen() {
           <Animated.View style={styles.contentStack} entering={FadeInUp.delay(120).duration(360)}>
             <Surface style={styles.emailSurface} elevation={1}>
               <Text style={styles.cardTitle}>Sign in with email</Text>
-              <PasswordlessLogin />
+              <PasswordlessLogin
+                onRequestCode={requestCode}
+                onConfirmCode={confirmCode}
+                requesting={requestingCode || isChecking}
+                confirming={confirmingCode || isChecking}
+              />
             </Surface>
             <Surface style={styles.ssoSurface} elevation={1}>
               <Text variant="labelLarge" style={styles.ssoLabel}>

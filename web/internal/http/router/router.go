@@ -16,6 +16,7 @@ import (
 	chordsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/chords"
 	feedbackapi "github.com/lyricapp/lyric/web/internal/http/handler/api/feedback"
 	levelsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/levels"
+	languagesapi "github.com/lyricapp/lyric/web/internal/http/handler/api/languages"
 	loginapi "github.com/lyricapp/lyric/web/internal/http/handler/api/login"
 	playlistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/playlists"
 	releaseyearapi "github.com/lyricapp/lyric/web/internal/http/handler/api/releaseyear"
@@ -105,6 +106,7 @@ func New(application *app.Application) chi.Router {
 	apiPlaylists := playlistsapi.New(application.Services.Playlists)
 	apiTrending := trendingapi.New(application.Services.Trendings)
 	apiLevels := levelsapi.New(application.Services.Levels)
+	apiLanguages := languagesapi.New(application.Services.Languages)
 	apiChords := chordsapi.New(application.Services.Chords)
 	apiFeedback := feedbackapi.New(application.Services.Feedback)
 	apiLogin := loginapi.New(application.Services.Login)
@@ -132,6 +134,7 @@ func New(application *app.Application) chi.Router {
 		api.Get("/trending-albums", apiTrending.Albums)
 		api.Get("/trending-artists", apiTrending.Artists)
 		api.Get("/levels", apiLevels.List)
+		api.Get("/languages", apiLanguages.List)
 		api.Get("/chords/{name}", apiChords.Show)
 	})
 

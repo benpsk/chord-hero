@@ -45,7 +45,10 @@
       "id": 1,
       "title": "Amazing Grace",
       "key": "G",
-      "language": "english",
+      "language": {
+        "id": 1,
+        "name": "Burmese"
+      }
       "lyric": "Intro: [G]... \n Amazing...",
       "release_year": null,
       "level": {
@@ -74,7 +77,7 @@
   "title": "Amazing Grace",
   "level_id": 1,
   "key": "G",
-  "language": "english",
+  "language_id": 1,
   "lyric": "Intro: [G]\nAmazing grace, how sweet the sound",
   "release_year": 1779,
   "album_ids": [1, 2],
@@ -238,20 +241,18 @@
 
 -- POST /api/songs/{song_id}/levels/{level_id}
 
--- POST /api/playlists/create
+-- POST /api/playlists
 {
   "name": "My Playlist 01"
 }
 
--- POST /api/playlists/{playlist_id}/songs/{song_ids}
-
-- POST /api/login
+-- POST /api/login
   -- request
 {
   "username": "abc@mail.com"
 }
 
-- POST /api/code
+-- POST /api/code
   -- request
 {
   "code": 10292
@@ -263,11 +264,39 @@
   }
 }
 
-- POST /api/me => auth protected
+-- POST /api/me => auth protected
   -- response
 {
   "username": "abc@mail.com",
   "role": "Contributor"
 }
 
+-- POST /api/playlists/{playlist_id}/songs/{song_ids}
+  -- song_ids => 1,2,3
 
+-- GET /api/languages
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Burmese",
+    }
+  ]
+}
+
+-- DELETE /api/playlists/{id}
+
+-- UPDATE /api/playlists/{id}
+{
+  "name": "Updated P01"
+} 
+
+-- POST /api/playlists/{id}/remove-songs
+{
+  "song_ids": [1,2,3]
+}
+
+-- POST /api/playlists/{id}/share
+{
+  "user_ids": [1,2,3]
+}

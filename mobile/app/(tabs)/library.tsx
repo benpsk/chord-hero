@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  ActivityIndicator,
   Button,
   Checkbox,
   Divider,
@@ -11,6 +12,7 @@ import {
   List,
   Modal,
   Portal,
+  Searchbar,
   Text,
   TextInput,
   TouchableRipple,
@@ -19,37 +21,62 @@ import {
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 
-import { SONGS } from '@/constants/songs';
 import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
 import { useAuth } from '@/hooks/useAuth';
-
-type Library = {
-  id: string;
-  name: string;
-  songIds: string[];
-  createdAt: number;
-};
-
-type ModalStep = 'name' | 'songs';
+import {
+  PlaylistSummary,
+  useAttachSongsToPlaylistMutation,
+  useCreatePlaylistMutation,
+  usePlaylists,
+} from '@/hooks/usePlaylists';
+import { useSongOptions } from '@/hooks/useSongOptions';
+import { ApiError } from '@/lib/api';
 
 export default function LibraryScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isChecking } = useAuth();
 
-  const [libraries, setLibraries] = useState<Library[]>([]);
   const [addModalVisible, setAddModalVisible] = useState(false);
-  const [modalStep, setModalStep] = useState<ModalStep>('name');
   const [draftName, setDraftName] = useState('');
   const [nameError, setNameError] = useState('');
-  const [selectedSongIds, setSelectedSongIds] = useState<Set<string>>(() => new Set<string>());
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [loginPromptVisible, setLoginPromptVisible] = useState(false);
+  const [modalStep, setModalStep] = useState<'name' | 'songs'>('name');
+  const [createdPlaylist, setCreatedPlaylist] = useState<PlaylistSummary | null>(null);
+  const [songSearch, setSongSearch] = useState('');
+  const [selectedSongIds, setSelectedSongIds] = useState<Set<number | string>>(
+    () => new Set<number | string>()
+  );
+  const [songSubmitError, setSongSubmitError] = useState<string | null>(null);
 
-  const songMap = useMemo(() => new Map(SONGS.map((song) => [song.id, song])), []);
+  const playlistsQuery = usePlaylists(isAuthenticated && !isChecking);
+  const createPlaylistMutation = useCreatePlaylistMutation();
+  const attachSongsMutation = useAttachSongsToPlaylistMutation();
+  const refetchPlaylists = playlistsQuery.refetch;
+
+  const playlists = playlistsQuery.data?.data ?? [];
+  const isInitialLoading =
+    playlistsQuery.isLoading || (playlistsQuery.isFetching && playlists.length === 0);
+  const isCreating = createPlaylistMutation.isPending;
+  const isAttachingSongs = attachSongsMutation.isPending;
+  const songQueryEnabled = addModalVisible && modalStep === 'songs';
+  const songsQuery = useSongOptions(songSearch, songQueryEnabled);
+  const songOptions = songsQuery.data?.data ?? [];
+  const isLoadingSongOptions =
+    songsQuery.isLoading || (songsQuery.isFetching && songOptions.length === 0);
 
   useEffect(() => {
     if (!isAuthenticated) {
       setAddModalVisible(false);
+      setDraftName('');
+      setNameError('');
+      setSubmitError(null);
+      setModalStep('name');
+      setCreatedPlaylist(null);
+      setSongSearch('');
+      setSelectedSongIds(new Set<number | string>());
+      setSongSubmitError(null);
     }
   }, [isAuthenticated]);
 
@@ -58,7 +85,7 @@ export default function LibraryScreen() {
       StyleSheet.create({
         safeArea: {
           flex: 1,
-          backgroundColor: theme.colors.background
+          backgroundColor: theme.colors.background,
         },
         container: {
           flexGrow: 1,
@@ -100,13 +127,9 @@ export default function LibraryScreen() {
         libraryTitle: {
           fontWeight: '700',
         },
-        librarySubtitleRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-        },
         librarySubtitle: {
           fontSize: 12,
+          color: theme.colors.onSurfaceVariant,
         },
         chevronButton: {
           margin: 0,
@@ -157,9 +180,6 @@ export default function LibraryScreen() {
           justifyContent: 'flex-end',
           gap: 12,
         },
-        sectionSpacing: {
-          height: 12,
-        },
         songList: {
           maxHeight: 360,
           marginTop: 12,
@@ -171,6 +191,8 @@ export default function LibraryScreen() {
           fontWeight: '600',
         },
         songListDescription: {
+          fontSize: 12,
+          color: theme.colors.onSurfaceVariant,
         },
         songStepSummary: {
           flexDirection: 'row',
@@ -180,6 +202,7 @@ export default function LibraryScreen() {
         },
         selectionCounter: {
           fontSize: 12,
+          color: theme.colors.onSurfaceVariant,
         },
         authRequired: {
           flex: 1,
@@ -198,8 +221,39 @@ export default function LibraryScreen() {
           textAlign: 'center',
           color: theme.colors.onSurfaceVariant,
         },
+        loadingState: {
+          alignItems: 'center',
+          gap: 12,
+          paddingVertical: 120,
+        },
+        loadingText: {
+          fontSize: 13,
+          color: theme.colors.onSurfaceVariant,
+        },
+        errorState: {
+          alignItems: 'center',
+          gap: 12,
+          paddingVertical: 120,
+          paddingHorizontal: 24,
+        },
+        errorTitle: {
+          fontSize: 18,
+          fontWeight: '700',
+          textAlign: 'center',
+        },
+        errorMessage: {
+          fontSize: 13,
+          textAlign: 'center',
+          color: theme.colors.onSurfaceVariant,
+        },
       }),
-    [theme.colors.tertiary, theme.colors.background, theme.colors.primary, theme.colors.surface, theme.colors.onSurfaceVariant]
+    [
+      theme.colors.tertiary,
+      theme.colors.background,
+      theme.colors.primary,
+      theme.colors.surface,
+      theme.colors.onSurfaceVariant,
+    ]
   );
 
   const resetModalState = useCallback(() => {
@@ -207,8 +261,14 @@ export default function LibraryScreen() {
     setModalStep('name');
     setDraftName('');
     setNameError('');
-    setSelectedSongIds(new Set<string>());
-  }, []);
+    setSubmitError(null);
+    setCreatedPlaylist(null);
+    setSongSearch('');
+    setSelectedSongIds(new Set<number | string>());
+    setSongSubmitError(null);
+    createPlaylistMutation.reset();
+    attachSongsMutation.reset();
+  }, [attachSongsMutation, createPlaylistMutation]);
 
   const openAddModal = useCallback(() => {
     if (!isAuthenticated) {
@@ -219,21 +279,76 @@ export default function LibraryScreen() {
     setModalStep('name');
     setDraftName('');
     setNameError('');
-    setSelectedSongIds(new Set<string>());
-  }, [isAuthenticated]);
+    setSubmitError(null);
+    setCreatedPlaylist(null);
+    setSongSearch('');
+    setSelectedSongIds(new Set<number | string>());
+    setSongSubmitError(null);
+    createPlaylistMutation.reset();
+    attachSongsMutation.reset();
+  }, [attachSongsMutation, createPlaylistMutation, isAuthenticated]);
 
-  const handleNameContinue = useCallback(() => {
+  const handleCreatePlaylist = useCallback(async () => {
     const trimmed = draftName.trim();
     if (!trimmed) {
-      setNameError('Library name is required');
+      setNameError('Playlist name is required');
       return;
     }
 
     setNameError('');
-    setModalStep('songs');
-  }, [draftName]);
+    setSubmitError(null);
+    try {
+      const response = await createPlaylistMutation.mutateAsync({ name: trimmed });
+      let playlist = response?.data;
 
-  const toggleSongSelection = useCallback((id: string) => {
+      if (!playlist?.id) {
+        const refreshed = await refetchPlaylists();
+        const refreshedPlaylists = refreshed.data?.data ?? [];
+        playlist = refreshedPlaylists.find((item) => {
+          if (!item?.name) return false;
+          return item.name.trim().toLowerCase() === trimmed.toLowerCase();
+        });
+
+        if (!playlist?.id) {
+          playlist = refreshedPlaylists.reduce<PlaylistSummary | null>((acc, item) => {
+            if (!item?.id) return acc;
+            const currentId = Number(item.id);
+            if (!Number.isFinite(currentId)) {
+              return acc;
+            }
+            if (!acc) {
+              return item;
+            }
+            const accId = Number(acc.id);
+            if (!Number.isFinite(accId) || currentId > accId) {
+              return item;
+            }
+            return acc;
+          }, null);
+        }
+      }
+
+      if (!playlist?.id) {
+        setSubmitError('Playlist created, but we could not confirm its ID. Please try again.');
+        return;
+      }
+
+      setCreatedPlaylist(playlist);
+      setDraftName(playlist.name ?? trimmed);
+      setModalStep('songs');
+      setSelectedSongIds(new Set<number | string>());
+      setSongSearch('');
+      setSongSubmitError(null);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setSubmitError(error.message);
+      } else {
+        setSubmitError('Unable to create playlist. Please try again.');
+      }
+    }
+  }, [createPlaylistMutation, draftName, refetchPlaylists]);
+
+  const toggleSongSelection = useCallback((id: number | string) => {
     setSelectedSongIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -243,28 +358,50 @@ export default function LibraryScreen() {
       }
       return next;
     });
+    setSongSubmitError(null);
   }, []);
 
-  const handleCreateLibrary = useCallback(() => {
-    const trimmed = draftName.trim();
-    if (!trimmed) {
-      setModalStep('name');
-      setNameError('Library name is required');
+  const handleAttachSongs = useCallback(async () => {
+    if (!createdPlaylist) {
+      setSongSubmitError('Playlist not ready yet. Please try again.');
       return;
     }
 
-    const songIds = Array.from(selectedSongIds);
+    if (selectedSongIds.size === 0) {
+      setSongSubmitError('Select at least one song to continue.');
+      return;
+    }
 
-    const newLibrary: Library = {
-      id: `library-${Date.now()}`,
-      name: trimmed,
-      songIds,
-      createdAt: Date.now(),
-    };
+    const playlistId = Number(createdPlaylist.id);
+    const songIds = Array.from(selectedSongIds)
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0);
 
-    setLibraries((prev) => [newLibrary, ...prev]);
-    resetModalState();
-  }, [draftName, resetModalState, selectedSongIds]);
+    if (!Number.isFinite(playlistId) || playlistId <= 0) {
+      setSongSubmitError('Playlist ID is invalid. Please try again.');
+      return;
+    }
+
+    if (songIds.length === 0) {
+      setSongSubmitError('Unable to resolve selected songs. Please try again.');
+      return;
+    }
+
+    setSongSubmitError(null);
+    try {
+      await attachSongsMutation.mutateAsync({
+        playlistId,
+        songIds,
+      });
+      resetModalState();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setSongSubmitError(error.message);
+      } else {
+        setSongSubmitError('Unable to add songs. Please try again.');
+      }
+    }
+  }, [attachSongsMutation, createdPlaylist, resetModalState, selectedSongIds]);
 
   const handleFabPress = useCallback(() => {
     if (!isAuthenticated) {
@@ -287,26 +424,54 @@ export default function LibraryScreen() {
     if (!isAuthenticated) {
       return (
         <Animated.View style={styles.authRequired} entering={FadeInUp.delay(100).duration(320)}>
-          <Text style={styles.authTitle}>Sign in to manage your libraries</Text>
+          <Text style={styles.authTitle}>Sign in to manage your playlists</Text>
           <Text style={styles.authSubtitle}>
             Create custom song collections, organize set lists, and sync them across your devices once you log in.
           </Text>
-          <Button mode="contained" onPress={() => router.push('/login') }>
+          <Button mode="contained" onPress={() => router.push('/login')}>
             Go to login
           </Button>
         </Animated.View>
       );
     }
 
-    if (libraries.length === 0) {
+    if (isChecking || isInitialLoading) {
+      return (
+        <View style={styles.loadingState}>
+          <ActivityIndicator animating size="small" />
+          <Text style={styles.loadingText}>
+            {isChecking ? 'Checking your account…' : 'Loading your playlists…'}
+          </Text>
+        </View>
+      );
+    }
+
+    if (playlistsQuery.isError) {
+      const message =
+        playlistsQuery.error instanceof ApiError
+          ? playlistsQuery.error.message
+          : 'Unable to load playlists right now.';
+
+      return (
+        <Animated.View style={styles.errorState} entering={FadeInUp.delay(120).duration(360)}>
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>{message}</Text>
+          <Button mode="contained" icon="reload" onPress={playlistsQuery.refetch}>
+            Try again
+          </Button>
+        </Animated.View>
+      );
+    }
+
+    if (playlists.length === 0) {
       return (
         <Animated.View style={styles.emptyState} entering={FadeInUp.delay(120).duration(360)}>
-          <Text style={styles.emptyTitle}>No libraries yet</Text>
+          <Text style={styles.emptyTitle}>No playlists yet</Text>
           <Text style={styles.emptySubtitle}>
-            Create a custom library to organize songs for your next performance or study session.
+            Create a playlist to organize songs for your next performance or study session.
           </Text>
           <Button mode="contained" icon="playlist-plus" onPress={openAddModal}>
-            Create a library
+            Create a playlist
           </Button>
         </Animated.View>
       );
@@ -314,45 +479,50 @@ export default function LibraryScreen() {
 
     return (
       <Animated.View entering={FadeInUp.delay(140).duration(360)}>
-        {libraries.map((library, index) => {
-          const songs = library.songIds
-            .map((id) => songMap.get(id))
-            .filter(Boolean);
-          const primaryArtist = songs.find((song) => song?.artist)?.artist ?? 'You';
-
-          return (
-            <TouchableRipple key={library.id} onPress={() => {}} borderless={false}>
-              <Animated.View entering={FadeInUp.delay(160 + index * 40).duration(320)}>
-                {index > 0 && <View style={styles.rowSpacing} />}
-                <View style={styles.libraryRow}>
-                  <View style={styles.artwork} />
-                  <View style={styles.libraryInfo}>
-                    <Text style={styles.libraryTitle}>{library.name}</Text>
-                    <View style={styles.librarySubtitleRow}>
-                      <Text style={styles.librarySubtitle}>{primaryArtist}</Text>
-                      <Text style={styles.librarySubtitle}>•</Text>
-                      <Text style={styles.librarySubtitle}>
-                        {library.songIds.length} song{library.songIds.length === 1 ? '' : 's'}
-                      </Text>
-                    </View>
-                  </View>
-                  <IconButton
-                    icon="chevron-right"
-                    size={22}
-                    style={styles.chevronButton}
-                    onPress={() => {}}
-                  />
+        {playlists.map((playlist, index) => (
+          <TouchableRipple key={playlist.id} onPress={() => {}} borderless={false}>
+            <Animated.View entering={FadeInUp.delay(160 + index * 40).duration(320)}>
+              {index > 0 && <View style={styles.rowSpacing} />}
+              <View style={styles.libraryRow}>
+                <View style={styles.artwork} />
+                <View style={styles.libraryInfo}>
+                  <Text style={styles.libraryTitle}>{playlist.name}</Text>
+                  <Text style={styles.librarySubtitle}>
+                    {playlist.total} song{playlist.total === 1 ? '' : 's'}
+                  </Text>
                 </View>
-                {index < libraries.length - 1 && <Divider style={styles.inlineDivider} />}
-              </Animated.View>
-            </TouchableRipple>
-          );
-        })}
+                <IconButton
+                  icon="chevron-right"
+                  size={22}
+                  style={styles.chevronButton}
+                  onPress={() => {}}
+                />
+              </View>
+              {index < playlists.length - 1 && <Divider style={styles.inlineDivider} />}
+            </Animated.View>
+          </TouchableRipple>
+        ))}
       </Animated.View>
     );
-  }, [isAuthenticated, libraries, openAddModal, songMap, styles]);
+  }, [
+    isAuthenticated,
+    isChecking,
+    isInitialLoading,
+    playlistsQuery.isError,
+    playlistsQuery.error,
+    playlistsQuery.refetch,
+    playlists,
+    openAddModal,
+    router,
+    styles,
+  ]);
 
   const selectedCount = selectedSongIds.size;
+  const currentPlaylistName = createdPlaylist?.name ?? draftName.trim();
+  const songsErrorMessage =
+    songsQuery.error instanceof ApiError
+      ? songsQuery.error.message
+      : 'Unable to load songs right now.';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -391,13 +561,13 @@ export default function LibraryScreen() {
           {modalStep === 'name' ? (
             <View>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>New library</Text>
+                <Text style={styles.modalTitle}>New playlist</Text>
                 <Text style={styles.modalSubtitle}>
-                  Give your library a clear name so it is easy to find later.
+                  Give your playlist a clear name. We&apos;ll help you add songs next.
                 </Text>
               </View>
               <TextInput
-                label="Library name"
+                label="Playlist name"
                 mode="outlined"
                 value={draftName}
                 onChangeText={(value) => {
@@ -405,15 +575,32 @@ export default function LibraryScreen() {
                   if (nameError) {
                     setNameError('');
                   }
+                  if (submitError) {
+                    setSubmitError(null);
+                  }
                 }}
-                error={Boolean(nameError)}
+                error={Boolean(nameError || submitError)}
                 autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleCreatePlaylist}
               />
-              {Boolean(nameError) && <HelperText type="error">{nameError}</HelperText>}
-              <View style={styles.sectionSpacing} />
+              {nameError ? (
+                <HelperText type="error">{nameError}</HelperText>
+              ) : submitError ? (
+                <HelperText type="error">{submitError}</HelperText>
+              ) : (
+                <HelperText type="info">Keep it short and descriptive.</HelperText>
+              )}
               <View style={styles.modalActions}>
-                <Button onPress={resetModalState}>Cancel</Button>
-                <Button mode="contained" onPress={handleNameContinue}>
+                <Button onPress={resetModalState} disabled={isCreating}>
+                  Cancel
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleCreatePlaylist}
+                  loading={isCreating}
+                  disabled={isCreating}
+                >
                   Continue
                 </Button>
               </View>
@@ -421,49 +608,106 @@ export default function LibraryScreen() {
           ) : (
             <View>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select songs</Text>
+                <Text style={styles.modalTitle}>Add songs</Text>
                 <Text style={styles.modalSubtitle}>
-                  Choose the songs you want to include in “{draftName.trim()}”.
+                  Select songs to include in “{currentPlaylistName}”. You can revisit this later.
                 </Text>
               </View>
-              <ScrollView style={styles.songList}>
-                {SONGS.map((song, index) => {
-                  const checked = selectedSongIds.has(song.id);
-                  return (
-                    <View key={song.id}>
-                      <List.Item
-                        title={song.title}
-                        description={song.artist}
-                        onPress={() => toggleSongSelection(song.id)}
-                        right={() => (
-                          <Checkbox
-                            status={checked ? 'checked' : 'unchecked'}
-                            onPress={() => toggleSongSelection(song.id)}
-                          />
-                        )}
-                        style={styles.songListItem}
-                        titleStyle={styles.songListTitle}
-                        descriptionStyle={styles.songListDescription}
-                      />
-                      {index < SONGS.length - 1 && <Divider />}
-                    </View>
-                  );
-                })}
-              </ScrollView>
+              <Searchbar
+                placeholder="Search songs"
+                value={songSearch}
+                onChangeText={(value) => {
+                  setSongSearch(value);
+                  if (songSubmitError) {
+                    setSongSubmitError(null);
+                  }
+                }}
+                autoCorrect={false}
+                autoCapitalize="none"
+                loading={songsQuery.isFetching}
+              />
+              {songsQuery.isError ? (
+                <View style={{ alignItems: 'center', gap: 12, paddingVertical: 32 }}>
+                  <Text style={styles.errorMessage}>{songsErrorMessage}</Text>
+                  <Button mode="outlined" onPress={songsQuery.refetch}>
+                    Retry
+                  </Button>
+                </View>
+              ) : isLoadingSongOptions ? (
+                <View style={{ alignItems: 'center', gap: 12, paddingVertical: 32 }}>
+                  <ActivityIndicator animating size="small" />
+                  <Text style={styles.loadingText}>Loading songs…</Text>
+                </View>
+              ) : songOptions.length === 0 ? (
+                <View style={{ alignItems: 'center', gap: 12, paddingVertical: 32 }}>
+                  <Text style={styles.emptyTitle}>No songs found</Text>
+                  <Text style={styles.emptySubtitle}>Try adjusting your search.</Text>
+                </View>
+              ) : (
+                <ScrollView style={styles.songList} keyboardShouldPersistTaps="handled">
+                  {songOptions.map((song, index) => {
+                    const checked = selectedSongIds.has(song.id);
+                    const artistLabel = Array.isArray(song.artists)
+                      ? song.artists
+                          .map((artist) => artist?.name)
+                          .filter(Boolean)
+                          .join(', ')
+                      : undefined;
+                    return (
+                      <View key={song.id}>
+                        <List.Item
+                          title={song.title}
+                          description={artistLabel}
+                          onPress={() => toggleSongSelection(song.id)}
+                          right={() => (
+                            <Checkbox
+                              status={checked ? 'checked' : 'unchecked'}
+                              onPress={() => toggleSongSelection(song.id)}
+                            />
+                          )}
+                          style={styles.songListItem}
+                          titleStyle={styles.songListTitle}
+                          descriptionStyle={styles.songListDescription}
+                        />
+                        {index < songOptions.length - 1 && <Divider />}
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              )}
               <View style={styles.songStepSummary}>
-                <Button onPress={() => setModalStep('name')}>Back</Button>
                 <Text style={styles.selectionCounter}>
                   {selectedCount} selected
                 </Text>
+                {selectedCount > 0 ? (
+                  <Button
+                    compact
+                    onPress={() => {
+                      setSelectedSongIds(new Set<number | string>());
+                      setSongSubmitError(null);
+                    }}
+                    disabled={isAttachingSongs}
+                  >
+                    Clear
+                  </Button>
+                ) : null}
               </View>
+              {songSubmitError ? (
+                <HelperText type="error" visible>
+                  {songSubmitError}
+                </HelperText>
+              ) : null}
               <View style={styles.modalActions}>
-                <Button onPress={resetModalState}>Cancel</Button>
+                <Button onPress={resetModalState} disabled={isAttachingSongs}>
+                  Skip for now
+                </Button>
                 <Button
                   mode="contained"
-                  onPress={handleCreateLibrary}
-                  disabled={selectedCount === 0}
+                  onPress={handleAttachSongs}
+                  loading={isAttachingSongs}
+                  disabled={isAttachingSongs || selectedCount === 0}
                 >
-                  Save library
+                  Add songs
                 </Button>
               </View>
             </View>

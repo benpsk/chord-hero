@@ -13,6 +13,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useMutation } from '@tanstack/react-query';
 
 import { apiPost, ApiError } from '@/lib/api';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 export default function RequestChordScreen() {
   const theme = useTheme();
@@ -20,6 +21,7 @@ export default function RequestChordScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { isAuthenticated, isChecking } = useRequireAuth();
 
   const feedbackMutation = useMutation<{ message?: string }, ApiError, { message: string }>({
     mutationFn: (payload) => apiPost('/api/feedback', payload),
@@ -106,6 +108,10 @@ export default function RequestChordScreen() {
     setSuccessMessage(null);
     feedbackMutation.mutate({ message: trimmedMessage });
   };
+
+  if (isChecking || !isAuthenticated) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>

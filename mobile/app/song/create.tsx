@@ -1,7 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  ActivityIndicator,
   Button,
   Checkbox,
   Chip,
@@ -17,95 +18,70 @@ import {
   useTheme,
 } from 'react-native-paper';
 
-type Option = {
-  label: string;
-  value: string;
+import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { useLevels } from '@/hooks/useLevels';
+import { useLanguages } from '@/hooks/useLanguages';
+import { useEntitySearch, type SearchableEntity } from '@/hooks/useEntitySearch';
+import { useCreateSongMutation } from '@/hooks/useCreateSong';
+import { ApiError } from '@/lib/api';
+
+type NamedOption = {
+  id: number;
+  name: string;
 };
 
-export default function LibraryNewPageScreen() {
+type EntitySearchMeta = {
+  isError: boolean;
+  error: unknown;
+  isFetching: boolean;
+  refetch: () => unknown;
+};
+
+function toNamedOption(entity: SearchableEntity): NamedOption {
+  const name =
+    typeof entity.name === 'string' && entity.name.trim().length > 0
+      ? entity.name.trim()
+      : `Item #${entity.id}`;
+  return {
+    id: Number(entity.id),
+    name,
+  };
+}
+
+function summarizeSelection(values: NamedOption[]): string {
+  if (values.length === 0) return '';
+  const names = values.map((value) => value.name).filter(Boolean);
+  if (names.length <= 2) {
+    return names.join(', ');
+  }
+  return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
+}
+
+export default function SongCreateScreen() {
   const theme = useTheme();
+  const { isAuthenticated, isChecking } = useRequireAuth();
 
-  const playlistOptions = useMemo<Option[]>(
-    () => [
-      { label: 'Uname Playlist 1', value: 'playlist-1' },
-      { label: 'Uname Playlist 2', value: 'playlist-2' },
-      { label: 'Uname Playlist 3', value: 'playlist-3' },
-    ],
-    []
-  );
+  const queriesEnabled = isAuthenticated && !isChecking;
+  const levelsQuery = useLevels(queriesEnabled);
+  const languagesQuery = useLanguages(queriesEnabled);
 
-  const levelOptions = useMemo<Option[]>(
-    () => [
-      { label: 'Easy', value: 'easy' },
-      { label: 'Medium', value: 'medium' },
-      { label: 'Hard', value: 'hard' },
-    ],
-    []
-  );
-
-  const languageOptions = useMemo<Option[]>(
-    () => [
-      { label: 'English', value: 'en' },
-      { label: 'Burmese', value: 'mm' },
-    ],
-    []
-  );
-
-  const albumOptions = useMemo<Option[]>(
-    () => [
-      { label: 'Sunrise Sessions', value: 'album-sunrise-sessions' },
-      { label: 'Live at the Loft', value: 'album-live-loft' },
-      { label: 'Midnight Drive', value: 'album-midnight-drive' },
-      { label: 'Coastal Skies', value: 'album-coastal-skies' },
-      { label: 'Evening Hymns', value: 'album-evening-hymns' },
-    ],
-    []
-  );
-
-  const artistOptions = useMemo<Option[]>(
-    () => [
-      { label: 'Uname 1', value: 'artist-uname-1' },
-      { label: 'Uname 2', value: 'artist-uname-2' },
-      { label: 'Uname 3', value: 'artist-uname-3' },
-      { label: 'Skyline Duo', value: 'artist-skyline-duo' },
-      { label: 'Golden Choir', value: 'artist-golden-choir' },
-    ],
-    []
-  );
-
-  const writerOptions = useMemo<Option[]>(
-    () => [
-      { label: 'Uname 1', value: 'writer-uname-1' },
-      { label: 'Uname 2', value: 'writer-uname-2' },
-      { label: 'Uname 3', value: 'writer-uname-3' },
-      { label: 'Harper Lane', value: 'writer-harper-lane' },
-      { label: 'Jordan West', value: 'writer-jordan-west' },
-    ],
-    []
-  );
-
-  const playlistLabelMap = useMemo(() => new Map(playlistOptions.map((option) => [option.value, option.label])), [playlistOptions]);
-  const levelLabelMap = useMemo(() => new Map(levelOptions.map((option) => [option.value, option.label])), [levelOptions]);
-  const languageLabelMap = useMemo(() => new Map(languageOptions.map((option) => [option.value, option.label])), [languageOptions]);
-  const albumLabelMap = useMemo(() => new Map(albumOptions.map((option) => [option.value, option.label])), [albumOptions]);
-  const artistLabelMap = useMemo(() => new Map(artistOptions.map((option) => [option.value, option.label])), [artistOptions]);
-  const writerLabelMap = useMemo(() => new Map(writerOptions.map((option) => [option.value, option.label])), [writerOptions]);
-
-  const [playlist, setPlaylist] = useState<string>(playlistOptions[0]?.value ?? '');
   const [title, setTitle] = useState('');
   const [key, setKey] = useState('');
-  const [level, setLevel] = useState<string>(levelOptions[1]?.value ?? '');
-  const [language, setLanguage] = useState<string>(languageOptions[0]?.value ?? '');
   const [releaseYear, setReleaseYear] = useState('');
   const [lyric, setLyric] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const [playlistMenuVisible, setPlaylistMenuVisible] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<NamedOption | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<NamedOption | null>(null);
+
   const [levelMenuVisible, setLevelMenuVisible] = useState(false);
   const [languageMenuVisible, setLanguageMenuVisible] = useState(false);
 
-  const [selectedAlbums, setSelectedAlbums] = useState<string[]>(['album-sunrise-sessions', 'album-live-loft']);
-  const [selectedArtists, setSelectedArtists] = useState<string[]>(['artist-uname-1', 'artist-uname-2']);
-  const [selectedWriters, setSelectedWriters] = useState<string[]>(['writer-uname-1', 'writer-jordan-west']);
+  const [selectedAlbums, setSelectedAlbums] = useState<NamedOption[]>([]);
+  const [selectedArtists, setSelectedArtists] = useState<NamedOption[]>([]);
+  const [selectedWriters, setSelectedWriters] = useState<NamedOption[]>([]);
 
   const [albumModalVisible, setAlbumModalVisible] = useState(false);
   const [artistModalVisible, setArtistModalVisible] = useState(false);
@@ -115,21 +91,98 @@ export default function LibraryNewPageScreen() {
   const [artistQuery, setArtistQuery] = useState('');
   const [writerQuery, setWriterQuery] = useState('');
 
-  const filteredAlbumOptions = useMemo(
-    () =>
-      albumOptions.filter((option) => option.label.toLowerCase().includes(albumQuery.trim().toLowerCase())),
-    [albumOptions, albumQuery]
+  const clearFieldError = useCallback((field: string) => {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
+  const toggleSelection = useCallback(
+    (option: NamedOption, setter: React.Dispatch<React.SetStateAction<NamedOption[]>>, fieldKey: string) => {
+      setSubmitError(null);
+      setter((prev) => {
+        const exists = prev.some((item) => item.id === option.id);
+        const next = exists ? prev.filter((item) => item.id !== option.id) : [...prev, option];
+        clearFieldError(fieldKey);
+        return next;
+      });
+    },
+    [clearFieldError, setSubmitError]
   );
-  const filteredArtistOptions = useMemo(
+
+  const albumSearchQuery = useEntitySearch<SearchableEntity>('/api/albums', albumQuery, albumModalVisible);
+  const artistSearchQuery = useEntitySearch<SearchableEntity>('/api/artists', artistQuery, artistModalVisible);
+  const writerSearchQuery = useEntitySearch<SearchableEntity>('/api/writers', writerQuery, writerModalVisible);
+
+  const albumOptions = useMemo<NamedOption[]>(
     () =>
-      artistOptions.filter((option) => option.label.toLowerCase().includes(artistQuery.trim().toLowerCase())),
-    [artistOptions, artistQuery]
+      (albumSearchQuery.data?.data ?? [])
+        .map(toNamedOption)
+        .filter((option) => Number.isFinite(option.id)),
+    [albumSearchQuery.data]
   );
-  const filteredWriterOptions = useMemo(
+  const artistOptions = useMemo<NamedOption[]>(
     () =>
-      writerOptions.filter((option) => option.label.toLowerCase().includes(writerQuery.trim().toLowerCase())),
-    [writerOptions, writerQuery]
+      (artistSearchQuery.data?.data ?? [])
+        .map(toNamedOption)
+        .filter((option) => Number.isFinite(option.id)),
+    [artistSearchQuery.data]
   );
+  const writerOptions = useMemo<NamedOption[]>(
+    () =>
+      (writerSearchQuery.data?.data ?? [])
+        .map(toNamedOption)
+        .filter((option) => Number.isFinite(option.id)),
+    [writerSearchQuery.data]
+  );
+
+  const levelOptions = useMemo<NamedOption[]>(
+    () =>
+      (levelsQuery.data?.data ?? [])
+        .map((level) => ({
+          id: Number(level.id),
+          name:
+            typeof level.name === 'string' && level.name.trim().length > 0
+              ? level.name.trim()
+              : `Level #${level.id}`,
+        }))
+        .filter((option) => Number.isFinite(option.id)),
+    [levelsQuery.data]
+  );
+
+  const languageOptions = useMemo<NamedOption[]>(
+    () =>
+      (languagesQuery.data?.data ?? [])
+        .map((language) => ({
+          id: Number(language.id),
+          name:
+            typeof language.name === 'string' && language.name.trim().length > 0
+              ? language.name.trim()
+              : `Language #${language.id}`,
+        }))
+        .filter((option) => Number.isFinite(option.id)),
+    [languagesQuery.data]
+  );
+
+  useEffect(() => {
+    if (!selectedLevel && levelOptions.length > 0) {
+      setSelectedLevel(levelOptions[0]);
+      clearFieldError('level_id');
+    }
+  }, [clearFieldError, levelOptions, selectedLevel]);
+
+  useEffect(() => {
+    if (!selectedLanguage && languageOptions.length > 0) {
+      setSelectedLanguage(languageOptions[0]);
+      clearFieldError('language');
+    }
+  }, [clearFieldError, languageOptions, selectedLanguage]);
+
+  const createSongMutation = useCreateSongMutation();
+  const isSubmitting = createSongMutation.isPending;
 
   const styles = useMemo(
     () =>
@@ -224,25 +277,276 @@ export default function LibraryNewPageScreen() {
           justifyContent: 'flex-end',
           gap: 12,
         },
+        modalFeedback: {
+          alignItems: 'center',
+          gap: 12,
+          paddingVertical: 32,
+        },
+        modalFeedbackText: {
+          textAlign: 'center',
+          color: theme.colors.onSurfaceVariant,
+        },
       }),
-    [theme.colors.background, theme.colors.surface, theme.colors.onSurfaceVariant]
+    [theme.colors.background, theme.colors.onSurfaceVariant, theme.colors.surface]
   );
 
-  const toggleSelection = useCallback(
-    (value: string, setter: React.Dispatch<React.SetStateAction<string[]>>) => {
-      setter((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
-    },
-    []
-  );
-
-  const summarizeSelection = useCallback((values: string[], labelMap: Map<string, string>) => {
-    if (values.length === 0) return '';
-    const names = values.map((value) => labelMap.get(value)).filter(Boolean) as string[];
-    if (names.length > 2) {
-      return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
-    }
-    return names.join(', ');
+  const resetQueries = useCallback(() => {
+    setAlbumQuery('');
+    setArtistQuery('');
+    setWriterQuery('');
   }, []);
+
+  const clearFormFields = useCallback(() => {
+    setTitle('');
+    setKey('');
+    setReleaseYear('');
+    setLyric('');
+    setSelectedAlbums([]);
+    setSelectedArtists([]);
+    setSelectedWriters([]);
+    setSelectedLevel(null);
+    setSelectedLanguage(null);
+    setAlbumModalVisible(false);
+    setArtistModalVisible(false);
+    setWriterModalVisible(false);
+    resetQueries();
+  }, [resetQueries]);
+
+  const resetForm = useCallback(() => {
+    clearFormFields();
+    setSubmitError(null);
+    setSubmitSuccess(null);
+    setFieldErrors({});
+  }, [clearFormFields]);
+
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      setSubmitError('Title is required.');
+      setFieldErrors((prev) => ({ ...prev, title: 'Title is required.' }));
+      setSubmitSuccess(null);
+      return;
+    }
+    clearFieldError('title');
+
+    const trimmedKey = key.trim();
+    if (!trimmedKey) {
+      setSubmitError('Key is required.');
+      setFieldErrors((prev) => ({ ...prev, key: 'Key is required.' }));
+      setSubmitSuccess(null);
+      return;
+    }
+    clearFieldError('key');
+
+    if (!selectedLevel) {
+      setSubmitError('Select a difficulty level.');
+      setFieldErrors((prev) => ({ ...prev, level_id: 'Difficulty level is required.' }));
+      setSubmitSuccess(null);
+      return;
+    }
+    clearFieldError('level_id');
+
+    if (!selectedLanguage) {
+      setSubmitError('Select a language.');
+      setFieldErrors((prev) => ({ ...prev, language: 'Language is required.' }));
+      setSubmitSuccess(null);
+      return;
+    }
+    clearFieldError('language');
+
+    if (selectedArtists.length === 0) {
+      setSubmitError('Add at least one artist.');
+      setFieldErrors((prev) => ({ ...prev, artist_ids: 'Select at least one artist.' }));
+      setSubmitSuccess(null);
+      return;
+    }
+    clearFieldError('artist_ids');
+
+    if (selectedWriters.length === 0) {
+      setSubmitError('Add at least one writer.');
+      setFieldErrors((prev) => ({ ...prev, writer_ids: 'Select at least one writer.' }));
+      setSubmitSuccess(null);
+      return;
+    }
+    clearFieldError('writer_ids');
+
+    const trimmedLyric = lyric.trim();
+    if (!trimmedLyric) {
+      setSubmitError('Lyrics are required.');
+      setFieldErrors((prev) => ({ ...prev, lyric: 'Lyrics are required.' }));
+      setSubmitSuccess(null);
+      return;
+    }
+    clearFieldError('lyric');
+
+    let releaseYearNumber: number | undefined;
+    const trimmedYear = releaseYear.trim();
+    if (trimmedYear) {
+      const parsed = Number(trimmedYear);
+      if (!Number.isFinite(parsed)) {
+        setSubmitError('Release year must be a number.');
+        setFieldErrors((prev) => ({ ...prev, release_year: 'Release year must be a number.' }));
+        setSubmitSuccess(null);
+        return;
+      }
+      releaseYearNumber = parsed;
+      clearFieldError('release_year');
+    }
+
+    const albumIds = selectedAlbums.map((album) => album.id);
+    const artistIds = selectedArtists.map((artist) => artist.id);
+    const writerIds = selectedWriters.map((writer) => writer.id);
+
+    const payload = {
+      title: trimmedTitle,
+      level_id: selectedLevel.id,
+      key: trimmedKey,
+      language_id: selectedLanguage.id,
+      lyric: trimmedLyric,
+      ...(releaseYearNumber !== undefined ? { release_year: releaseYearNumber } : {}),
+      ...(albumIds.length > 0 ? { album_ids: albumIds } : {}),
+      artist_ids: artistIds,
+      writer_ids: writerIds,
+    };
+
+    setSubmitError(null);
+    setSubmitSuccess(null);
+    setFieldErrors({});
+    try {
+      const response = await createSongMutation.mutateAsync(payload);
+      clearFormFields();
+      setSubmitSuccess(
+        response?.message ?? 'Song submitted successfully. We will review it shortly.'
+      );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const rawErrors = error.errors;
+        let normalized: Record<string, string> = {};
+        if (rawErrors && typeof rawErrors === 'object') {
+          normalized = Object.entries(rawErrors as Record<string, unknown>).reduce<Record<string, string>>(
+            (acc, [key, value]) => {
+              if (typeof value === 'string' && value.trim().length > 0) {
+                acc[key] = value;
+              } else if (Array.isArray(value)) {
+                const firstString = value.find(
+                  (item) => typeof item === 'string' && item.trim().length > 0
+                );
+                if (typeof firstString === 'string') {
+                  acc[key] = firstString;
+                }
+              }
+              return acc;
+            },
+            {}
+          );
+        }
+        setFieldErrors(normalized);
+        const message =
+          rawErrors && typeof rawErrors === 'object' && typeof (rawErrors as Record<string, unknown>).message === 'string'
+            ? ((rawErrors as Record<string, unknown>).message as string)
+            : error.message;
+        setSubmitError(message || 'Unable to create the song right now. Please try again.');
+      } else {
+        setSubmitError('Unable to create the song right now. Please try again.');
+      }
+      setSubmitSuccess(null);
+    }
+  }, [
+    clearFormFields,
+    createSongMutation,
+    isSubmitting,
+    key,
+    lyric,
+    releaseYear,
+    selectedAlbums,
+    selectedArtists,
+    selectedLanguage,
+    selectedLevel,
+    selectedWriters,
+    title,
+  ]);
+
+  if (isChecking || !isAuthenticated) {
+    return null;
+  }
+
+  const levelErrorMessage =
+    levelsQuery.isError && levelsQuery.error instanceof ApiError
+      ? levelsQuery.error.message
+      : levelsQuery.isError
+      ? 'Unable to load levels.'
+      : null;
+
+  const languageErrorMessage =
+    languagesQuery.isError && languagesQuery.error instanceof ApiError
+      ? languagesQuery.error.message
+      : languagesQuery.isError
+      ? 'Unable to load languages.'
+      : null;
+
+  const renderOptionsList = (
+    options: NamedOption[],
+    selected: NamedOption[],
+    setSelected: React.Dispatch<React.SetStateAction<NamedOption[]>>,
+    queryState: EntitySearchMeta,
+    loadingMessage: string,
+    emptyMessage: string,
+    fieldKey: string
+  ) => {
+    if (queryState.isError) {
+      const message =
+        queryState.error instanceof ApiError ? queryState.error.message : emptyMessage;
+      return (
+        <View style={styles.modalFeedback}>
+          <Text style={styles.modalFeedbackText}>{message}</Text>
+          <Button mode="outlined" onPress={queryState.refetch}>
+            Retry
+          </Button>
+        </View>
+      );
+    }
+
+    if (queryState.isFetching && options.length === 0) {
+      return (
+        <View style={styles.modalFeedback}>
+          <ActivityIndicator animating />
+          <Text style={styles.modalFeedbackText}>{loadingMessage}</Text>
+        </View>
+      );
+    }
+
+    if (options.length === 0) {
+      return (
+        <View style={styles.modalFeedback}>
+          <Text style={styles.modalFeedbackText}>{emptyMessage}</Text>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView style={styles.modalList}>
+        {options.map((option) => {
+          const checked = selected.some((item) => item.id === option.id);
+          return (
+            <TouchableRipple
+              key={option.id}
+              onPress={() => toggleSelection(option, setSelected, fieldKey)}
+              borderless
+            >
+              <View style={styles.modalRow}>
+                <Checkbox status={checked ? 'checked' : 'unchecked'} />
+                <Text style={styles.modalLabel}>{option.name}</Text>
+              </View>
+            </TouchableRipple>
+          );
+        })}
+      </ScrollView>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -260,230 +564,291 @@ export default function LibraryNewPageScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Add a new track</Text>
             <Text style={styles.sectionSubtitle}>
-              Capture the essential details for your custom song. Playlist, title, key, level, language, contributing
-              artists, writers, and lyrics are required.
+              Capture the essential details for your custom song. Title, key, level, language,
+              contributing artists, writers, and lyrics are required.
             </Text>
           </View>
 
           <Surface elevation={1} style={styles.formCard}>
             <View style={styles.fieldGroup}>
-              <Menu
-              visible={playlistMenuVisible}
-              onDismiss={() => setPlaylistMenuVisible(false)}
-              anchor={
-                <TouchableRipple style={styles.dropdownWrapper} onPress={() => setPlaylistMenuVisible(true)} borderless>
-                  <View pointerEvents="none">
-                    <TextInput
-                      label="Playlist"
-                      mode="outlined"
-                      value={playlistLabelMap.get(playlist) ?? ''}
-                      placeholder="Select a playlist"
-                      editable={false}
-                      right={<TextInput.Icon icon="menu-down" />}
-                    />
-                  </View>
-                </TouchableRipple>
-              }
-            >
-              {playlistOptions.map((option) => (
-                <Menu.Item
-                  key={option.value}
-                  title={option.label}
-                  onPress={() => {
-                    setPlaylist(option.value);
-                    setPlaylistMenuVisible(false);
-                  }}
-                />
-              ))}
-            </Menu>
-
-            <TextInput
-              label="Title"
-              mode="outlined"
-              value={title}
-              onChangeText={setTitle}
-              placeholder="Song title"
-            />
-
-            <View style={styles.inlineRow}>
               <TextInput
-                label="Key"
+                label="Title"
                 mode="outlined"
-                value={key}
-                onChangeText={setKey}
-                placeholder="e.g. C"
-                style={styles.inlineField}
-                right={<TextInput.Icon icon="piano" />}
+                value={title}
+                onChangeText={(value) => {
+                  setTitle(value);
+                  if (submitError) setSubmitError(null);
+                  clearFieldError('title');
+                }}
+                placeholder="Song title"
               />
+              {fieldErrors.title ? (
+                <HelperText type="error" visible>
+                  {fieldErrors.title}
+                </HelperText>
+              ) : null}
+
+              <View style={styles.inlineRow}>
+                <TextInput
+                  label="Key"
+                  mode="outlined"
+                  value={key}
+                  onChangeText={(value) => {
+                    setKey(value);
+                    if (submitError) setSubmitError(null);
+                    clearFieldError('key');
+                  }}
+                  placeholder="e.g. C"
+                  style={styles.inlineField}
+                  right={<TextInput.Icon icon="piano" />}
+                />
+                {fieldErrors.key ? (
+                  <HelperText type="error" visible>
+                    {fieldErrors.key}
+                  </HelperText>
+                ) : null}
+                <Menu
+                  visible={levelMenuVisible}
+                  onDismiss={() => setLevelMenuVisible(false)}
+                  anchor={
+                    <TouchableRipple
+                      style={[styles.dropdownWrapper, styles.inlineField]}
+                      onPress={() => setLevelMenuVisible(true)}
+                      borderless
+                      disabled={levelOptions.length === 0}
+                    >
+                      <View pointerEvents="none">
+                        <TextInput
+                          label="Level"
+                          mode="outlined"
+                          value={selectedLevel?.name ?? ''}
+                          placeholder={
+                            levelOptions.length === 0 ? 'Loading levels…' : 'Select level'
+                          }
+                          editable={false}
+                          right={<TextInput.Icon icon="menu-down" />}
+                        />
+                      </View>
+                    </TouchableRipple>
+                  }
+                >
+                  {levelOptions.map((option) => (
+                    <Menu.Item
+                      key={option.id}
+                      title={option.name}
+                      onPress={() => {
+                        setSelectedLevel(option);
+                        setLevelMenuVisible(false);
+                        clearFieldError('level_id');
+                      }}
+                    />
+                  ))}
+                </Menu>
+              </View>
+              {levelErrorMessage ? (
+                <HelperText type="error">{levelErrorMessage}</HelperText>
+              ) : null}
+
               <Menu
-                visible={levelMenuVisible}
-                onDismiss={() => setLevelMenuVisible(false)}
+                visible={languageMenuVisible}
+                onDismiss={() => setLanguageMenuVisible(false)}
                 anchor={
                   <TouchableRipple
-                    style={[styles.dropdownWrapper, styles.inlineField]}
-                    onPress={() => setLevelMenuVisible(true)}
+                    style={styles.dropdownWrapper}
+                    onPress={() => setLanguageMenuVisible(true)}
                     borderless
+                    disabled={languageOptions.length === 0}
                   >
                     <View pointerEvents="none">
                       <TextInput
-                        label="Level"
+                        label="Language"
                         mode="outlined"
-                        value={levelLabelMap.get(level) ?? ''}
-                        placeholder="Select level"
+                        value={selectedLanguage?.name ?? ''}
+                        placeholder={
+                          languageOptions.length === 0 ? 'Loading languages…' : 'Select language'
+                        }
                         editable={false}
-                        right={<TextInput.Icon icon="menu-down" />}
+                        right={<TextInput.Icon icon="translate" />}
                       />
                     </View>
                   </TouchableRipple>
                 }
               >
-                {levelOptions.map((option) => (
-                  <Menu.Item
-                    key={option.value}
-                    title={option.label}
-                    onPress={() => {
-                      setLevel(option.value);
-                      setLevelMenuVisible(false);
-                    }}
-                  />
-                ))}
-              </Menu>
-            </View>
-
-            <Menu
-              visible={languageMenuVisible}
-              onDismiss={() => setLanguageMenuVisible(false)}
-              anchor={
-                <TouchableRipple style={styles.dropdownWrapper} onPress={() => setLanguageMenuVisible(true)} borderless>
-                  <View pointerEvents="none">
-                    <TextInput
-                      label="Language"
-                      mode="outlined"
-                      value={languageLabelMap.get(language) ?? ''}
-                      placeholder="Select language"
-                      editable={false}
-                      right={<TextInput.Icon icon="translate" />}
+                {languageOptions.map((option) => (
+                    <Menu.Item
+                      key={option.id}
+                      title={option.name}
+                      onPress={() => {
+                        setSelectedLanguage(option);
+                        setLanguageMenuVisible(false);
+                        clearFieldError('language');
+                      }}
                     />
-                  </View>
-                </TouchableRipple>
-              }
-            >
-              {languageOptions.map((option) => (
-                <Menu.Item
-                  key={option.value}
-                  title={option.label}
-                  onPress={() => {
-                    setLanguage(option.value);
-                    setLanguageMenuVisible(false);
-                  }}
-                />
-              ))}
-            </Menu>
+                  ))}
+              </Menu>
+              {languageErrorMessage ? (
+                <HelperText type="error">{languageErrorMessage}</HelperText>
+              ) : fieldErrors.language ? (
+                <HelperText type="error" visible>
+                  {fieldErrors.language}
+                </HelperText>
+              ) : null}
 
-            <TextInput
-              label="Release year"
-              mode="outlined"
-              value={releaseYear}
-              onChangeText={setReleaseYear}
-              placeholder="2024"
-              keyboardType="numeric"
-            />
+              <TextInput
+                label="Release year"
+                mode="outlined"
+                value={releaseYear}
+                onChangeText={(value) => {
+                  setReleaseYear(value);
+                  if (submitError) setSubmitError(null);
+                  clearFieldError('release_year');
+                }}
+                placeholder="e.g. 1998"
+                keyboardType="numeric"
+              />
+              {fieldErrors.release_year ? (
+                <HelperText type="error" visible>
+                  {fieldErrors.release_year}
+                </HelperText>
+              ) : null}
             </View>
           </Surface>
 
           <Surface elevation={1} style={styles.formCard}>
             <View style={styles.fieldGroup}>
               <View>
-                <TouchableRipple style={styles.dropdownWrapper} onPress={() => setAlbumModalVisible(true)} borderless>
+                <TouchableRipple
+                  style={styles.dropdownWrapper}
+                  onPress={() => setAlbumModalVisible(true)}
+                  borderless
+                >
                   <View pointerEvents="none">
                     <TextInput
                       label="Albums"
                       mode="outlined"
-                      value={summarizeSelection(selectedAlbums, albumLabelMap)}
+                      value={summarizeSelection(selectedAlbums)}
                       placeholder="Select albums"
                       editable={false}
                       right={<TextInput.Icon icon="menu-down" />}
                     />
                   </View>
                 </TouchableRipple>
-                <HelperText type="info">Select one or many albums that feature this track.</HelperText>
+                <HelperText type="info">
+                  Select one or many albums that feature this track.
+                </HelperText>
                 <View style={styles.chipsContainer}>
-                  {selectedAlbums.map((value) => {
-                    const label = albumLabelMap.get(value);
-                    if (!label) return null;
-                    return (
-                      <Chip
-                        key={value}
-                        mode="outlined"
-                        onClose={() => setSelectedAlbums((prev) => prev.filter((item) => item !== value))}
-                      >
-                        {label}
-                      </Chip>
-                    );
-                  })}
+                  {selectedAlbums.map((album) => (
+                    <Chip
+                      key={album.id}
+                      mode="outlined"
+                      onClose={() =>
+                        setSelectedAlbums((prev) => {
+                          setSubmitError(null);
+                          const next = prev.filter((item) => item.id !== album.id);
+                          clearFieldError('album_ids');
+                          return next;
+                        })
+                      }
+                    >
+                      {album.name}
+                    </Chip>
+                  ))}
                 </View>
+                {fieldErrors.album_ids ? (
+                  <HelperText type="error" visible>
+                    {fieldErrors.album_ids}
+                  </HelperText>
+                ) : null}
               </View>
 
               <View>
-                <TouchableRipple style={styles.dropdownWrapper} onPress={() => setArtistModalVisible(true)} borderless>
+                <TouchableRipple
+                  style={styles.dropdownWrapper}
+                  onPress={() => setArtistModalVisible(true)}
+                  borderless
+                >
                   <View pointerEvents="none">
                     <TextInput
                       label="Artists"
                       mode="outlined"
-                      value={summarizeSelection(selectedArtists, artistLabelMap)}
+                      value={summarizeSelection(selectedArtists)}
                       placeholder="Select artists"
                       editable={false}
                       right={<TextInput.Icon icon="menu-down" />}
                     />
                   </View>
                 </TouchableRipple>
-                <HelperText type="info">Add the performers credited on this recording.</HelperText>
+                <HelperText type="info">
+                  Add the performers credited on this recording.
+                </HelperText>
                 <View style={styles.chipsContainer}>
-                  {selectedArtists.map((value) => {
-                    const label = artistLabelMap.get(value);
-                    if (!label) return null;
-                    return (
-                      <Chip
-                        key={value}
-                        mode="outlined"
-                        onClose={() => setSelectedArtists((prev) => prev.filter((item) => item !== value))}
-                      >
-                        {label}
-                      </Chip>
-                    );
-                  })}
+                  {selectedArtists.map((artist) => (
+                    <Chip
+                      key={artist.id}
+                      mode="outlined"
+                      onClose={() =>
+                        setSelectedArtists((prev) => {
+                          setSubmitError(null);
+                          const next = prev.filter((item) => item.id !== artist.id);
+                          clearFieldError('artist_ids');
+                          return next;
+                        })
+                      }
+                    >
+                      {artist.name}
+                    </Chip>
+                  ))}
                 </View>
+                {fieldErrors.artist_ids ? (
+                  <HelperText type="error" visible>
+                    {fieldErrors.artist_ids}
+                  </HelperText>
+                ) : null}
               </View>
 
               <View>
-                <TouchableRipple style={styles.dropdownWrapper} onPress={() => setWriterModalVisible(true)} borderless>
+                <TouchableRipple
+                  style={styles.dropdownWrapper}
+                  onPress={() => setWriterModalVisible(true)}
+                  borderless
+                >
                   <View pointerEvents="none">
                     <TextInput
                       label="Writers"
                       mode="outlined"
-                      value={summarizeSelection(selectedWriters, writerLabelMap)}
+                      value={summarizeSelection(selectedWriters)}
                       placeholder="Select writers"
                       editable={false}
                       right={<TextInput.Icon icon="menu-down" />}
                     />
                   </View>
                 </TouchableRipple>
-                <HelperText type="info">Credit the lyricists and composers for this track.</HelperText>
+                <HelperText type="info">
+                  Credit the lyricists and composers for this track.
+                </HelperText>
                 <View style={styles.chipsContainer}>
-                  {selectedWriters.map((value) => {
-                    const label = writerLabelMap.get(value);
-                    if (!label) return null;
-                    return (
-                      <Chip
-                        key={value}
-                        mode="outlined"
-                        onClose={() => setSelectedWriters((prev) => prev.filter((item) => item !== value))}
-                      >
-                        {label}
-                      </Chip>
-                    );
-                  })}
+                  {selectedWriters.map((writer) => (
+                    <Chip
+                      key={writer.id}
+                      mode="outlined"
+                      onClose={() =>
+                        setSelectedWriters((prev) => {
+                          setSubmitError(null);
+                          const next = prev.filter((item) => item.id !== writer.id);
+                          clearFieldError('writer_ids');
+                          return next;
+                        })
+                      }
+                    >
+                      {writer.name}
+                    </Chip>
+                  ))}
                 </View>
+                {fieldErrors.writer_ids ? (
+                  <HelperText type="error" visible>
+                    {fieldErrors.writer_ids}
+                  </HelperText>
+                ) : null}
               </View>
             </View>
           </Surface>
@@ -494,25 +859,60 @@ export default function LibraryNewPageScreen() {
                 label="Lyrics"
                 mode="outlined"
                 value={lyric}
-                onChangeText={setLyric}
+                onChangeText={(value) => {
+                  setLyric(value);
+                  if (submitError) setSubmitError(null);
+                  clearFieldError('lyric');
+                }}
                 placeholder="Start typing the chord & lyric sheet..."
                 multiline
                 numberOfLines={10}
                 textAlignVertical="top"
                 style={styles.lyricsInput}
               />
+              {fieldErrors.lyric ? (
+                <HelperText type="error" visible>
+                  {fieldErrors.lyric}
+                </HelperText>
+              ) : null}
             </View>
 
             <View style={styles.buttonRow}>
-              <Button mode="outlined">Discard</Button>
-              <Button mode="contained">Save draft</Button>
+              <Button mode="outlined" onPress={resetForm} disabled={isSubmitting}>
+                Discard
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleSubmit}
+                loading={isSubmitting}
+                disabled={isSubmitting}
+              >
+                Create song
+              </Button>
             </View>
+            {submitError ? (
+              <HelperText type="error" visible>
+                {submitError}
+              </HelperText>
+            ) : null}
+            {submitSuccess ? (
+              <HelperText type="info" visible>
+                {submitSuccess}
+              </HelperText>
+            ) : null}
           </Surface>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <Portal>
-        <Modal visible={albumModalVisible} onDismiss={() => setAlbumModalVisible(false)} contentContainerStyle={styles.modalContainer}>
+        <Modal
+          visible={albumModalVisible}
+          onDismiss={() => {
+            setAlbumModalVisible(false);
+            setAlbumQuery('');
+          }}
+          contentContainerStyle={styles.modalContainer}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select albums</Text>
             <Searchbar
@@ -521,34 +921,54 @@ export default function LibraryNewPageScreen() {
               onChangeText={setAlbumQuery}
               autoCorrect={false}
               autoCapitalize="none"
+              loading={albumSearchQuery.isFetching}
             />
           </View>
-          <ScrollView style={styles.modalList}>
-            {filteredAlbumOptions.map((option) => {
-              const checked = selectedAlbums.includes(option.value);
-              return (
-                <TouchableRipple
-                  key={option.value}
-                  onPress={() => toggleSelection(option.value, setSelectedAlbums)}
-                  borderless
-                >
-                  <View style={styles.modalRow}>
-                    <Checkbox status={checked ? 'checked' : 'unchecked'} />
-                    <Text style={styles.modalLabel}>{option.label}</Text>
-                  </View>
-                </TouchableRipple>
-              );
-            })}
-          </ScrollView>
+          {renderOptionsList(
+            albumOptions,
+            selectedAlbums,
+            setSelectedAlbums,
+            {
+              isError: albumSearchQuery.isError,
+              error: albumSearchQuery.error,
+              isFetching: albumSearchQuery.isFetching,
+              refetch: albumSearchQuery.refetch,
+            },
+            'Loading albums…',
+            'No albums found. Try another search.',
+            'album_ids'
+          )}
           <View style={styles.modalActions}>
-            <Button onPress={() => setSelectedAlbums([])}>Clear</Button>
-            <Button mode="contained" onPress={() => setAlbumModalVisible(false)}>
+            <Button
+              onPress={() => {
+                setSelectedAlbums([]);
+                clearFieldError('album_ids');
+                setSubmitError(null);
+              }}
+              disabled={albumSearchQuery.isFetching}
+            >
+              Clear
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() => {
+                setAlbumModalVisible(false);
+                setAlbumQuery('');
+              }}
+            >
               Done
             </Button>
           </View>
         </Modal>
 
-        <Modal visible={artistModalVisible} onDismiss={() => setArtistModalVisible(false)} contentContainerStyle={styles.modalContainer}>
+        <Modal
+          visible={artistModalVisible}
+          onDismiss={() => {
+            setArtistModalVisible(false);
+            setArtistQuery('');
+          }}
+          contentContainerStyle={styles.modalContainer}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select artists</Text>
             <Searchbar
@@ -557,34 +977,54 @@ export default function LibraryNewPageScreen() {
               onChangeText={setArtistQuery}
               autoCorrect={false}
               autoCapitalize="none"
+              loading={artistSearchQuery.isFetching}
             />
           </View>
-          <ScrollView style={styles.modalList}>
-            {filteredArtistOptions.map((option) => {
-              const checked = selectedArtists.includes(option.value);
-              return (
-                <TouchableRipple
-                  key={option.value}
-                  onPress={() => toggleSelection(option.value, setSelectedArtists)}
-                  borderless
-                >
-                  <View style={styles.modalRow}>
-                    <Checkbox status={checked ? 'checked' : 'unchecked'} />
-                    <Text style={styles.modalLabel}>{option.label}</Text>
-                  </View>
-                </TouchableRipple>
-              );
-            })}
-          </ScrollView>
+          {renderOptionsList(
+            artistOptions,
+            selectedArtists,
+            setSelectedArtists,
+            {
+              isError: artistSearchQuery.isError,
+              error: artistSearchQuery.error,
+              isFetching: artistSearchQuery.isFetching,
+              refetch: artistSearchQuery.refetch,
+            },
+            'Loading artists…',
+            'No artists found. Try another search.',
+            'artist_ids'
+          )}
           <View style={styles.modalActions}>
-            <Button onPress={() => setSelectedArtists([])}>Clear</Button>
-            <Button mode="contained" onPress={() => setArtistModalVisible(false)}>
+            <Button
+              onPress={() => {
+                setSelectedArtists([]);
+                clearFieldError('artist_ids');
+                setSubmitError(null);
+              }}
+              disabled={artistSearchQuery.isFetching}
+            >
+              Clear
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() => {
+                setArtistModalVisible(false);
+                setArtistQuery('');
+              }}
+            >
               Done
             </Button>
           </View>
         </Modal>
 
-        <Modal visible={writerModalVisible} onDismiss={() => setWriterModalVisible(false)} contentContainerStyle={styles.modalContainer}>
+        <Modal
+          visible={writerModalVisible}
+          onDismiss={() => {
+            setWriterModalVisible(false);
+            setWriterQuery('');
+          }}
+          contentContainerStyle={styles.modalContainer}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select writers</Text>
             <Searchbar
@@ -593,28 +1033,41 @@ export default function LibraryNewPageScreen() {
               onChangeText={setWriterQuery}
               autoCorrect={false}
               autoCapitalize="none"
+              loading={writerSearchQuery.isFetching}
             />
           </View>
-          <ScrollView style={styles.modalList}>
-            {filteredWriterOptions.map((option) => {
-              const checked = selectedWriters.includes(option.value);
-              return (
-                <TouchableRipple
-                  key={option.value}
-                  onPress={() => toggleSelection(option.value, setSelectedWriters)}
-                  borderless
-                >
-                  <View style={styles.modalRow}>
-                    <Checkbox status={checked ? 'checked' : 'unchecked'} />
-                    <Text style={styles.modalLabel}>{option.label}</Text>
-                  </View>
-                </TouchableRipple>
-              );
-            })}
-          </ScrollView>
+          {renderOptionsList(
+            writerOptions,
+            selectedWriters,
+            setSelectedWriters,
+            {
+              isError: writerSearchQuery.isError,
+              error: writerSearchQuery.error,
+              isFetching: writerSearchQuery.isFetching,
+              refetch: writerSearchQuery.refetch,
+            },
+            'Loading writers…',
+            'No writers found. Try another search.',
+            'writer_ids'
+          )}
           <View style={styles.modalActions}>
-            <Button onPress={() => setSelectedWriters([])}>Clear</Button>
-            <Button mode="contained" onPress={() => setWriterModalVisible(false)}>
+            <Button
+              onPress={() => {
+                setSelectedWriters([]);
+                clearFieldError('writer_ids');
+                setSubmitError(null);
+              }}
+              disabled={writerSearchQuery.isFetching}
+            >
+              Clear
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() => {
+                setWriterModalVisible(false);
+                setWriterQuery('');
+              }}
+            >
               Done
             </Button>
           </View>

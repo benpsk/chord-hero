@@ -495,22 +495,6 @@ export default function SongDetailScreen() {
               style={[styles.guideSurface, { backgroundColor: theme.colors.elevation.level2 }]}
               elevation={2}
             >
-              <View style={styles.guideHeader}>
-                <Text variant="titleMedium">Performance Tips</Text>
-                <IconButton icon="close" onPress={closeGuide} accessibilityLabel="Close guide" />
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.guideCarousel}
-              >
-                {[...Array(6).keys()].map((index) => (
-                  <View
-                    key={`guide-card-${index}`}
-                    style={[styles.guidePlaceholder, { backgroundColor: theme.colors.secondaryContainer }]}
-                  />
-                ))}
-              </ScrollView>
               <View style={styles.guideDifficultySection}>
                 <Text variant="titleSmall">Difficulty Level</Text>
                 <SegmentedButtons

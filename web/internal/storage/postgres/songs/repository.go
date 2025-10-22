@@ -103,12 +103,14 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
             l.name,
             s.level_id,
             s.key,
-            s.language,
             s.lyric,
             s.release_year,
-						s.status
+						s.status,
+						la.id language_id,
+						la.name language_name
         from songs s
         left join levels l on l.id = s.level_id
+        left join languages la on la.id = s.language_id
         %s
         order by s.id desc
         limit %s offset %s
@@ -129,18 +131,20 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 
 	for rows.Next() {
 		var (
-			id          int
-			title       string
-			levelName   sql.NullString
-			levelID     sql.NullInt32
-			songKey     sql.NullString
-			language    sql.NullString
-			lyric       sql.NullString
-			releaseYear sql.NullInt32
-			status      string
+			id           int
+			title        string
+			levelName    sql.NullString
+			levelID      sql.NullInt32
+			songKey      sql.NullString
+			lyric        sql.NullString
+			releaseYear  sql.NullInt32
+			status       string
+			languageID   int
+			languageName string
 		)
 
-		if err := rows.Scan(&id, &title, &levelName, &levelID, &songKey, &language, &lyric, &releaseYear, &status); err != nil {
+		if err := rows.Scan(&id, &title, &levelName, &levelID, &songKey, &lyric, &releaseYear, &status,
+			&languageID, &languageName); err != nil {
 			return result, fmt.Errorf("scan song: %w", err)
 		}
 
@@ -163,13 +167,13 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 			}
 			song.Level = &level
 		}
+		song.Language = songsvc.Language{
+			ID: int(languageID),
+			Name: titleCase(languageName),
+		}
 		if songKey.Valid {
 			value := songKey.String
 			song.Key = &value
-		}
-		if language.Valid {
-			value := strings.ToLower(language.String)
-			song.Language = &value
 		}
 		if lyric.Valid {
 			value := lyric.String
@@ -222,9 +226,12 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
             s.key,
             s.language,
             s.lyric,
-            s.release_year
+            s.release_year,
+						la.id language_id,
+						la.name language_name
         from songs s
         left join levels l on l.id = s.level_id
+        left join languages la on la.id = s.language_id
         where s.id = $1
     `
 
@@ -267,10 +274,6 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
 		value := songKey.String
 		song.Key = &value
 	}
-	if language.Valid {
-		value := strings.ToLower(language.String)
-		song.Language = &value
-	}
 	if lyric.Valid {
 		value := lyric.String
 		song.Lyric = &value
@@ -311,14 +314,14 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 
 	var songID int
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO songs (title, level_id, key, language, lyric, release_year, created_by)
+		INSERT INTO songs (title, level_id, key, language_id, lyric, release_year, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`,
 		params.Title,
 		nullableInt(params.LevelID),
 		nullableString(params.Key),
-		nullableString(params.Language),
+		params.LanguageID,
 		nullableString(params.Lyric),
 		nullableInt(params.ReleaseYear),
 		nullableInt(params.CreatedBy),
@@ -373,14 +376,14 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 		SET title = $1,
 		    level_id = $2,
 		    key = $3,
-		    language = $4,
+		    language_id = $4,
 		    lyric = $5,
 		    release_year = $6
 		WHERE id = $7
 	`, params.Title,
 		nullableInt(params.LevelID),
 		nullableString(params.Key),
-		nullableString(params.Language),
+		params.LanguageID,
 		nullableString(params.Lyric),
 		nullableInt(params.ReleaseYear),
 		id,

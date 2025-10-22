@@ -14,12 +14,6 @@ import (
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 )
 
-var (
-	allowedLanguages = map[string]struct{}{
-		"english": {},
-		"burmese": {},
-	}
-)
 
 // Handler exposes song catalogue endpoints.
 type Handler struct {
@@ -60,6 +54,7 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.svc.List(r.Context(), params)
+	log.Println(err)
 	if err != nil {
 		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list songs"}})
 		return
@@ -74,7 +69,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Title       string `json:"title"`
 		LevelID     *int   `json:"level_id"`
 		Key         string `json:"key"`
-		Language    string `json:"language"`
+		LanguageID  int    `json:"language_id"`
 		ReleaseYear *int   `json:"release_year"`
 		AlbumIDs    []int  `json:"album_ids"`
 		ArtistIDs   []int  `json:"artist_ids"`
@@ -91,7 +86,6 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	title := strings.TrimSpace(payload.Title)
 	key := strings.TrimSpace(payload.Key)
-	language := strings.ToLower(strings.TrimSpace(payload.Language))
 	lyricTrimmed := strings.TrimSpace(payload.Lyric)
 
 	errorsMap := map[string]string{}
@@ -105,11 +99,10 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	} else if *payload.LevelID <= 0 {
 		errorsMap["level_id"] = "level_id must be a positive integer"
 	}
-
-	if language == "" {
-		errorsMap["language"] = "language is required"
-	} else if _, ok := allowedLanguages[language]; !ok {
-		errorsMap["language"] = "language must be english or burmese"
+	if payload.LanguageID == 0 {
+		errorsMap["language_id"] = "language_id is required"
+	} else if payload.LanguageID <= 0 {
+		errorsMap["language_id"] = "language_id must be a positive integer"
 	}
 
 	if lyricTrimmed == "" {
@@ -157,14 +150,12 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 			ArtistIDs: artistIDs,
 			WriterIDs: writerIDs,
 			LevelID:   payload.LevelID,
+			LanguageID:   payload.LanguageID,
 		},
 	}
 
 	if key != "" {
 		params.Key = &key
-	}
-	if language != "" {
-		params.Language = &language
 	}
 	lyric := payload.Lyric
 	params.Lyric = &lyric

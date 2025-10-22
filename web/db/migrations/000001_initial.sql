@@ -111,6 +111,21 @@ BEFORE UPDATE ON levels
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
+
+CREATE TABLE IF NOT EXISTS languages(
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+--bun:split
+
+CREATE TRIGGER update_languages_updated_at
+BEFORE UPDATE ON languages
+FOR EACH ROW
+EXECUTE PROCEDURE update_updated_at_column();
+
 --bun:split
 
 CREATE TABLE IF NOT EXISTS songs (
@@ -118,7 +133,7 @@ CREATE TABLE IF NOT EXISTS songs (
     title VARCHAR(255) NOT NULL,
     level_id INT,
     key VARCHAR(20),
-    language VARCHAR(50) CHECK (language IN ('english', 'burmese')),
+    language_id INT NOT NULL,
     lyric TEXT,
     release_year INT,
     created_by INT,
@@ -127,6 +142,7 @@ CREATE TABLE IF NOT EXISTS songs (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     FOREIGN KEY (level_id) REFERENCES levels(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (language_id) REFERENCES languages(id) ON DELETE SET NULL,
 );
 
 --bun:split

@@ -14,6 +14,7 @@ import (
 	chordsvc "github.com/lyricapp/lyric/web/internal/services/chords"
 	feedbacksvc "github.com/lyricapp/lyric/web/internal/services/feedback"
 	healthsvc "github.com/lyricapp/lyric/web/internal/services/health"
+	languagesvc "github.com/lyricapp/lyric/web/internal/services/languages"
 	levelsvc "github.com/lyricapp/lyric/web/internal/services/levels"
 	loginsvc "github.com/lyricapp/lyric/web/internal/services/login"
 	playlistsvc "github.com/lyricapp/lyric/web/internal/services/playlists"
@@ -27,6 +28,7 @@ import (
 	chordrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/chords"
 	feedbackrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/feedback"
 	healthrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/health"
+	languagerepo "github.com/lyricapp/lyric/web/internal/storage/postgres/languages"
 	levelrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/levels"
 	loginrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/login"
 	playlistrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/playlists"
@@ -58,6 +60,7 @@ type Services struct {
 	Feedback    feedbacksvc.Service
 	AdminAuth   adminauthsvc.Service
 	Levels      levelsvc.Service
+	Languages   languagesvc.Service
 	Login       loginsvc.Service
 }
 
@@ -75,6 +78,7 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 	healthRepository := healthrepo.NewRepository(db)
 	adminRepository := adminrepo.NewRepository(db)
 	levelRepository := levelrepo.NewRepository(db)
+	languageRepository := languagerepo.NewRepository(db)
 	loginRepository := loginrepo.NewRepository(db)
 
 	adminAuthRepository := adminAuthRepoAdapter{repo: adminRepository}
@@ -126,6 +130,7 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 			Feedback:    feedbacksvc.NewService(feedbackRepository),
 			AdminAuth:   adminAuthService,
 			Levels:      levelsvc.NewService(levelRepository),
+			Languages:   languagesvc.NewService(languageRepository),
 			Login:       loginService,
 		},
 		AdminSessions: adminSessions,

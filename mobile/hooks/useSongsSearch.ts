@@ -7,7 +7,7 @@ export type SongRecord = {
   title: string;
   level?: { id: number; name: string | null } | null;
   key?: string | null;
-  language?: string | null;
+  language: { id: number; name: string };
   lyric: string;
   release_year?: number | null;
   is_bookmark?: boolean;

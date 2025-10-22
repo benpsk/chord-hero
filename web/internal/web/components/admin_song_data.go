@@ -72,7 +72,7 @@ type AdminSongFormValues struct {
 	Title           string
 	LevelID         string
 	Key             string
-	Language        string
+	LanguageID      string
 	ReleaseYear     string
 	AlbumIDs        []string
 	PrimaryWriterID string

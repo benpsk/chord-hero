@@ -37,7 +37,7 @@ type MutationParams struct {
 	Title       string
 	LevelID     *int
 	Key         *string
-	Language    *string
+	LanguageID  int
 	Lyric       *string
 	ReleaseYear *int
 	AlbumIDs    []int
@@ -70,9 +70,9 @@ type Song struct {
 	Title       string   `json:"title"`
 	Level       *Level   `json:"level,omitempty"`
 	Key         *string  `json:"key,omitempty"`
-	Language    *string  `json:"language,omitempty"`
 	Lyric       *string  `json:"lyric,omitempty"`
 	ReleaseYear *int     `json:"release_year"`
+	Language    Language `json:"language"`
 	Status      string   `json:"status"`
 	Artists     []Person `json:"artists"`
 	Writers     []Person `json:"writers"`
@@ -95,6 +95,11 @@ type Album struct {
 
 // Level captures structured difficulty metadata.
 type Level struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type Language struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
@@ -124,13 +129,6 @@ func (s *service) List(ctx context.Context, params ListParams) (ListResult, erro
 
 	return s.repo.List(ctx, params)
 }
-
-var (
-	allowedLanguages = map[string]struct{}{
-		"english": {},
-		"burmese": {},
-	}
-)
 
 // ErrTitleRequired is returned when attempting to create a song without a title.
 var ErrTitleRequired = errors.New("songs: title is required")
@@ -213,16 +211,9 @@ func normaliseMutation(params *MutationParams) error {
 			return fmt.Errorf("songs: invalid level id %d", *params.LevelID)
 		}
 	}
-
-	if params.Language != nil {
-		value := strings.ToLower(strings.TrimSpace(*params.Language))
-		if value == "" {
-			params.Language = nil
-		} else {
-			if _, ok := allowedLanguages[value]; !ok {
-				return fmt.Errorf("songs: invalid language %q", value)
-			}
-			params.Language = ptr(value)
+	if params.LanguageID != 0 {
+		if params.LanguageID <= 0 {
+			return fmt.Errorf("songs: invalid language id %d", params.LanguageID)
 		}
 	}
 

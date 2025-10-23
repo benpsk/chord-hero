@@ -22,7 +22,7 @@ import {
   usePreferences,
 } from '@/hooks/usePreferences';
 import { useAuth } from '@/hooks/useAuth';
-import LoginRequiredDialog from '@/components/auth/LoginRequiredDialog';
+import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
 
 function getInitials(input: string): string {
   const trimmed = input.trim();

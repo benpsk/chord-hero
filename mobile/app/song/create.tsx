@@ -456,6 +456,7 @@ export default function SongCreateScreen() {
       setSubmitSuccess(null);
     }
   }, [
+    clearFieldError,
     clearFormFields,
     createSongMutation,
     isSubmitting,

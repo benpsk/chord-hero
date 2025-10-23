@@ -33,6 +33,7 @@ export function Stat({
         meta: {
           marginTop: 6,
           fontSize: 13,
+          color: theme.colors.onSurfaceVariant,
         },
         loadingMore: {
           paddingVertical: 16,
@@ -41,7 +42,7 @@ export function Stat({
           textAlign: 'center',
         },
       }),
-    [theme.colors.tertiary]
+    [theme.colors.onSurfaceVariant]
   );
 
   return (

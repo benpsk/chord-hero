@@ -32,7 +32,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { ChordProView } from '@/components/ChordProView';
 import { ChordDiagramCarousel } from '@/components/ChordDiagramCarousel';
-import LoginRequiredDialog from '@/components/auth/LoginRequiredDialog';
+import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
 import { getChordByName, type GuitarChord } from '@/constants/chords';
 import { extractMeta, toDisplayLines, transposeChordPro, transposeChordToken } from '@/lib/chord';
 import SongHeaderTitle from '@/components/SongHeaderTitle';
@@ -71,6 +71,7 @@ export default function SongDetailScreen() {
   const autoScrollEnabledRef = useRef(autoScrollEnabled);
   const autoScrollSpeedRef = useRef(autoScrollSpeed);
   const userInteractingRef = useRef(false);
+  const lastTapTimestampRef = useRef(0);
 
   const hidePeek = useCallback(() => {
     RNAnimated.timing(peekOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start(({ finished }) => {
@@ -415,18 +416,15 @@ export default function SongDetailScreen() {
         >
           <Animated.View entering={FadeInDown.delay(80).duration(340)}>
             <Pressable
-              onPress={(() => {
-                let last = 0;
-                return () => {
-                  const now = Date.now();
-                  if (now - last < 300) {
-                    openControls();
-                    last = 0;
-                  } else {
-                    last = now;
-                  }
-                };
-              })()}
+              onPress={() => {
+                const now = Date.now();
+                if (now - lastTapTimestampRef.current < 300) {
+                  openControls();
+                  lastTapTimestampRef.current = 0;
+                } else {
+                  lastTapTimestampRef.current = now;
+                }
+              }}
             >
               <ChordProView
                 lines={lines}

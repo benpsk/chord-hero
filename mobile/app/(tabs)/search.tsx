@@ -49,7 +49,7 @@ export default function SearchScreen() {
   const [loginPromptVisible, setLoginPromptVisible] = useState(false);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
+  const tabBarHeight = useBottomTabBarHeight();
   const trimmedQuery = query.trim();
 
   const {

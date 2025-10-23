@@ -160,6 +160,7 @@
     {
       "id": 1,
       "name": "my uname playlist",
+      "is_owner": true,
       "total": 3
     },
   ],
@@ -241,11 +242,6 @@
 
 -- POST /api/songs/{song_id}/levels/{level_id}
 
--- POST /api/playlists
-{
-  "name": "My Playlist 01"
-}
-
 -- POST /api/login
   -- request
 {
@@ -272,7 +268,7 @@
 }
 
 -- POST /api/playlists/{playlist_id}/songs/{song_ids}
-  -- song_ids => 1,2,3
+  -- song_ids: 1,2,3
 
 -- GET /api/languages
 {
@@ -282,6 +278,11 @@
       "name": "Burmese",
     }
   ]
+}
+
+-- POST /api/playlists
+{
+  "name": "My Playlist 01"
 }
 
 -- DELETE /api/playlists/{id}
@@ -300,3 +301,18 @@
 {
   "user_ids": [1,2,3]
 }
+
+-- POST /api/users?email=abc
+  -- response
+{
+  "data": [
+    {
+      "id": 1,
+      "email": "abc@mail.com"
+    }
+  ]
+}
+
+-- POST /api/playlists/{id}/leave
+
+

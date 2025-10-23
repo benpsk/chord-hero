@@ -270,6 +270,21 @@ BEFORE UPDATE ON playlists
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
+CREATE TABLE IF NOT EXISTS playlist_user (
+    playlist_id INT NOT NULL,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+--bun:split
+
+CREATE TRIGGER update_playlist_user_updated_at
+BEFORE UPDATE ON playlist_user
+FOR EACH ROW
+EXECUTE PROCEDURE update_updated_at_column();
 --bun:split
 
 CREATE TABLE IF NOT EXISTS playlist_song (

@@ -79,3 +79,11 @@ export async function apiGet<T>(path: string, options?: Omit<RequestOptions, 'bo
 export async function apiPost<TBody, TResponse>(path: string, body: TBody): Promise<TResponse> {
   return request<TResponse>(path, { method: 'POST', body });
 }
+
+export async function apiPut<TBody, TResponse>(path: string, body: TBody): Promise<TResponse> {
+  return request<TResponse>(path, { method: 'PUT', body });
+}
+
+export async function apiDelete<TResponse>(path: string): Promise<TResponse> {
+  return request<TResponse>(path, { method: 'DELETE' });
+}

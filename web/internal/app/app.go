@@ -21,6 +21,7 @@ import (
 	releaseyearsvc "github.com/lyricapp/lyric/web/internal/services/releaseyear"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 	trendingsvc "github.com/lyricapp/lyric/web/internal/services/trending"
+	usersvc "github.com/lyricapp/lyric/web/internal/services/users"
 	writersvc "github.com/lyricapp/lyric/web/internal/services/writers"
 	adminrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/admin"
 	albumrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/albums"
@@ -35,6 +36,7 @@ import (
 	releaseyearrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/releaseyear"
 	songrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/songs"
 	trendingrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/trending"
+	usersrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/users"
 	writerrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/writers"
 )
 
@@ -62,6 +64,7 @@ type Services struct {
 	Levels      levelsvc.Service
 	Languages   languagesvc.Service
 	Login       loginsvc.Service
+	Users       usersvc.Service
 }
 
 // New constructs a new Application instance with default implementations.
@@ -80,6 +83,7 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 	levelRepository := levelrepo.NewRepository(db)
 	languageRepository := languagerepo.NewRepository(db)
 	loginRepository := loginrepo.NewRepository(db)
+	userRepository := usersrepo.NewRepository(db)
 
 	adminAuthRepository := adminAuthRepoAdapter{repo: adminRepository}
 	adminAuthService := adminauthsvc.NewService(adminAuthRepository)
@@ -132,6 +136,7 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 			Levels:      levelsvc.NewService(levelRepository),
 			Languages:   languagesvc.NewService(languageRepository),
 			Login:       loginService,
+			Users:       usersvc.NewService(userRepository),
 		},
 		AdminSessions: adminSessions,
 	}

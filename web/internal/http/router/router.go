@@ -15,13 +15,14 @@ import (
 	artistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/artists"
 	chordsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/chords"
 	feedbackapi "github.com/lyricapp/lyric/web/internal/http/handler/api/feedback"
-	levelsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/levels"
 	languagesapi "github.com/lyricapp/lyric/web/internal/http/handler/api/languages"
+	levelsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/levels"
 	loginapi "github.com/lyricapp/lyric/web/internal/http/handler/api/login"
 	playlistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/playlists"
 	releaseyearapi "github.com/lyricapp/lyric/web/internal/http/handler/api/releaseyear"
 	songsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/songs"
 	trendingapi "github.com/lyricapp/lyric/web/internal/http/handler/api/trending"
+	usersapi "github.com/lyricapp/lyric/web/internal/http/handler/api/users"
 	writersapi "github.com/lyricapp/lyric/web/internal/http/handler/api/writers"
 	chartshandler "github.com/lyricapp/lyric/web/internal/http/handler/charts"
 	healthhandler "github.com/lyricapp/lyric/web/internal/http/handler/health"
@@ -110,6 +111,7 @@ func New(application *app.Application) chi.Router {
 	apiChords := chordsapi.New(application.Services.Chords)
 	apiFeedback := feedbackapi.New(application.Services.Feedback)
 	apiLogin := loginapi.New(application.Services.Login)
+	apiUsers := usersapi.New(application.Services.Users)
 	tokenAuth := application.Services.Login.TokenAuth()
 	r.Route("/api", func(api chi.Router) {
 		api.Post("/login", apiLogin.Request)
@@ -121,7 +123,13 @@ func New(application *app.Application) chi.Router {
 			protected.Post("/songs", apiSongs.Create)
 			protected.Get("/playlists", apiPlaylists.List)
 			protected.Post("/playlists/create", apiPlaylists.Create)
+			protected.Put("/playlists/{id}", apiPlaylists.Update)
+			protected.Delete("/playlists/{id}", apiPlaylists.Delete)
+			protected.Post("/playlists/{id}/share", apiPlaylists.Share)
+			protected.Post("/playlists/{id}/leave", apiPlaylists.Leave)
+			protected.Post("/playlists/{id}/remove-songs", apiPlaylists.RemoveSongs)
 			protected.Post("/playlists/{playlist_id}/songs/{song_ids}", apiPlaylists.AddSongs)
+			protected.Post("/users", apiUsers.Search)
 			protected.Post("/feedback", apiFeedback.Create)
 			protected.Post("/songs/{song_id}/levels/{level_id}", apiSongs.AssignLevel)
 		})

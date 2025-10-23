@@ -24,6 +24,12 @@
   - library => popup only when click create library + create new song
   - profile => request chord => popup
 - playlist [crud]
+  - menu 
+    - share => input user_ids => multiple
+    - update
+    - delete 
+    - leave playlists
+  
 
 ## apis binding
 - POST /api/login - done
@@ -36,15 +42,12 @@
 - rate song POST /api/songs/{song_id}/level/{level_id}
 - update the songs api to include the playlist_ids [array]
 - update the songs api to include current user level submit
-- playlist share feature
-  - menu 
-    - share => input username => multiple
-    - update
-    - delete 
-
-- delete playlist
-- update playlist
-- remove from playlist
+- delete playlist - done
+- update playlist - done
+- remove from playlist - done
+- share playlists - done
+- users?email="abc" - done
+- leave playlists - done
 
 ## admin side
 - update the render logic

@@ -29,7 +29,7 @@
 - Routing: Place screens in `app/` per Expo Router (e.g., `app/(tabs)/index.tsx`).
 - Linting: ESLint via `eslint.config.js`; fix warnings before PR.
 - Don't over engineer. Make simple as possible.
-- Extract as a component if possible.
+- Make a reusable components as much as possible and always ask yourself can this be a standalone components.
 
 ### Testing Guidelines
 - Current status: No automated tests configured.

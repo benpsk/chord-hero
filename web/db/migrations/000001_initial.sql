@@ -137,12 +137,12 @@ CREATE TABLE IF NOT EXISTS songs (
     lyric TEXT,
     release_year INT,
     created_by INT,
-    status VARCHAR(50) CHECK (language IN ('created', 'pending', 'approved', 'declined')) DEFAULT 'created',
+    status VARCHAR(50) CHECK (status IN ('created', 'pending', 'approved', 'declined')) DEFAULT 'created',
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     FOREIGN KEY (level_id) REFERENCES levels(id) ON DELETE SET NULL,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-    FOREIGN KEY (language_id) REFERENCES languages(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (language_id) REFERENCES languages(id) ON DELETE SET NULL
 );
 
 --bun:split

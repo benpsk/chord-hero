@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	_ "github.com/joho/godotenv"
 )
 
 const (

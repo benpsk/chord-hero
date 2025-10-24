@@ -86,6 +86,9 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if name == "" {
 		errorsMap["name"] = "name is required"
 	}
+	if len(name) > 45 {
+		errorsMap["name"] = "name too long!"
+	}
 	if len(errorsMap) > 0 {
 		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
 		return

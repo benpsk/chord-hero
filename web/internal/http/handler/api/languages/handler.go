@@ -18,15 +18,15 @@ func New(svc languagesvc.Service) Handler {
 	return Handler{svc: svc}
 }
 
-// List responds with all available levels.
+// List responds with all available languages.
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
-	levels, err := h.svc.List(r.Context())
+	languages, err := h.svc.List(r.Context())
 	log.Println(err)
 	if err != nil {
 		log.Println(err)
-		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list levels"}})
+		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list languages"}})
 		return
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{"data": levels})
+	util.RespondJSON(w, http.StatusOK, map[string]any{"data": languages})
 }

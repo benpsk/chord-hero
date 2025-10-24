@@ -3,12 +3,6 @@ SHELL := /bin/bash
 GOCACHE ?= $(PWD)/.gocache
 GOENV := GOCACHE=$(GOCACHE)
 
-# Load environment variables from .env file if it exists
-ifneq ($(wildcard .env),)
-	include .env
-	export
-endif
-
 tidy: ## Download modules and prune unused dependencies
 	@$(GOENV) go mod tidy
 
@@ -19,7 +13,10 @@ build: templ css ## Generate assets and compile binaries
 	@$(GOENV) go build ./...
 
 test: ## Run unit tests
-	@$(GOENV) go test ./...
+	@$(GOENV) go test ./... | grep -v "\[no test files\]"
+
+testv: ## Run unit tests
+	@$(GOENV) go test ./... -v | grep -v "\[no test files\]"
 
 migrate: ## Execute the migration command (placeholder)
 	@if [ -f .env ]; then \
@@ -62,14 +59,22 @@ live/tailwind:
 
 # watch for any js or css change in the assets/ folder, then reload the browser via templ proxy.
 live/sync_assets:
-	go run github.com/air-verse/air@v1.51.0 \
-	--build.cmd "templ generate --notify-proxy" \
-	--build.bin "true" \
-	--build.delay "100" \
-	--build.exclude_dir "" \
-	--build.include_dir "./internal/web/assets" \
-	--build.include_ext "js,css"
+	go run github.com/air-verse/air@v1.51.0 \\
+	--build.cmd \"templ generate --notify-proxy\" \\
+	--build.bin \"true\" \\
+	--build.delay \"100\" \\
+	--build.exclude_dir \"\" \\
+	--build.include_dir \"./internal/web/assets\" \\
+	--build.include_ext \"js,css\"
 
 # start all 5 watch processes in parallel.
 live: 
 	make -j5 live/templ live/server live/tailwind live/esbuild live/sync_assets
+
+migrate-test: ## Execute the migration command for test
+	@if [ -f .env.test ]; then \
+		set -a; \
+		source .env.test; \
+		set +a; \
+	fi; \
+	$(GOENV) go run ./cmd/migrate

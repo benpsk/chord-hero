@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/lyricapp/lyric/web/internal/app"
 	"github.com/lyricapp/lyric/web/internal/config"
 	"github.com/lyricapp/lyric/web/internal/http/router"

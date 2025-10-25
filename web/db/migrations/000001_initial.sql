@@ -378,7 +378,6 @@ FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
 CREATE TABLE IF NOT EXISTS user_login_codes (
-    id SERIAL PRIMARY KEY,
     user_id INT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     code VARCHAR(12) NOT NULL CHECK (char_length(code) = 6),
     used_at TIMESTAMPTZ NULL,

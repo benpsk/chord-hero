@@ -32,7 +32,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
 		return
 	}
 
@@ -47,7 +47,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(errorsMap) > 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
 		return
 	}
 
@@ -56,9 +56,9 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Message: message,
 	})
 	if err != nil {
-		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to store feedback"}})
+		util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to store feedback"}})
 		return
 	}
 
-	util.RespondJSON(w, http.StatusCreated, map[string]any{"data": map[string]any{"message": "Feedback submitted", "feedback": feedback}})
+	util.RespondJSONOld(w, http.StatusCreated, map[string]any{"data": map[string]any{"message": "Feedback submitted", "feedback": feedback}})
 }

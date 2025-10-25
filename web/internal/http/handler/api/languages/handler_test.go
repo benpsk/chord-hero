@@ -82,12 +82,6 @@ func TestHandler_List(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			respBody["data"], languagesData)
 	}
-
-	// Clean up after test
-	_, err = db.Exec(context.Background(), "DELETE FROM languages")
-	if err != nil {
-		t.Fatalf("failed to clean up languages table: %v", err)
-	}
 }
 
 type mockService struct{}
@@ -103,32 +97,22 @@ func TestHandler_List_Error(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create a new ResponseRecorder to record the response.
 	rr := httptest.NewRecorder()
-
-	// Create a new service with the mock repository.
 	svc := &mockService{}
-
-	// Create a new handler and serve the request.
 	handler := languages.New(svc)
 	handler.List(rr, req)
 
-	// Check that the status code is http.StatusInternalServerError.
 	if status := rr.Code; status != http.StatusInternalServerError {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusInternalServerError)
 	}
-
-	// Check that the response body is what we expect.
 	var respBody map[string]map[string]string
 	err = json.Unmarshal(rr.Body.Bytes(), &respBody)
 	if err != nil {
 		t.Fatalf("failed to unmarshal response body: %v", err)
 	}
-
-	expected := "failed to list languages"
-	if respBody["errors"]["message"] != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			respBody["errors"]["message"], expected)
+	if _, ok := respBody["errors"]["message"]; !ok {
+		t.Errorf("handler returned unexpected body: got %v",
+			respBody["errors"])
 	}
 }

@@ -17,6 +17,12 @@ type AdminUser struct {
 	Username string
 }
 
+type User struct {
+	ID           int
+	Username     string
+	PasswordHash string
+}
+
 // Credential carries the stored password hash needed to authenticate.
 type Credential struct {
 	ID           int
@@ -26,12 +32,13 @@ type Credential struct {
 
 // Repository exposes credential lookup methods required for authentication.
 type Repository interface {
-	FindByUsername(ctx context.Context, username string) (Credential, error)
+	FindByUsername(ctx context.Context, username string) (User, error)
 }
 
 // Service defines admin authentication behaviours.
 type Service interface {
 	Authenticate(ctx context.Context, username, password string) (AdminUser, error)
+	FindByUsername(ctx context.Context, username string) (Credential, error)
 }
 
 type service struct {
@@ -59,4 +66,17 @@ func (s *service) Authenticate(ctx context.Context, username, password string) (
 	}
 
 	return AdminUser{ID: credential.ID, Username: credential.Username}, nil
+}
+
+
+func (s *service) FindByUsername(ctx context.Context, username string) (Credential, error) {
+	user, err := s.repo.FindByUsername(ctx, username)
+	if err != nil {
+		return Credential{}, err
+	}
+	return Credential{
+		ID:           user.ID,
+		Username:     user.Username,
+		PasswordHash: user.PasswordHash,
+	}, nil
 }

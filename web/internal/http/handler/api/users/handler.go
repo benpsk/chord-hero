@@ -26,15 +26,15 @@ func (h Handler) Search(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, usersvc.ErrEmailRequired):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"email": "email is required"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"email": "email is required"}})
 			return
 		default:
-			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to search users"}})
+			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to search users"}})
 			return
 		}
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{
+	util.RespondJSONOld(w, http.StatusOK, map[string]any{
 		"data": users,
 	})
 }

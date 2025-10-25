@@ -21,7 +21,7 @@ func New(svc writersvc.Service) Handler {
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	params := writersvc.ListParams{}
-	validationErrors := map[string]string{}
+	validationErrors := util.NewValidationError()
 
 	if page := util.ParseOptionalPositiveInt(query.Get("page"), "page", validationErrors); page != nil {
 		params.Page = *page
@@ -33,14 +33,14 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	params.Search = util.ParseOptionalSearch(query.Get("search"))
 
-	if len(validationErrors) > 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": validationErrors})
+	if validationErrors.Err() != nil {
+		util.RespondError(w, validationErrors)
 		return
 	}
 
 	result, err := h.svc.List(r.Context(), params)
 	if err != nil {
-		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list writers"}})
+		util.RespondError(w, err)
 		return
 	}
 

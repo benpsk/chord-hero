@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	"github.com/lyricapp/lyric/web/pkg/pagination"
 )
 
@@ -200,20 +201,21 @@ func (s *service) AssignLevel(ctx context.Context, songID, levelID, userID int) 
 }
 
 func normaliseMutation(params *MutationParams) error {
+	ve := util.NewValidationError()
 	title := strings.TrimSpace(params.Title)
 	if title == "" {
-		return ErrTitleRequired
+		ve.AddField("title", "title is required")
 	}
 	params.Title = title
 
 	if params.LevelID != nil {
 		if *params.LevelID <= 0 {
-			return fmt.Errorf("songs: invalid level id %d", *params.LevelID)
+			ve.AddField("level_id", "invalid level_id")
 		}
 	}
 	if params.LanguageID != 0 {
 		if params.LanguageID <= 0 {
-			return fmt.Errorf("songs: invalid language id %d", params.LanguageID)
+			ve.AddField("language_id", "invalid language_id")
 		}
 	}
 
@@ -241,7 +243,7 @@ func normaliseMutation(params *MutationParams) error {
 	params.WriterIDs = uniquePositive(params.WriterIDs)
 	params.AlbumIDs = uniquePositive(params.AlbumIDs)
 
-	return nil
+	return ve.Err()
 }
 
 func ptr[T any](value T) *T {

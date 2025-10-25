@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	loginsvc "github.com/lyricapp/lyric/web/internal/services/login"
 )
 
@@ -28,9 +29,9 @@ func (r *Repository) FindOrCreateUser(ctx context.Context, email string) (logins
 
 	var user loginsvc.User
 	err := r.db.QueryRow(ctx, `
-		SELECT id, email, role
-		FROM users
-		WHERE email = $1
+		select id, email, role
+		from users
+		where email = $1
 	`, email).Scan(&user.ID, &user.Email, &user.Role)
 	if err == nil {
 		return user, nil
@@ -41,16 +42,15 @@ func (r *Repository) FindOrCreateUser(ctx context.Context, email string) (logins
 	}
 
 	err = r.db.QueryRow(ctx, `
-		INSERT INTO users (email, role)
-		VALUES ($1, 'user')
-		ON CONFLICT (email) DO UPDATE
-		SET updated_at = NOW()
-		RETURNING id, email, role
+		insert into users (email, role)
+		values ($1, 'user')
+		on conflict (email) do update
+		set updated_at = now()
+		returning id, email, role
 	`, email).Scan(&user.ID, &user.Email, &user.Role)
 	if err != nil {
 		return loginsvc.User{}, fmt.Errorf("insert user: %w", err)
 	}
-
 	return user, nil
 }
 
@@ -67,8 +67,8 @@ func (r *Repository) CreateLoginCode(ctx context.Context, userID int, code strin
 	}
 
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO user_login_codes (user_id, code, expires_at)
-		VALUES ($1, $2, $3)
+		insert into user_login_codes (user_id, code, expires_at)
+		values ($1, $2, $3)
 	`, userID, code, expiresAt); err != nil {
 		return fmt.Errorf("insert login code: %w", err)
 	}
@@ -86,12 +86,12 @@ func (r *Repository) ConsumeLoginCode(ctx context.Context, code string, attempte
 
 	var userID int
 	err := r.db.QueryRow(ctx, `
-		UPDATE user_login_codes
-		SET used_at = $3
-		WHERE code = $1
-		  AND used_at IS NULL
-		  AND expires_at >= $2
-		RETURNING user_id
+		update user_login_codes
+		set used_at = $3
+		where code = $1
+		  and used_at is null
+		  and expires_at >= $2
+		returning user_id
 	`, code, attemptedAt, attemptedAt).Scan(&userID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -102,9 +102,9 @@ func (r *Repository) ConsumeLoginCode(ctx context.Context, code string, attempte
 
 	var user loginsvc.User
 	if err := r.db.QueryRow(ctx, `
-		SELECT id, email, role
-		FROM users
-		WHERE id = $1
+		select id, email, role
+		from users
+		where id = $1
 	`, userID).Scan(&user.ID, &user.Email, &user.Role); err != nil {
 		return loginsvc.User{}, false, fmt.Errorf("select user by id: %w", err)
 	}
@@ -116,13 +116,13 @@ func (r *Repository) ConsumeLoginCode(ctx context.Context, code string, attempte
 func (r *Repository) FindUserByID(ctx context.Context, userID int) (loginsvc.User, error) {
 	var user loginsvc.User
 	err := r.db.QueryRow(ctx, `
-		SELECT id, email, role
-		FROM users
-		WHERE id = $1
+		select id, email, role
+		from users
+		where id = $1
 	`, userID).Scan(&user.ID, &user.Email, &user.Role)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return loginsvc.User{}, fmt.Errorf("user not found")
+			return loginsvc.User{}, util.NewNotFoundError("user not found", nil)
 		}
 		return loginsvc.User{}, fmt.Errorf("select user by id: %w", err)
 	}

@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -85,8 +84,6 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 	loginRepository := loginrepo.NewRepository(db)
 	userRepository := usersrepo.NewRepository(db)
 
-	adminAuthRepository := adminAuthRepoAdapter{repo: adminRepository}
-	adminAuthService := adminauthsvc.NewService(adminAuthRepository)
 	adminSessions := adminsession.NewManager(
 		cfg.Admin.SessionCookie,
 		[]byte(cfg.Admin.SessionSecret),
@@ -132,7 +129,7 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 			Trendings:   trendingsvc.NewService(trendingRepository),
 			Chords:      chordsvc.NewService(chordRepository),
 			Feedback:    feedbacksvc.NewService(feedbackRepository),
-			AdminAuth:   adminAuthService,
+			AdminAuth:    adminauthsvc.NewService(adminRepository),
 			Levels:      levelsvc.NewService(levelRepository),
 			Languages:   languagesvc.NewService(languageRepository),
 			Login:       loginService,
@@ -140,20 +137,4 @@ func New(cfg config.Config, db *pgxpool.Pool) *Application {
 		},
 		AdminSessions: adminSessions,
 	}
-}
-
-type adminAuthRepoAdapter struct {
-	repo *adminrepo.Repository
-}
-
-func (a adminAuthRepoAdapter) FindByUsername(ctx context.Context, username string) (adminauthsvc.Credential, error) {
-	user, err := a.repo.FindByUsername(ctx, username)
-	if err != nil {
-		return adminauthsvc.Credential{}, err
-	}
-	return adminauthsvc.Credential{
-		ID:           user.ID,
-		Username:     user.Username,
-		PasswordHash: user.PasswordHash,
-	}, nil
 }

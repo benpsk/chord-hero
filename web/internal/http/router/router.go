@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -39,7 +40,7 @@ func New(application *app.Application) chi.Router {
 	r := chi.NewRouter()
 
 	var allowedOrigins []string
-	if application.Config.Api.AppEnv == "production" {
+	if strings.EqualFold(application.Config.Api.AppEnv, "production") {
 		allowedOrigins = []string{application.Config.Api.FrontendUrl}
 	} else {
 		allowedOrigins = []string{"*"}

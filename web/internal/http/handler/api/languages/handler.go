@@ -24,9 +24,9 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	log.Println(err)
 	if err != nil {
 		log.Println(err)
-		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list languages"}})
+		util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list languages"}})
 		return
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{"data": languages})
+	util.RespondJSONOld(w, http.StatusOK, map[string]any{"data": languages})
 }

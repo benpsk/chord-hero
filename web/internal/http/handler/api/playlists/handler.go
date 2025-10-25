@@ -34,7 +34,7 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 	params := playlistsvc.ListParams{}
-	validationErrors := map[string]string{}
+	validationErrors := util.NewValidationError()
 
 	if page := util.ParseOptionalPositiveInt(query.Get("page"), "page", validationErrors); page != nil {
 		params.Page = *page
@@ -47,15 +47,14 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	params.Search = util.ParseOptionalSearch(query.Get("search"))
 	params.UserID = &userID
 
-	if len(validationErrors) > 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": validationErrors})
+	if validationErrors.Err() != nil {
+		util.RespondError(w, validationErrors)
 		return
 	}
 
 	result, err := h.svc.List(r.Context(), params)
-	log.Println(err)
 	if err != nil {
-		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list playlists"}})
+		util.RespondError(w, err)
 		return
 	}
 
@@ -77,7 +76,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
 		return
 	}
 
@@ -90,7 +89,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		errorsMap["name"] = "name too long!"
 	}
 	if len(errorsMap) > 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
 		return
 	}
 
@@ -102,19 +101,19 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, playlistsvc.ErrNameRequired):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"name": "name is required"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"name": "name is required"}})
 			return
 		case errors.Is(err, playlistsvc.ErrInvalidUser):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
 			return
 		default:
 			log.Println(err)
-			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to create playlist"}})
+			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to create playlist"}})
 			return
 		}
 	}
 
-	util.RespondJSON(w, http.StatusCreated, map[string]any{
+	util.RespondJSONOld(w, http.StatusCreated, map[string]any{
 		"data": map[string]any{
 			"message":     "Playlist created successfully",
 			"playlist_id": playlistID,
@@ -133,7 +132,7 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
 	playlistID, err := strconv.Atoi(rawID)
 	if err != nil || playlistID <= 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
 		return
 	}
 
@@ -144,13 +143,13 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
 		return
 	}
 
 	name := strings.TrimSpace(payload.Name)
 	if name == "" {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"name": "name is required"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"name": "name is required"}})
 		return
 	}
 
@@ -161,22 +160,22 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		switch {
 		case errors.Is(err, playlistsvc.ErrNameRequired):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"name": "name is required"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"name": "name is required"}})
 			return
 		case errors.Is(err, playlistsvc.ErrPlaylistNotFound):
-			util.RespondJSON(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
+			util.RespondJSONOld(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
 			return
 		case errors.Is(err, playlistsvc.ErrInvalidUser):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
 			return
 		default:
 			log.Println(err)
-			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to update playlist"}})
+			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to update playlist"}})
 			return
 		}
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{
+	util.RespondJSONOld(w, http.StatusOK, map[string]any{
 		"data": map[string]any{
 			"message": "Playlist updated successfully",
 		},
@@ -194,26 +193,26 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
 	playlistID, err := strconv.Atoi(rawID)
 	if err != nil || playlistID <= 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
 		return
 	}
 
 	if err := h.svc.Delete(r.Context(), playlistID, userID); err != nil {
 		switch {
 		case errors.Is(err, playlistsvc.ErrPlaylistNotFound):
-			util.RespondJSON(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
+			util.RespondJSONOld(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
 			return
 		case errors.Is(err, playlistsvc.ErrInvalidUser):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
 			return
 		default:
 			log.Println(err)
-			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to delete playlist"}})
+			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to delete playlist"}})
 			return
 		}
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{
+	util.RespondJSONOld(w, http.StatusOK, map[string]any{
 		"data": map[string]any{
 			"message": "Playlist deleted successfully",
 		},
@@ -231,32 +230,32 @@ func (h Handler) Leave(w http.ResponseWriter, r *http.Request) {
 	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
 	playlistID, err := strconv.Atoi(rawID)
 	if err != nil || playlistID <= 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
 		return
 	}
 
 	if err := h.svc.Leave(r.Context(), playlistID, userID); err != nil {
 		switch {
 		case errors.Is(err, playlistsvc.ErrPlaylistNotFound):
-			util.RespondJSON(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
+			util.RespondJSONOld(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
 			return
 		case errors.Is(err, playlistsvc.ErrOwnerCannotLeave):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "playlist owner cannot leave"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "playlist owner cannot leave"}})
 			return
 		case errors.Is(err, playlistsvc.ErrNotMember):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user is not a member of this playlist"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user is not a member of this playlist"}})
 			return
 		case errors.Is(err, playlistsvc.ErrInvalidUser):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
 			return
 		default:
 			log.Println(err)
-			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to leave playlist"}})
+			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to leave playlist"}})
 			return
 		}
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{
+	util.RespondJSONOld(w, http.StatusOK, map[string]any{
 		"data": map[string]any{
 			"message": "Left playlist successfully",
 		},
@@ -274,7 +273,7 @@ func (h Handler) RemoveSongs(w http.ResponseWriter, r *http.Request) {
 	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
 	playlistID, err := strconv.Atoi(rawID)
 	if err != nil || playlistID <= 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
 		return
 	}
 
@@ -285,42 +284,42 @@ func (h Handler) RemoveSongs(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
 		return
 	}
 
 	validIds := make([]int, 0, len(payload.SongIDs))
 	for _, id := range payload.SongIDs {
 		if id <= 0 {
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must include positive integers"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must include positive integers"}})
 			return
 		}
 		validIds = append(validIds, id)
 	}
 	if len(validIds) == 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must include at least one positive integer"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must include at least one positive integer"}})
 		return
 	}
 
 	if err := h.svc.RemoveSongs(r.Context(), playlistID, userID, validIds); err != nil {
 		switch {
 		case errors.Is(err, playlistsvc.ErrPlaylistNotFound):
-			util.RespondJSON(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
+			util.RespondJSONOld(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
 			return
 		case errors.Is(err, playlistsvc.ErrInvalidUser):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
 			return
 		case errors.Is(err, playlistsvc.ErrSongsRequired):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must include at least one positive integer"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must include at least one positive integer"}})
 			return
 		default:
 			log.Println(err)
-			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to remove songs from playlist"}})
+			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to remove songs from playlist"}})
 			return
 		}
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{
+	util.RespondJSONOld(w, http.StatusOK, map[string]any{
 		"data": map[string]any{
 			"message": "Songs removed from playlist successfully",
 		},
@@ -338,7 +337,7 @@ func (h Handler) Share(w http.ResponseWriter, r *http.Request) {
 	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
 	playlistID, err := strconv.Atoi(rawID)
 	if err != nil || playlistID <= 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "id must be a positive integer"}})
 		return
 	}
 
@@ -349,14 +348,14 @@ func (h Handler) Share(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
 		return
 	}
 
 	validIDs := make([]int, 0, len(payload.UserIDs))
 	for _, id := range payload.UserIDs {
 		if id <= 0 {
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"user_ids": "user_ids must contain positive integers"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"user_ids": "user_ids must contain positive integers"}})
 			return
 		}
 		validIDs = append(validIDs, id)
@@ -365,19 +364,19 @@ func (h Handler) Share(w http.ResponseWriter, r *http.Request) {
 	if err := h.svc.Share(r.Context(), playlistID, userID, validIDs); err != nil {
 		switch {
 		case errors.Is(err, playlistsvc.ErrPlaylistNotFound):
-			util.RespondJSON(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
+			util.RespondJSONOld(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
 			return
 		case errors.Is(err, playlistsvc.ErrInvalidUser):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"user_ids": "one or more users were not found"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"user_ids": "one or more users were not found"}})
 			return
 		default:
 			log.Println(err)
-			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to share playlist"}})
+			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to share playlist"}})
 			return
 		}
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{
+	util.RespondJSONOld(w, http.StatusOK, map[string]any{
 		"data": map[string]any{
 			"message": "Playlist sharing updated successfully",
 		},
@@ -394,41 +393,41 @@ func (h Handler) AddSongs(w http.ResponseWriter, r *http.Request) {
 	playlistParam := strings.TrimSpace(chi.URLParam(r, "playlist_id"))
 	playlistID, err := strconv.Atoi(playlistParam)
 	if err != nil || playlistID <= 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "playlist_id must be a positive integer"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "playlist_id must be a positive integer"}})
 		return
 	}
 
 	rawSongIDs := strings.TrimSpace(chi.URLParam(r, "song_ids"))
 	if rawSongIDs == "" {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must be provided as comma separated integers"}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must be provided as comma separated integers"}})
 		return
 	}
 
 	ids, parseErr := parseSongIDs(rawSongIDs)
 	if parseErr != nil {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": parseErr.Error()}})
+		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": parseErr.Error()}})
 		return
 	}
 
 	if err := h.svc.AddSongs(r.Context(), userID, playlistID, ids); err != nil {
 		switch {
 		case errors.Is(err, playlistsvc.ErrPlaylistNotFound):
-			util.RespondJSON(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
+			util.RespondJSONOld(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "playlist not found"}})
 			return
 		case errors.Is(err, playlistsvc.ErrSongsRequired):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must include at least one positive integer"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "song_ids must include at least one positive integer"}})
 			return
 		case errors.Is(err, playlistsvc.ErrSongNotFound):
-			util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "one or more songs were not found"}})
+			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"song_ids": "one or more songs were not found"}})
 			return
 		default:
 			log.Println(err)
-			util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to add songs to playlist"}})
+			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to add songs to playlist"}})
 			return
 		}
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{
+	util.RespondJSONOld(w, http.StatusOK, map[string]any{
 		"data": map[string]any{
 			"message": "Songs added to playlist successfully",
 		},

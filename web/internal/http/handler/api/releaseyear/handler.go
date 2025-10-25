@@ -1,7 +1,6 @@
 package releaseyear
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
@@ -22,7 +21,7 @@ func New(svc releaseyearsvc.Service) Handler {
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	params := releaseyearsvc.ListParams{}
-	validationErrors := map[string]string{}
+	validationErrors := util.NewValidationError()
 
 	if page := util.ParseOptionalPositiveInt(query.Get("page"), "page", validationErrors); page != nil {
 		params.Page = *page
@@ -32,15 +31,14 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 		params.PerPage = *perPage
 	}
 
-	if len(validationErrors) > 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": validationErrors})
+	if validationErrors.Err() != nil {
+		util.RespondError(w, validationErrors)
 		return
 	}
 
 	result, err := h.svc.List(r.Context(), params)
 	if err != nil {
-		log.Println(err)
-		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list release years"}})
+		util.RespondError(w, err)
 		return
 	}
 

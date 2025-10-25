@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 )
 
@@ -314,9 +315,9 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 
 	var songID int
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO songs (title, level_id, key, language_id, lyric, release_year, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id
+		insert into songs (title, level_id, key, language_id, lyric, release_year, created_by)
+		values ($1, $2, $3, $4, $5, $6, $7)
+		returning id
 	`,
 		params.Title,
 		nullableInt(params.LevelID),
@@ -331,28 +332,28 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 
 	for _, artistID := range params.ArtistIDs {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO artist_song (artist_id, song_id)
-			VALUES ($1, $2)
+			insert into artist_song (artist_id, song_id)
+			values ($1, $2)
 		`, artistID, songID); err != nil {
-			return 0, fmt.Errorf("insert artist relation: %w", err)
+			return 0, util.NewNotFoundError("invalid artist_id", err)
 		}
 	}
 
 	for _, writerID := range params.WriterIDs {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO song_writer (writer_id, song_id)
-			VALUES ($1, $2)
+			insert into song_writer (writer_id, song_id)
+			values ($1, $2)
 		`, writerID, songID); err != nil {
-			return 0, fmt.Errorf("insert writer relation: %w", err)
+			return 0, util.NewNotFoundError("invalid writer_id", err)
 		}
 	}
 
 	for _, albumID := range params.AlbumIDs {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO album_song (album_id, song_id)
-			VALUES ($1, $2)
+			insert into album_song (album_id, song_id)
+			values ($1, $2)
 		`, albumID, songID); err != nil {
-			return 0, fmt.Errorf("insert album relation: %w", err)
+			return 0, util.NewNotFoundError("invalid album_id", err)
 		}
 	}
 

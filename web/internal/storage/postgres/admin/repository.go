@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	adminauthsvc "github.com/lyricapp/lyric/web/internal/services/adminauth"
 )
 
 // ErrNotFound indicates that no admin user matched the lookup criteria.
@@ -23,15 +24,10 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 // User encapsulates the data required to authenticate an admin user.
-type User struct {
-	ID           int
-	Username     string
-	PasswordHash string
-}
 
 // FindByUsername retrieves an admin user by their username.
-func (r *Repository) FindByUsername(ctx context.Context, username string) (User, error) {
-	var user User
+func (r *Repository) FindByUsername(ctx context.Context, username string) (adminauthsvc.User, error) {
+	var user adminauthsvc.User
 	err := r.db.QueryRow(ctx, `
 		SELECT id, username, password_hash
 		FROM admin_users
@@ -39,9 +35,10 @@ func (r *Repository) FindByUsername(ctx context.Context, username string) (User,
 	`, username).Scan(&user.ID, &user.Username, &user.PasswordHash)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return User{}, ErrNotFound
+			return adminauthsvc.User{}, ErrNotFound
 		}
-		return User{}, fmt.Errorf("select admin user: %w", err)
+		return adminauthsvc.User{}, fmt.Errorf("select admin user: %w", err)
 	}
 	return user, nil
 }
+

@@ -3,7 +3,7 @@ package login
 import (
 	"context"
 	"crypto/rand"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/mail"
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 )
 
 const (
@@ -20,21 +21,10 @@ const (
 	defaultCodeValidity = 5 * time.Minute
 )
 
-var (
-	// ErrEmailRequired indicates the login payload lacked a username/email.
-	ErrEmailRequired = errors.New("login: email is required")
-	// ErrInvalidEmail indicates the email format failed validation.
-	ErrInvalidEmail = errors.New("login: invalid email address")
-	// ErrCodeRequired indicates the verification payload lacks an OTP code.
-	ErrCodeRequired = errors.New("login: code is required")
-	// ErrCodeInvalid indicates the supplied OTP code is malformed or expired.
-	ErrCodeInvalid = errors.New("login: code is invalid")
-)
-
 // Service manages OTP login workflows.
 type Service interface {
 	RequestOTP(ctx context.Context, email string) error
-	VerifyCode(ctx context.Context, code string) (VerifyResult, error)
+	VerifyCode(ctx context.Context, code any) (VerifyResult, error)
 	TokenAuth() *jwtauth.JWTAuth
 	CurrentUser(ctx context.Context, userID int) (User, error)
 }
@@ -106,20 +96,27 @@ func NewService(repo Repository, mailer Mailer, cfg Config) Service {
 	}
 }
 
-// RequestOTP generates and dispatches a one-time login code.
-func (s *service) RequestOTP(ctx context.Context, email string) error {
+func (s *service) validate(email string) error {
+	ve := util.NewValidationError()
 	email = strings.TrimSpace(strings.ToLower(email))
 	if email == "" {
-		return ErrEmailRequired
+		ve.AddField("username", "username is required.")
 	}
-
 	if !isValidEmail(email) {
-		return ErrInvalidEmail
+		ve.AddField("username", "username is invalid.")
 	}
+	return ve.Err()
+}
 
+// RequestOTP generates and dispatches a one-time login code.
+func (s *service) RequestOTP(ctx context.Context, email string) error {
+	err := s.validate(email)
+	if err != nil {
+		return err
+	}
 	user, err := s.repo.FindOrCreateUser(ctx, email)
 	if err != nil {
-		return fmt.Errorf("lookup user: %w", err)
+		return util.NewNotFoundError("lookup user", err)
 	}
 
 	code, err := s.generateCode()
@@ -165,15 +162,51 @@ func isValidEmail(value string) bool {
 	return strings.EqualFold(addr.Address, value)
 }
 
-// VerifyCode validates an OTP code and issues an access token.
-func (s *service) VerifyCode(ctx context.Context, code string) (VerifyResult, error) {
-	code = strings.TrimSpace(code)
-	if code == "" {
-		return VerifyResult{}, ErrCodeRequired
+func normalizeCode(value any) (string, error) {
+	ve := util.NewValidationError()
+	switch v := value.(type) {
+	case string:
+		code := strings.TrimSpace(v)
+		if code == "" {
+			ve.AddField("code", "code is required")
+			return "", ve.Err()
+		}
+		return code, nil
+	case json.Number:
+		if v == "" {
+			ve.AddField("code", "code is required")
+			return "", ve.Err()
+		}
+		if _, err := v.Int64(); err != nil {
+			ve.AddField("code", "code must be numeric")
+			return "", ve.Err()
+		}
+		return v.String(), nil
+	case float64:
+		if v < 0 {
+			ve.AddField("code", "code must be numeric")
+			return "", ve.Err()
+		}
+		return strconv.FormatInt(int64(v), 10), nil
+	case nil:
+		ve.AddField("code", "code is required")
+		return "", ve.Err()
+	default:
+		ve.AddField("code", "code must be numeric")
+		return "", ve.Err()
 	}
+}
 
+// VerifyCode validates an OTP code and issues an access token.
+func (s *service) VerifyCode(ctx context.Context, otp any) (VerifyResult, error) {
+	code, err := normalizeCode(otp)
+	if err != nil {
+		return VerifyResult{}, err
+	}
+	ve := util.NewValidationError()
 	if len(code) != s.codeLength || !isDigits(code) {
-		return VerifyResult{}, ErrCodeInvalid
+		ve.AddField("code", "Code is invalid or has the wrong format.")
+		return VerifyResult{}, ve
 	}
 
 	now := s.now()
@@ -182,7 +215,8 @@ func (s *service) VerifyCode(ctx context.Context, code string) (VerifyResult, er
 		return VerifyResult{}, fmt.Errorf("consume otp: %w", err)
 	}
 	if !ok {
-		return VerifyResult{}, ErrCodeInvalid
+		ve.AddField("code", "Code is invalid.")
+		return VerifyResult{}, ve
 	}
 
 	claims := map[string]any{
@@ -220,7 +254,7 @@ func (s *service) TokenAuth() *jwtauth.JWTAuth {
 // CurrentUser retrieves the latest user profile.
 func (s *service) CurrentUser(ctx context.Context, userID int) (User, error) {
 	if userID <= 0 {
-		return User{}, fmt.Errorf("invalid user id")
+		return User{}, util.NewUnauthorizedError("invalid user id", nil)
 	}
 	return s.repo.FindUserByID(ctx, userID)
 }

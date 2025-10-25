@@ -23,9 +23,9 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	levels, err := h.svc.List(r.Context())
 	if err != nil {
 		log.Println(err)
-		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list levels"}})
+		util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list levels"}})
 		return
 	}
 
-	util.RespondJSON(w, http.StatusOK, map[string]any{"data": levels})
+	util.RespondJSONOld(w, http.StatusOK, map[string]any{"data": levels})
 }

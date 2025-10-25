@@ -81,10 +81,4 @@ func TestHandler_List(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			respBody["data"], levelsData)
 	}
-
-	// Clean up after test
-	_, err = db.Exec(context.Background(), "DELETE FROM levels")
-	if err != nil {
-		t.Fatalf("failed to clean up levels table: %v", err)
-	}
 }

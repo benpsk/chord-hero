@@ -7,14 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/jwtauth/v5"
-	"github.com/lyricapp/lyric/web/internal/config"
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/playlists"
-	"github.com/lyricapp/lyric/web/internal/http/middleware/auth"
 	playlistsvc "github.com/lyricapp/lyric/web/internal/services/playlists"
 	playlistrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/playlists"
 	"github.com/lyricapp/lyric/web/internal/testutil"
@@ -41,29 +36,11 @@ func TestHandler_Create_Success(t *testing.T) {
 		t.Fatalf("failed to seed user: %v", err)
 	}
 
-	// Create a token
-	cfg, err := config.Load()
-	if err != nil {
-		t.Fatalf("failed to load config: %v", err)
-	}
-	tokenAuth := jwtauth.New("HS256", []byte(cfg.Auth.TokenSecret), nil)
-
-	claims := map[string]any{
-		"sub": strconv.Itoa(userID),
-		"typ": "access",
-	}
-	_, tokenString, _ := tokenAuth.Encode(claims)
-
+	r, accessToken := testutil.AuthToken(t, db, userID)
 	// Create a new repository and service.
 	repo := playlistrepo.NewRepository(db)
 	svc := playlistsvc.NewService(repo)
 	handler := playlists.New(svc)
-
-	r := chi.NewRouter()
-
-	// 1. Mount your REAL JWT middleware
-	r.Use(jwtauth.Verifier(tokenAuth))
-	r.Use(auth.Authenticator(tokenAuth))
 
 	// 2. Mount your REAL handler
 	r.Post("/api/playlists", handler.Create)
@@ -72,7 +49,7 @@ func TestHandler_Create_Success(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenString))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	// Create a new ResponseRecorder to record the response.
 	rr := httptest.NewRecorder()
@@ -116,29 +93,12 @@ func TestHandler_Create_Fail(t *testing.T) {
 		t.Fatalf("failed to seed user: %v", err)
 	}
 
-	// Create a token
-	cfg, err := config.Load()
-	if err != nil {
-		t.Fatalf("failed to load config: %v", err)
-	}
-	tokenAuth := jwtauth.New("HS256", []byte(cfg.Auth.TokenSecret), nil)
-
-	claims := map[string]any{
-		"sub": strconv.Itoa(userID),
-		"typ": "access",
-	}
-	_, tokenString, _ := tokenAuth.Encode(claims)
+	r, accessToken := testutil.AuthToken(t, db, userID)
 
 	// Create a new repository and service.
 	repo := playlistrepo.NewRepository(db)
 	svc := playlistsvc.NewService(repo)
 	handler := playlists.New(svc)
-
-	r := chi.NewRouter()
-
-	// 1. Mount your REAL JWT middleware
-	r.Use(jwtauth.Verifier(tokenAuth))
-	r.Use(auth.Authenticator(tokenAuth))
 
 	// 2. Mount your REAL handler
 	r.Post("/api/playlists", handler.Create)
@@ -170,7 +130,7 @@ func TestHandler_Create_Fail(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenString))
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 			// Create a new ResponseRecorder to record the response.
 			rr := httptest.NewRecorder()
@@ -182,9 +142,8 @@ func TestHandler_Create_Fail(t *testing.T) {
 					status, tc.expectedStatusCode)
 			}
 
-			// Check that the response body is what we expect.
 			var respBody map[string]map[string]string
-			err = json.NewDecoder(rr.Body).Decode(&respBody)
+			err = json.Unmarshal(rr.Body.Bytes(), &respBody)
 			if err != nil {
 				t.Fatalf("failed to unmarshal response body: %v", err)
 			}

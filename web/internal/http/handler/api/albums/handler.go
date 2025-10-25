@@ -21,7 +21,7 @@ func New(svc albumsvc.Service) Handler {
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	params := albumsvc.ListParams{}
-	validationErrors := map[string]string{}
+	validationErrors := util.NewValidationError()
 
 	if page := util.ParseOptionalPositiveInt(query.Get("page"), "page", validationErrors); page != nil {
 		params.Page = *page
@@ -35,14 +35,14 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	params.PlaylistID = util.ParseOptionalPositiveInt(query.Get("playlist_id"), "playlist_id", validationErrors)
 	params.UserID = util.ParseOptionalPositiveInt(query.Get("user_id"), "user_id", validationErrors)
 
-	if len(validationErrors) > 0 {
-		util.RespondJSON(w, http.StatusBadRequest, map[string]any{"errors": validationErrors})
+	if validationErrors.Err() != nil {
+		util.RespondError(w, validationErrors)
 		return
 	}
 
 	result, err := h.svc.List(r.Context(), params)
 	if err != nil {
-		util.RespondJSON(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list albums"}})
+		util.RespondError(w, err)
 		return
 	}
 

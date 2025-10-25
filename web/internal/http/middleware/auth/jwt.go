@@ -15,7 +15,7 @@ func Authenticator(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, _, err := jwtauth.FromContext(r.Context())
 			if err != nil || token == nil {
-				util.RespondJSON(w, http.StatusUnauthorized, map[string]any{
+				util.RespondJSONOld(w, http.StatusUnauthorized, map[string]any{
 					"errors": map[string]string{
 						"message": "unauthorized",
 					},

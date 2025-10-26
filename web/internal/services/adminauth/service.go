@@ -2,14 +2,11 @@ package adminauth
 
 import (
 	"context"
-	"errors"
 	"strings"
 
+	"github.com/lyricapp/lyric/web/internal/apperror"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// ErrInvalidCredentials is returned when the supplied username/password pair is invalid.
-var ErrInvalidCredentials = errors.New("adminauth: invalid credentials")
 
 // AdminUser represents the authenticated admin principal.
 type AdminUser struct {
@@ -53,16 +50,16 @@ func NewService(repo Repository) Service {
 func (s *service) Authenticate(ctx context.Context, username, password string) (AdminUser, error) {
 	trimmedUser := strings.TrimSpace(username)
 	if trimmedUser == "" || strings.TrimSpace(password) == "" {
-		return AdminUser{}, ErrInvalidCredentials
+		return AdminUser{}, apperror.BadRequest("invalid user")
 	}
 
 	credential, err := s.repo.FindByUsername(ctx, trimmedUser)
 	if err != nil {
-		return AdminUser{}, ErrInvalidCredentials
+		return AdminUser{}, apperror.BadRequest("invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(credential.PasswordHash), []byte(password)); err != nil {
-		return AdminUser{}, ErrInvalidCredentials
+		return AdminUser{}, apperror.BadRequest("invalid credentials")
 	}
 
 	return AdminUser{ID: credential.ID, Username: credential.Username}, nil

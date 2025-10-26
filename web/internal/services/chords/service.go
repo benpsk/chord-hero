@@ -7,7 +7,7 @@ type Service interface {
 	Find(ctx context.Context, name string) (Chord, error)
 }
 
-// Chord describes a chord with its playable positions.
+// Chord describes a chord with its playable positions. 
 type Chord struct {
 	ID        int        `json:"id"`
 	Name      string     `json:"name"`

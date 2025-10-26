@@ -1,11 +1,10 @@
 package users
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	usersvc "github.com/lyricapp/lyric/web/internal/services/users"
 )
 
@@ -24,17 +23,8 @@ func (h Handler) Search(w http.ResponseWriter, r *http.Request) {
 	email := strings.TrimSpace(r.URL.Query().Get("email"))
 	users, err := h.svc.SearchByEmail(r.Context(), email)
 	if err != nil {
-		switch {
-		case errors.Is(err, usersvc.ErrEmailRequired):
-			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"email": "email is required"}})
-			return
-		default:
-			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to search users"}})
-			return
-		}
+		handler.Error(w, err)
+		return
 	}
-
-	util.RespondJSONOld(w, http.StatusOK, map[string]any{
-		"data": users,
-	})
+	handler.Success(w, http.StatusOK, users)
 }

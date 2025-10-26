@@ -3,6 +3,8 @@ package albums
 import (
 	"net/http"
 
+	"github.com/lyricapp/lyric/web/internal/apperror"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	albumsvc "github.com/lyricapp/lyric/web/internal/services/albums"
 )
@@ -21,7 +23,7 @@ func New(svc albumsvc.Service) Handler {
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	params := albumsvc.ListParams{}
-	validationErrors := util.NewValidationError()
+	validationErrors := map[string]string{}
 
 	if page := util.ParseOptionalPositiveInt(query.Get("page"), "page", validationErrors); page != nil {
 		params.Page = *page
@@ -35,16 +37,22 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	params.PlaylistID = util.ParseOptionalPositiveInt(query.Get("playlist_id"), "playlist_id", validationErrors)
 	params.UserID = util.ParseOptionalPositiveInt(query.Get("user_id"), "user_id", validationErrors)
 
-	if validationErrors.Err() != nil {
-		util.RespondError(w, validationErrors)
+	if len(validationErrors) > 0 {
+		handler.Error(w, apperror.Validation("failed validation", validationErrors))
 		return
 	}
 
 	result, err := h.svc.List(r.Context(), params)
 	if err != nil {
-		util.RespondError(w, err)
+		handler.Error(w, err)
 		return
 	}
+	page := handler.PaginationResponse{
+		Data: result.Data,
+		Page: result.Page,
+		PerPage: result.PerPage,
+		Total: result.Total,
+	}
 
-	util.RespondJSON(w, http.StatusOK, result)
+	handler.Success(w, http.StatusOK, page)
 }

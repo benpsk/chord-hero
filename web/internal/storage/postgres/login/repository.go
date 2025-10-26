@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/apperror"
 	loginsvc "github.com/lyricapp/lyric/web/internal/services/login"
 )
 
@@ -38,7 +38,7 @@ func (r *Repository) FindOrCreateUser(ctx context.Context, email string) (logins
 	}
 
 	if err != pgx.ErrNoRows {
-		return loginsvc.User{}, fmt.Errorf("select user: %w", err)
+		return loginsvc.User{}, apperror.NotFound("email not found")
 	}
 
 	err = r.db.QueryRow(ctx, `
@@ -95,7 +95,7 @@ func (r *Repository) ConsumeLoginCode(ctx context.Context, code string, attempte
 	`, code, attemptedAt, attemptedAt).Scan(&userID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return loginsvc.User{}, false, nil
+			return loginsvc.User{}, false, apperror.Validation("msg", map[string]string{"code": "invalid code"})
 		}
 		return loginsvc.User{}, false, fmt.Errorf("consume login code: %w", err)
 	}
@@ -122,7 +122,7 @@ func (r *Repository) FindUserByID(ctx context.Context, userID int) (loginsvc.Use
 	`, userID).Scan(&user.ID, &user.Email, &user.Role)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return loginsvc.User{}, util.NewNotFoundError("user not found", nil)
+			return loginsvc.User{}, apperror.NotFound("user not found")
 		}
 		return loginsvc.User{}, fmt.Errorf("select user by id: %w", err)
 	}

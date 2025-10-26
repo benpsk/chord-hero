@@ -11,6 +11,7 @@ import (
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
+	"github.com/lyricapp/lyric/web/internal/apperror"
 	adminctx "github.com/lyricapp/lyric/web/internal/http/context/admin"
 	albumsvc "github.com/lyricapp/lyric/web/internal/services/albums"
 	artistsvc "github.com/lyricapp/lyric/web/internal/services/artists"
@@ -233,10 +234,6 @@ func (h *Handler) Edit(w http.ResponseWriter, r *http.Request) {
 
 	song, err := h.songs.Get(r.Context(), songID)
 	if err != nil {
-		if errors.Is(err, songsvc.ErrNotFound) {
-			http.NotFound(w, r)
-			return
-		}
 		http.Error(w, "failed to load song", http.StatusInternalServerError)
 		return
 	}
@@ -354,10 +351,6 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.songs.Update(r.Context(), songID, params); err != nil {
-		if errors.Is(err, songsvc.ErrNotFound) {
-			http.NotFound(w, r)
-			return
-		}
 		http.Error(w, "failed to update song", http.StatusInternalServerError)
 		return
 	}
@@ -381,7 +374,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	searchTerm := strings.TrimSpace(r.FormValue("q"))
 
-	if err := h.songs.Delete(r.Context(), songID); err != nil && !errors.Is(err, songsvc.ErrNotFound) {
+	if err := h.songs.Delete(r.Context(), songID); err != nil && !errors.Is(err, apperror.NotFound("song not found")) {
 		http.Error(w, "failed to delete song", http.StatusInternalServerError)
 		return
 	}

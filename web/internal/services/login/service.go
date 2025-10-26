@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/apperror"
 )
 
 const (
@@ -97,15 +97,18 @@ func NewService(repo Repository, mailer Mailer, cfg Config) Service {
 }
 
 func (s *service) validate(email string) error {
-	ve := util.NewValidationError()
+	ve := map[string]string{}
 	email = strings.TrimSpace(strings.ToLower(email))
 	if email == "" {
-		ve.AddField("username", "username is required.")
+		ve["username"] = "username is required."
 	}
 	if !isValidEmail(email) {
-		ve.AddField("username", "username is invalid.")
+		ve["username"] = "username is invalid."
 	}
-	return ve.Err()
+	if len(ve) > 0 {
+		return apperror.Validation("msg", ve)
+	}
+	return nil
 }
 
 // RequestOTP generates and dispatches a one-time login code.
@@ -116,7 +119,7 @@ func (s *service) RequestOTP(ctx context.Context, email string) error {
 	}
 	user, err := s.repo.FindOrCreateUser(ctx, email)
 	if err != nil {
-		return util.NewNotFoundError("lookup user", err)
+		return apperror.NotFound("user not found")
 	}
 
 	code, err := s.generateCode()
@@ -163,37 +166,37 @@ func isValidEmail(value string) bool {
 }
 
 func normalizeCode(value any) (string, error) {
-	ve := util.NewValidationError()
+	ve := map[string]string{}
 	switch v := value.(type) {
 	case string:
 		code := strings.TrimSpace(v)
 		if code == "" {
-			ve.AddField("code", "code is required")
-			return "", ve.Err()
+			ve["code"] = "code is required"
+			return "", apperror.Validation("msg", ve)
 		}
 		return code, nil
 	case json.Number:
 		if v == "" {
-			ve.AddField("code", "code is required")
-			return "", ve.Err()
+			ve["code"] = "code is required"
+			return "", apperror.Validation("msg", ve)
 		}
 		if _, err := v.Int64(); err != nil {
-			ve.AddField("code", "code must be numeric")
-			return "", ve.Err()
+			ve["code"] = "code must be numeric"
+			return "", apperror.Validation("msg", ve)
 		}
 		return v.String(), nil
 	case float64:
 		if v < 0 {
-			ve.AddField("code", "code must be numeric")
-			return "", ve.Err()
+			ve["code"] = "code must be numeric"
+			return "", apperror.Validation("msg", ve)
 		}
 		return strconv.FormatInt(int64(v), 10), nil
 	case nil:
-		ve.AddField("code", "code is required")
-		return "", ve.Err()
+		ve["code"] = "code is required"
+		return "", apperror.Validation("msg", ve)
 	default:
-		ve.AddField("code", "code must be numeric")
-		return "", ve.Err()
+		ve["code"] = "code must be numeric"
+		return "", apperror.Validation("msg", ve)
 	}
 }
 
@@ -203,10 +206,10 @@ func (s *service) VerifyCode(ctx context.Context, otp any) (VerifyResult, error)
 	if err != nil {
 		return VerifyResult{}, err
 	}
-	ve := util.NewValidationError()
+	ve := map[string]string{}
 	if len(code) != s.codeLength || !isDigits(code) {
-		ve.AddField("code", "Code is invalid or has the wrong format.")
-		return VerifyResult{}, ve
+		ve["code"] = "Code is invalid or has the wrong format."
+		return VerifyResult{}, apperror.Validation("msg", ve)
 	}
 
 	now := s.now()
@@ -215,8 +218,8 @@ func (s *service) VerifyCode(ctx context.Context, otp any) (VerifyResult, error)
 		return VerifyResult{}, fmt.Errorf("consume otp: %w", err)
 	}
 	if !ok {
-		ve.AddField("code", "Code is invalid.")
-		return VerifyResult{}, ve
+		ve["code"] = "Code is invalid."
+		return VerifyResult{}, apperror.Validation("msg", ve)
 	}
 
 	claims := map[string]any{
@@ -254,7 +257,7 @@ func (s *service) TokenAuth() *jwtauth.JWTAuth {
 // CurrentUser retrieves the latest user profile.
 func (s *service) CurrentUser(ctx context.Context, userID int) (User, error) {
 	if userID <= 0 {
-		return User{}, util.NewUnauthorizedError("invalid user id", nil)
+		return User{}, apperror.Unauthorized("Unauthorized")
 	}
 	return s.repo.FindUserByID(ctx, userID)
 }

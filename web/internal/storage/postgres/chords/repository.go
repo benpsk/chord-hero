@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/lyricapp/lyric/web/internal/apperror"
 	chords "github.com/lyricapp/lyric/web/internal/services/chords"
 )
 
@@ -36,7 +37,7 @@ func (r *Repository) Find(ctx context.Context, name string) (chords.Chord, error
 
 	if err := row.Scan(&chord.ID, &chord.Name); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return chords.Chord{}, fmt.Errorf("chord not found")
+			return chords.Chord{}, apperror.NotFound("chord not found")
 		}
 		return chords.Chord{}, fmt.Errorf("find chord: %w", err)
 	}

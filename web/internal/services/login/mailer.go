@@ -7,6 +7,8 @@ import (
 	"net/smtp"
 	"strings"
 	"time"
+
+	"github.com/lyricapp/lyric/web/internal/apperror"
 )
 
 // SMTPSettings describes how to connect to an SMTP relay.
@@ -57,7 +59,7 @@ func NewSMTPMailer(settings SMTPSettings) Mailer {
 
 func (m *smtpMailer) SendOTP(_ context.Context, email, code string, expiresAt time.Time) error {
 	if strings.TrimSpace(email) == "" {
-		return fmt.Errorf("smtp mailer: recipient email is required")
+		return apperror.BadRequest("email is required")
 	}
 
 	from := m.from
@@ -65,7 +67,7 @@ func (m *smtpMailer) SendOTP(_ context.Context, email, code string, expiresAt ti
 		from = m.username
 	}
 	if strings.TrimSpace(from) == "" {
-		return fmt.Errorf("smtp mailer: from address is required")
+		return apperror.BadRequest("from is required")
 	}
 
 	subject := "Your login code"

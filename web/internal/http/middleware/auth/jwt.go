@@ -5,7 +5,8 @@ import (
 
 	"github.com/go-chi/jwtauth/v5"
 
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/apperror"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 )
 
 // Authenticator returns middleware that enforces JWT presence and validity,
@@ -15,11 +16,7 @@ func Authenticator(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, _, err := jwtauth.FromContext(r.Context())
 			if err != nil || token == nil {
-				util.RespondJSONOld(w, http.StatusUnauthorized, map[string]any{
-					"errors": map[string]string{
-						"message": "unauthorized",
-					},
-				})
+				handler.Error(w, apperror.Unauthorized("unauthorized"))
 				return
 			}
 

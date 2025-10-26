@@ -2,16 +2,13 @@ package admin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lyricapp/lyric/web/internal/apperror"
 	adminauthsvc "github.com/lyricapp/lyric/web/internal/services/adminauth"
 )
-
-// ErrNotFound indicates that no admin user matched the lookup criteria.
-var ErrNotFound = errors.New("admin: user not found")
 
 // Repository provides access to admin user credentials stored in Postgres.
 type Repository struct {
@@ -35,7 +32,7 @@ func (r *Repository) FindByUsername(ctx context.Context, username string) (admin
 	`, username).Scan(&user.ID, &user.Username, &user.PasswordHash)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return adminauthsvc.User{}, ErrNotFound
+			return adminauthsvc.User{}, apperror.NotFound("user not found")
 		}
 		return adminauthsvc.User{}, fmt.Errorf("select admin user: %w", err)
 	}

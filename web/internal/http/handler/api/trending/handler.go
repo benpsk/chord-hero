@@ -3,7 +3,7 @@ package trending
 import (
 	"net/http"
 
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	trendingsvc "github.com/lyricapp/lyric/web/internal/services/trending"
 )
 
@@ -21,31 +21,29 @@ func New(svc trendingsvc.Service) Handler {
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	collections, err := h.svc.TrendingSets(r.Context())
 	if err != nil {
-		util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list trendings"}})
+		handler.Error(w, err)
 		return
 	}
 
-	util.RespondJSONOld(w, http.StatusOK, map[string]any{"data": collections})
+	handler.Success(w, http.StatusOK, collections)
 }
 
 // Albums responds with trending albums.
 func (h Handler) Albums(w http.ResponseWriter, r *http.Request) {
 	albums, err := h.svc.TrendingAlbums(r.Context())
 	if err != nil {
-		util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list trending albums"}})
+		handler.Error(w, err)
 		return
 	}
-
-	util.RespondJSONOld(w, http.StatusOK, map[string]any{"data": albums})
+	handler.Success(w, http.StatusOK, albums)
 }
 
 // Artists responds with trending artists.
 func (h Handler) Artists(w http.ResponseWriter, r *http.Request) {
 	artists, err := h.svc.TrendingArtists(r.Context())
 	if err != nil {
-		util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list trending artists"}})
+		handler.Error(w, err)
 		return
 	}
-
-	util.RespondJSONOld(w, http.StatusOK, map[string]any{"data": artists})
+	handler.Success(w, http.StatusOK, artists)
 }

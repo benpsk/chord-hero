@@ -2,9 +2,10 @@ package login
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
+	"github.com/lyricapp/lyric/web/internal/apperror"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	loginsvc "github.com/lyricapp/lyric/web/internal/services/login"
 )
@@ -27,14 +28,14 @@ func (h Handler) Request(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
-		util.RespondJSON(w, http.StatusBadRequest, errors.New("Invalid request body"))
+		handler.Error(w, apperror.BadRequest("Invalid request body"))
 		return
 	}
 	if err := h.svc.RequestOTP(r.Context(), payload.Username); err != nil {
-		util.RespondError(w, err)
+		handler.Error(w, err)
 		return
 	}
-	util.RespondJSON(w, http.StatusOK, map[string]string{"message": "Success"})
+	handler.Success(w, http.StatusOK, map[string]string{"message": "Success"})
 }
 
 // Verify handles OTP code verification and token issuance.
@@ -46,31 +47,31 @@ func (h Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
-		util.RespondJSON(w, http.StatusBadRequest, err)
+		handler.Error(w, apperror.BadRequest("invalid json payload"))
 		return
 	}
 
 	result, svcErr := h.svc.VerifyCode(r.Context(), payload.Code)
 	if svcErr != nil {
-		util.RespondError(w, svcErr)
+		handler.Error(w, svcErr)
 		return
 	}
-	util.RespondJSON(w, http.StatusOK, map[string]string{"access_token": result.Token})
+	handler.Success(w, http.StatusOK, map[string]string{"access_token": result.Token})
 }
 
 // Me returns the authenticated user's profile.
 func (h Handler) Me(w http.ResponseWriter, r *http.Request) {
 	userID, err := util.CurrentUserID(r)
 	if err != nil {
-		util.RespondJSON(w, http.StatusUnauthorized, map[string]string{"message": "unauthorized"})
+		handler.Error(w, apperror.Unauthorized("unauthorized"))
 		return
 	}
 	user, err := h.svc.CurrentUser(r.Context(), userID)
 	if err != nil {
-		util.RespondError(w, err)
+		handler.Error(w, err)
 		return
 	}
-	util.RespondJSON(w, http.StatusOK, map[string]any{
+	handler.Success(w, http.StatusOK, map[string]string{
 		"username": user.Email,
 		"role":     user.Role,
 	})

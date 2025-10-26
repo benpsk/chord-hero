@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/lyricapp/lyric/web/internal/apperror"
 	playlistsvc "github.com/lyricapp/lyric/web/internal/services/playlists"
 )
 
@@ -138,7 +139,7 @@ func (r *Repository) Create(ctx context.Context, params playlistsvc.CreateParams
     `, params.Name, params.UserID).Scan(&playlistID); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
-			return 0, playlistsvc.ErrInvalidUser
+			return 0, apperror.BadRequest("invalid user_id")
 		}
 	}
 	return playlistID, nil
@@ -173,13 +174,7 @@ func (r *Repository) AddSongs(ctx context.Context, userID int, playlistID int, s
         `, playlistID, songID); err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
-				switch pgErr.ConstraintName {
-				case "playlist_song_playlist_id_fkey":
-					return playlistsvc.ErrPlaylistNotFound
-				case "playlist_song_song_id_fkey":
-					return playlistsvc.ErrSongNotFound
-				}
-				return playlistsvc.ErrSongNotFound
+				return apperror.BadRequest("invalid playlist_id or song_id")
 			}
 			return fmt.Errorf("add songs to playlist: %w", err)
 		}
@@ -203,7 +198,7 @@ func (r *Repository) Update(ctx context.Context, id int, params playlistsvc.Upda
 		return fmt.Errorf("update playlist: %w", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return playlistsvc.ErrPlaylistNotFound
+		return apperror.NotFound("playlist not found")
 	}
 	return nil
 }
@@ -218,7 +213,7 @@ func (r *Repository) Delete(ctx context.Context, id int, userID int) error {
 		return fmt.Errorf("delete playlist: %w", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return playlistsvc.ErrPlaylistNotFound
+		return apperror.NotFound("playlist not found")
 	}
 	return nil
 }
@@ -242,7 +237,7 @@ func (r *Repository) RemoveSongs(ctx context.Context, playlistID int, userID int
 		return fmt.Errorf("check playlist ownership: %w", err)
 	}
 	if !exists {
-		return playlistsvc.ErrPlaylistNotFound
+		return apperror.NotFound("playlist not found")
 	}
 
 	for _, songID := range songIDs {
@@ -280,7 +275,7 @@ func (r *Repository) Share(ctx context.Context, playlistID int, ownerID int, use
 		return fmt.Errorf("verify playlist owner: %w", err)
 	}
 	if !isOwner {
-		return playlistsvc.ErrPlaylistNotFound
+		return apperror.NotFound("playlist not found")
 	}
 
 	desired := make(map[int]struct{}, len(userIDs))
@@ -302,7 +297,7 @@ func (r *Repository) Share(ctx context.Context, playlistID int, ownerID int, use
         `, playlistID, id); err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
-				return playlistsvc.ErrInvalidUser
+				return apperror.BadRequest("invalid user_id")
 			}
 			return fmt.Errorf("share playlist with user %d: %w", id, err)
 		}
@@ -323,7 +318,7 @@ func (r *Repository) Leave(ctx context.Context, playlistID int, userID int) erro
 		return fmt.Errorf("leave playlist: %w", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return playlistsvc.ErrNotMember
+		return apperror.Unauthorized("unauthorized user")
 	}
 
 	return nil

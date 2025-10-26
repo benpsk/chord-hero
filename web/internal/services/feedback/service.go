@@ -2,9 +2,10 @@ package feedback
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
+
+	"github.com/lyricapp/lyric/web/internal/apperror"
 )
 
 // Service provides feedback submission.
@@ -42,10 +43,10 @@ func NewService(repo Repository) Service {
 func (s *service) Create(ctx context.Context, input CreateInput) (Feedback, error) {
 	input.Message = strings.TrimSpace(input.Message)
 	if input.Message == "" {
-		return Feedback{}, fmt.Errorf("message is required")
+		return Feedback{}, apperror.Validation("msg", map[string]string{"message": "message is required"})
 	}
 	if input.UserID <= 0 {
-		return Feedback{}, fmt.Errorf("user_id is required")
+		return Feedback{}, apperror.Unauthorized("Unauthorized user")
 	}
 
 	return s.repo.Create(ctx, input)

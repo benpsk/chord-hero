@@ -85,6 +85,19 @@
   "writer_ids": [4]
 }
 
+-- PUT /api/songs/{id}
+{
+  "title": "Amazing Grace",
+  "level_id": 1,
+  "key": "G",
+  "language_id": 1,
+  "lyric": "Intro: [G]\nAmazing grace, how sweet the sound",
+  "release_year": 1779,
+  "album_ids": [1, 2],
+  "artist_ids": [1],
+  "writer_ids": [4]
+}
+
 -- GET /api/albums
   -- ?search="album_name"
 {

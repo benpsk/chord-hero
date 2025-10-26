@@ -2,11 +2,9 @@ package songs
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"strings"
 
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/apperror"
 	"github.com/lyricapp/lyric/web/pkg/pagination"
 )
 
@@ -131,18 +129,6 @@ func (s *service) List(ctx context.Context, params ListParams) (ListResult, erro
 	return s.repo.List(ctx, params)
 }
 
-// ErrTitleRequired is returned when attempting to create a song without a title.
-var ErrTitleRequired = errors.New("songs: title is required")
-
-// ErrNotFound indicates a requested song does not exist.
-var ErrNotFound = errors.New("songs: not found")
-
-// ErrInvalidLevel indicates the supplied level is missing or invalid.
-var ErrInvalidLevel = errors.New("songs: invalid level")
-
-// ErrInvalidUser indicates the supplied user is missing or invalid.
-var ErrInvalidUser = errors.New("songs: invalid user")
-
 func (s *service) Create(ctx context.Context, params CreateParams) (int, error) {
 	if err := normaliseMutation(&params.MutationParams); err != nil {
 		return 0, err
@@ -158,7 +144,7 @@ func (s *service) Create(ctx context.Context, params CreateParams) (int, error) 
 // Get returns a song with its related data by identifier.
 func (s *service) Get(ctx context.Context, id int) (Song, error) {
 	if id <= 0 {
-		return Song{}, ErrNotFound
+		return Song{}, apperror.NotFound("song not found")
 	}
 	return s.repo.Get(ctx, id)
 }
@@ -166,7 +152,7 @@ func (s *service) Get(ctx context.Context, id int) (Song, error) {
 // Update applies new values to an existing song.
 func (s *service) Update(ctx context.Context, id int, params UpdateParams) error {
 	if id <= 0 {
-		return ErrNotFound
+		return apperror.NotFound("song not found")
 	}
 
 	if err := normaliseMutation(&params.MutationParams); err != nil {
@@ -179,7 +165,7 @@ func (s *service) Update(ctx context.Context, id int, params UpdateParams) error
 // Delete removes a song record.
 func (s *service) Delete(ctx context.Context, id int) error {
 	if id <= 0 {
-		return ErrNotFound
+		return apperror.NotFound("song not found")
 	}
 	return s.repo.Delete(ctx, id)
 }
@@ -187,35 +173,35 @@ func (s *service) Delete(ctx context.Context, id int) error {
 // AssignLevel updates the associated level for a song.
 func (s *service) AssignLevel(ctx context.Context, songID, levelID, userID int) error {
 	if songID <= 0 {
-		return ErrNotFound
+		return apperror.NotFound("song not found")
 	}
 	if levelID <= 0 {
-		return fmt.Errorf("songs: invalid level id %d", levelID)
+		return apperror.BadRequest("song: invalid level id")
 	}
 
 	if userID <= 0 {
-		return ErrInvalidUser
+		return apperror.Unauthorized("unauthorized user")
 	}
 
 	return s.repo.AssignLevel(ctx, songID, levelID, userID)
 }
 
 func normaliseMutation(params *MutationParams) error {
-	ve := util.NewValidationError()
+	ve := map[string]string{}
 	title := strings.TrimSpace(params.Title)
 	if title == "" {
-		ve.AddField("title", "title is required")
+		ve["title"] = "title is required"
 	}
 	params.Title = title
 
 	if params.LevelID != nil {
 		if *params.LevelID <= 0 {
-			ve.AddField("level_id", "invalid level_id")
+			ve["level_id"] = "invalid level_id"
 		}
 	}
 	if params.LanguageID != 0 {
 		if params.LanguageID <= 0 {
-			ve.AddField("language_id", "invalid language_id")
+			ve["language_id"] = "invalid language_id"
 		}
 	}
 
@@ -243,7 +229,10 @@ func normaliseMutation(params *MutationParams) error {
 	params.WriterIDs = uniquePositive(params.WriterIDs)
 	params.AlbumIDs = uniquePositive(params.AlbumIDs)
 
-	return ve.Err()
+	if len(ve) > 0 {
+		return apperror.Validation("msg", ve)
+	}
+	return nil
 }
 
 func ptr[T any](value T) *T {

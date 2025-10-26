@@ -72,6 +72,7 @@
 - Use idiomatic package naming (short, lower-case) and keep files focused on a single concern.
 - Prefer dependency injection for handlers/services to simplify testing.
 - Document exported functions and types with GoDoc comments when they are part of the public API surface.
+- Always use all lower-case for sql syntax
 
 ### API Design & Testing Guidelines
 - Keep handlers thin; delegate business logic to services under `internal/`.

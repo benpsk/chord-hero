@@ -1,10 +1,9 @@
 package levels
 
 import (
-	"log"
 	"net/http"
 
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	levelsvc "github.com/lyricapp/lyric/web/internal/services/levels"
 )
 
@@ -22,10 +21,8 @@ func New(svc levelsvc.Service) Handler {
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	levels, err := h.svc.List(r.Context())
 	if err != nil {
-		log.Println(err)
-		util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list levels"}})
+		handler.Error(w, err)
 		return
 	}
-
-	util.RespondJSONOld(w, http.StatusOK, map[string]any{"data": levels})
+	handler.Success(w, http.StatusOK, levels)
 }

@@ -1,10 +1,9 @@
 package languages
 
 import (
-	"log"
 	"net/http"
 
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	languagesvc "github.com/lyricapp/lyric/web/internal/services/languages"
 )
 
@@ -21,12 +20,9 @@ func New(svc languagesvc.Service) Handler {
 // List responds with all available languages.
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	languages, err := h.svc.List(r.Context())
-	log.Println(err)
 	if err != nil {
-		log.Println(err)
-		util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to list languages"}})
+		handler.Error(w, err)
 		return
 	}
-
-	util.RespondJSONOld(w, http.StatusOK, map[string]any{"data": languages})
+	handler.Success(w, http.StatusOK, languages)
 }

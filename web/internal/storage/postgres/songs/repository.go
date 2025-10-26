@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/apperror"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 )
 
@@ -169,7 +169,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 			song.Level = &level
 		}
 		song.Language = songsvc.Language{
-			ID: int(languageID),
+			ID:   int(languageID),
 			Name: titleCase(languageName),
 		}
 		if songKey.Valid {
@@ -235,7 +235,6 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
         left join languages la on la.id = s.language_id
         where s.id = $1
     `
-
 	var (
 		levelName   sql.NullString
 		levelID     sql.NullInt32
@@ -257,7 +256,7 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
 		&releaseYear,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return songsvc.Song{}, songsvc.ErrNotFound
+			return songsvc.Song{}, apperror.NotFound("song not found")
 		}
 		return songsvc.Song{}, fmt.Errorf("get song: %w", err)
 	}
@@ -327,7 +326,11 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 		nullableInt(params.ReleaseYear),
 		nullableInt(params.CreatedBy),
 	).Scan(&songID); err != nil {
-		return 0, fmt.Errorf("insert song: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+			return 0, apperror.BadRequest("A related resources does not exist")
+		}
+		return 0, fmt.Errorf("insert songs: %w", err)
 	}
 
 	for _, artistID := range params.ArtistIDs {
@@ -335,7 +338,11 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 			insert into artist_song (artist_id, song_id)
 			values ($1, $2)
 		`, artistID, songID); err != nil {
-			return 0, util.NewNotFoundError("invalid artist_id", err)
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+				return 0, apperror.BadRequest("invalid artist_id")
+			}
+			return 0, err
 		}
 	}
 
@@ -344,7 +351,11 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 			insert into song_writer (writer_id, song_id)
 			values ($1, $2)
 		`, writerID, songID); err != nil {
-			return 0, util.NewNotFoundError("invalid writer_id", err)
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+				return 0, apperror.BadRequest("invalid writer_id")
+			}
+			return 0, err
 		}
 	}
 
@@ -353,7 +364,11 @@ func (r *Repository) Create(ctx context.Context, params songsvc.CreateParams) (i
 			insert into album_song (album_id, song_id)
 			values ($1, $2)
 		`, albumID, songID); err != nil {
-			return 0, util.NewNotFoundError("invalid album_id", err)
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+				return 0, apperror.BadRequest("invalid album_id")
+			}
+			return 0, err
 		}
 	}
 
@@ -393,7 +408,7 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 		return fmt.Errorf("update song: %w", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return songsvc.ErrNotFound
+		return apperror.NotFound("song not found")
 	}
 
 	if _, err := tx.Exec(ctx, `DELETE FROM artist_song WHERE song_id = $1`, id); err != nil {
@@ -411,6 +426,10 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 			INSERT INTO artist_song (artist_id, song_id)
 			VALUES ($1, $2)
 		`, artistID, id); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+				return apperror.BadRequest("invalid artist_id")
+			}
 			return fmt.Errorf("insert artist relation: %w", err)
 		}
 	}
@@ -419,6 +438,10 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 			INSERT INTO song_writer (writer_id, song_id)
 			VALUES ($1, $2)
 		`, writerID, id); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+				return apperror.BadRequest("invalid writer_id")
+			}
 			return fmt.Errorf("insert writer relation: %w", err)
 		}
 	}
@@ -427,6 +450,10 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 			INSERT INTO album_song (album_id, song_id)
 			VALUES ($1, $2)
 		`, albumID, id); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+				return apperror.BadRequest("invalid album_id")
+			}
 			return fmt.Errorf("insert album relation: %w", err)
 		}
 	}
@@ -445,7 +472,7 @@ func (r *Repository) Delete(ctx context.Context, id int) error {
 		return fmt.Errorf("delete song: %w", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return songsvc.ErrNotFound
+		return apperror.NotFound("song not found")
 	}
 	return nil
 }
@@ -466,12 +493,12 @@ func (r *Repository) AssignLevel(ctx context.Context, songID, levelID, userID in
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
-			return songsvc.ErrInvalidLevel
+			return apperror.BadRequest("invalid level_id")
 		}
 		return fmt.Errorf("assign level update song: %w", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return songsvc.ErrNotFound
+		return apperror.NotFound("song not found")
 	}
 
 	if _, err := tx.Exec(ctx, `
@@ -482,15 +509,7 @@ func (r *Repository) AssignLevel(ctx context.Context, songID, levelID, userID in
     `, songID, levelID, userID); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
-			switch pgErr.ConstraintName {
-			case "level_song_song_id_fkey":
-				return songsvc.ErrNotFound
-			case "level_song_level_id_fkey":
-				return songsvc.ErrInvalidLevel
-			case "level_song_user_id_fkey":
-				return songsvc.ErrInvalidUser
-			}
-			return songsvc.ErrInvalidLevel
+			return apperror.BadRequest("invalid resources")
 		}
 		return fmt.Errorf("assign level insert relation: %w", err)
 	}

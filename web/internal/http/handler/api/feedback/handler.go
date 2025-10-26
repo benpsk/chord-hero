@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/lyricapp/lyric/web/internal/apperror"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	feedbacksvc "github.com/lyricapp/lyric/web/internal/services/feedback"
 )
@@ -23,7 +25,7 @@ func New(svc feedbacksvc.Service) Handler {
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, authErr := util.CurrentUserID(r)
 	if authErr != nil {
-		util.RespondUnauthorized(w)
+		handler.Error(w, authErr)
 		return
 	}
 
@@ -32,7 +34,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "invalid JSON payload"}})
+		handler.Error(w, apperror.BadRequest("invalid JSON payload"))
 		return
 	}
 
@@ -47,7 +49,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(errorsMap) > 0 {
-		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": errorsMap})
+		handler.Error(w, apperror.Validation("msg", errorsMap))
 		return
 	}
 
@@ -56,9 +58,13 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Message: message,
 	})
 	if err != nil {
-		util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to store feedback"}})
+		handler.Error(w, err)
 		return
 	}
 
-	util.RespondJSONOld(w, http.StatusCreated, map[string]any{"data": map[string]any{"message": "Feedback submitted", "feedback": feedback}})
+	handler.Success(
+		w, 
+		http.StatusCreated, 
+		map[string]any{"message": "Feedback submitted", "feedback": feedback},
+		)
 }

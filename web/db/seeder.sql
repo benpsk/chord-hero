@@ -28,10 +28,10 @@ VALUES
     ('Zomi'),
     ('Mizo');
 
-INSERT INTO users (name, email, role)
+INSERT INTO users (email, role)
 VALUES
-    ('Alice Nguyen', 'alice@example.com', 'user'),
-    ('Ben Harper', 'ben@example.com', 'editor');
+    ('alice@example.com', 'user'),
+    ('ben@example.com', 'editor');
 
 INSERT INTO artists (name)
 VALUES

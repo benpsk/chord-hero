@@ -5,7 +5,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+	"github.com/lyricapp/lyric/web/internal/apperror"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	chordsvc "github.com/lyricapp/lyric/web/internal/services/chords"
 )
 
@@ -23,15 +24,15 @@ func New(svc chordsvc.Service) Handler {
 func (h Handler) Show(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	if name == "" {
-		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "chord name is required"}})
+		handler.Error(w, apperror.BadRequest("chord name is required"))
 		return
 	}
 
 	chord, err := h.svc.Find(r.Context(), name)
 	if err != nil {
-		util.RespondJSONOld(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "chord not found"}})
+		handler.Error(w, err)
 		return
 	}
 
-	util.RespondJSONOld(w, http.StatusOK, map[string]any{"data": chord})
+	handler.Success(w, http.StatusOK, chord)
 }

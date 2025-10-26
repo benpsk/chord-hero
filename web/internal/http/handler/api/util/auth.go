@@ -45,11 +45,3 @@ func CurrentUserID(r *http.Request) (int, error) {
 	}
 }
 
-// RespondUnauthorized returns a standardized unauthorized JSON response.
-func RespondUnauthorized(w http.ResponseWriter) {
-	RespondJSONOld(w, http.StatusUnauthorized, map[string]any{
-		"errors": map[string]string{
-			"message": "unauthorized",
-		},
-	})
-}

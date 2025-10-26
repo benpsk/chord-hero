@@ -2,14 +2,14 @@ package songs
 
 import (
 	"encoding/json"
-	"errors"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/lyricapp/lyric/web/internal/apperror"
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 )
@@ -24,11 +24,114 @@ func New(svc songsvc.Service) Handler {
 	return Handler{svc: svc}
 }
 
+type songPayload struct {
+	Title       string `json:"title"`
+	LevelID     *int   `json:"level_id"`
+	Key         string `json:"key"`
+	LanguageID  int    `json:"language_id"`
+	ReleaseYear *int   `json:"release_year"`
+	AlbumIDs    []int  `json:"album_ids"`
+	ArtistIDs   []int  `json:"artist_ids"`
+	WriterIDs   []int  `json:"writer_ids"`
+	Lyric       string `json:"lyric"`
+}
+
+func decodeSongPayload(r *http.Request) (songPayload, error) {
+	var payload songPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		return songPayload{}, err
+	}
+	return payload, nil
+}
+
+func (p songPayload) toMutationParams() (songsvc.MutationParams, error) {
+	ve := map[string]string{}
+
+	title := strings.TrimSpace(p.Title)
+	if title == "" {
+		ve["title"] = "title is required"
+	}
+
+	if p.LevelID == nil {
+		ve["level_id"] = "level_id is required"
+	} else if *p.LevelID <= 0 {
+		ve["level_id"] = "level_id must be a positive integer"
+	}
+
+	if p.LanguageID == 0 {
+		ve["language_id"] = "language_id is required"
+	} else if p.LanguageID <= 0 {
+		ve["language_id"] = "language_id must be a positive integer"
+	}
+
+	lyricTrimmed := strings.TrimSpace(p.Lyric)
+	if lyricTrimmed == "" {
+		ve["lyric"] = "lyric is required"
+	}
+
+	var releaseYear *int
+	if p.ReleaseYear != nil {
+		if *p.ReleaseYear <= 0 {
+			ve["release_year"] = "release_year must be a positive integer"
+		} else {
+			releaseYear = p.ReleaseYear
+		}
+	}
+
+	validateIDs := func(values []int, field string) []int {
+		if len(values) == 0 {
+			return []int{}
+		}
+
+		valid := make([]int, 0, len(values))
+		for _, id := range values {
+			if id <= 0 {
+				ve[field] = field + " must contain positive integers"
+				return []int{}
+			}
+			valid = append(valid, id)
+		}
+		return valid
+	}
+
+	albumIDs := validateIDs(p.AlbumIDs, "album_ids")
+	artistIDs := validateIDs(p.ArtistIDs, "artist_ids")
+	writerIDs := validateIDs(p.WriterIDs, "writer_ids")
+
+	if len(ve) > 0 {
+		return songsvc.MutationParams{}, apperror.Validation("msg", ve)
+	}
+
+	mutation := songsvc.MutationParams{
+		Title:      title,
+		AlbumIDs:   albumIDs,
+		ArtistIDs:  artistIDs,
+		WriterIDs:  writerIDs,
+		LevelID:    p.LevelID,
+		LanguageID: p.LanguageID,
+	}
+
+	if key := strings.TrimSpace(p.Key); key != "" {
+		mutation.Key = &key
+	}
+
+	lyric := p.Lyric
+	mutation.Lyric = &lyric
+
+	if releaseYear != nil {
+		mutation.ReleaseYear = releaseYear
+	}
+
+	return mutation, nil
+}
+
 // List responds with a paginated list of songs following the shared API shape.
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	params := songsvc.ListParams{}
-	validationErrors := util.NewValidationError()
+	validationErrors := map[string]string{}
 
 	if page := util.ParseOptionalPositiveInt(query.Get("page"), "page", validationErrors); page != nil {
 		params.Page = *page
@@ -47,134 +150,82 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	params.Search = util.ParseOptionalSearch(query.Get("search"))
 
-	if validationErrors.Err() != nil {
-		util.RespondError(w, validationErrors)
+	if len(validationErrors) > 0 {
+		handler.Error(w, apperror.Validation("failed validation", validationErrors))
 		return
 	}
 
 	result, err := h.svc.List(r.Context(), params)
 	if err != nil {
-		util.RespondError(w, err)
+		handler.Error(w, err)
 		return
 	}
-	page := util.PaginationResponse{
+	page := handler.PaginationResponse{
 		Data:    result.Data,
 		Page:    result.Page,
 		PerPage: result.PerPage,
 		Total:   result.Total,
 	}
-	util.RespondJSON(w, http.StatusOK, page)
+	handler.Success(w, http.StatusOK, page)
 }
 
 // Create stores a new song using the shared admin schema.
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Title       string `json:"title"`
-		LevelID     *int   `json:"level_id"`
-		Key         string `json:"key"`
-		LanguageID  int    `json:"language_id"`
-		ReleaseYear *int   `json:"release_year"`
-		AlbumIDs    []int  `json:"album_ids"`
-		ArtistIDs   []int  `json:"artist_ids"`
-		WriterIDs   []int  `json:"writer_ids"`
-		Lyric       string `json:"lyric"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&payload); err != nil {
-		util.RespondJSON(w, http.StatusBadRequest, err)
+	payload, err := decodeSongPayload(r)
+	if err != nil {
+		handler.Error(w, err)
 		return
 	}
 
-	title := strings.TrimSpace(payload.Title)
-	key := strings.TrimSpace(payload.Key)
-	lyricTrimmed := strings.TrimSpace(payload.Lyric)
-
-	ve := util.NewValidationError()
-
-	if title == "" {
-		ve.AddField("title", "title is required")
-	}
-
-	if payload.LevelID == nil {
-		ve.AddField("level_id", "level_id is required")
-	} else if *payload.LevelID <= 0 {
-		ve.AddField("level_id", "level_id must be a positive integer")
-	}
-	if payload.LanguageID == 0 {
-		ve.AddField("language_id", "language_id is required")
-	} else if payload.LanguageID <= 0 {
-		ve.AddField("language_id", "language_id must be a positive integer")
-	}
-
-	if lyricTrimmed == "" {
-		ve.AddField("lyric", "lyric is required")
-	}
-
-	var releaseYear *int
-	if payload.ReleaseYear != nil {
-		if *payload.ReleaseYear <= 0 {
-			ve.AddField("release_year", "release_year must be a positive integer")
-		} else {
-			releaseYear = payload.ReleaseYear
-		}
-	}
-
-	validateIDs := func(values []int, field string) []int {
-		if len(values) == 0 {
-			return []int{}
-		}
-
-		valid := make([]int, 0, len(values))
-		for _, id := range values {
-			if id <= 0 {
-				ve.AddField(field, field+" must contain positive integers")
-				return []int{}
-			}
-			valid = append(valid, id)
-		}
-		return valid
-	}
-
-	albumIDs := validateIDs(payload.AlbumIDs, "album_ids")
-	artistIDs := validateIDs(payload.ArtistIDs, "artist_ids")
-	writerIDs := validateIDs(payload.WriterIDs, "writer_ids")
-
-	if ve.Err() != nil {
-		util.RespondError(w, ve)
+	mutation, err := payload.toMutationParams()
+	if err != nil {
+		handler.Error(w, err)
 		return
 	}
 
-	params := songsvc.CreateParams{
-		MutationParams: songsvc.MutationParams{
-			Title:      title,
-			AlbumIDs:   albumIDs,
-			ArtistIDs:  artistIDs,
-			WriterIDs:  writerIDs,
-			LevelID:    payload.LevelID,
-			LanguageID: payload.LanguageID,
-		},
-	}
-
-	if key != "" {
-		params.Key = &key
-	}
-	lyric := payload.Lyric
-	params.Lyric = &lyric
-	if releaseYear != nil {
-		params.ReleaseYear = releaseYear
-	}
-
+	params := songsvc.CreateParams{MutationParams: mutation}
 	songID, err := h.svc.Create(r.Context(), params)
 	if err != nil {
-		util.RespondError(w, err)
+		handler.Error(w, err)
 		return
 	}
 
-	util.RespondJSON(w, http.StatusCreated, map[string]any{
+	handler.Success(w, http.StatusCreated, map[string]any{
 		"message": "Song created successfully",
 		"song_id": songID,
+	})
+}
+
+// Update mutates an existing song using the shared admin schema.
+func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
+	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
+	songID, err := strconv.Atoi(rawID)
+	if err != nil || songID <= 0 {
+		handler.Error(w, err)
+		return
+	}
+
+	payload, err := decodeSongPayload(r)
+	if err != nil {
+		handler.Error(w, err)
+		return
+	}
+
+	mutation, err := payload.toMutationParams()
+	if err != nil {
+		handler.Error(w, err)
+		return
+	}
+
+	if err := h.svc.Update(r.Context(), songID, songsvc.UpdateParams{
+		MutationParams: mutation,
+	}); err != nil {
+		handler.Error(w, err)
+		return
+	}
+
+	handler.Success(w, http.StatusOK, map[string]any{
+		"message": "Song updated successfully",
 	})
 }
 
@@ -185,47 +236,26 @@ func (h Handler) AssignLevel(w http.ResponseWriter, r *http.Request) {
 
 	songID, err := strconv.Atoi(strings.TrimSpace(songIDValue))
 	if err != nil || songID <= 0 {
-		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "song_id must be a positive integer"}})
+		handler.Error(w, err)
 		return
 	}
 
 	levelID, err := strconv.Atoi(strings.TrimSpace(levelIDValue))
 	if err != nil || levelID <= 0 {
-		util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "level_id must be a positive integer"}})
+		handler.Error(w, err)
 		return
 	}
 	userID, authErr := util.CurrentUserID(r)
 	if authErr != nil {
-		util.RespondUnauthorized(w)
+		handler.Error(w, err)
 		return
 	}
 
 	if err := h.svc.AssignLevel(r.Context(), songID, levelID, userID); err != nil {
-		switch {
-		case errors.Is(err, songsvc.ErrNotFound):
-			util.RespondJSONOld(w, http.StatusNotFound, map[string]any{"errors": map[string]string{"message": "song not found"}})
-			return
-		case errors.Is(err, songsvc.ErrInvalidLevel):
-			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "level not found"}})
-			return
-		case errors.Is(err, songsvc.ErrInvalidUser):
-			util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "user not found"}})
-			return
-		default:
-			msg := err.Error()
-			if strings.Contains(msg, "invalid level id") {
-				util.RespondJSONOld(w, http.StatusBadRequest, map[string]any{"errors": map[string]string{"message": "level_id must be a positive integer"}})
-				return
-			}
-			log.Println(err)
-			util.RespondJSONOld(w, http.StatusInternalServerError, map[string]any{"errors": map[string]string{"message": "failed to assign level"}})
-			return
-		}
+		handler.Error(w, err)
+		return
 	}
-
-	util.RespondJSONOld(w, http.StatusOK, map[string]any{
-		"data": map[string]any{
-			"message": "Level assigned successfully",
-		},
+	handler.Success(w, http.StatusOK, map[string]string{
+		"message": "Level assigned successfully",
 	})
 }

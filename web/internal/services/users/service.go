@@ -2,8 +2,9 @@ package users
 
 import (
 	"context"
-	"errors"
 	"strings"
+
+	"github.com/lyricapp/lyric/web/internal/apperror"
 )
 
 // Service exposes user directory search capabilities.
@@ -31,18 +32,11 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-var (
-	// ErrEmailRequired indicates email parameter is missing.
-	ErrEmailRequired = errors.New("users: email is required")
-	// ErrEmailTooShort indicates the search term is too short to be useful.
-	ErrEmailTooShort = errors.New("users: email must be at least 3 characters")
-)
-
 // SearchByEmail returns a list of users matching the provided email fragment.
 func (s *service) SearchByEmail(ctx context.Context, email string) ([]User, error) {
 	query := strings.TrimSpace(email)
 	if query == "" {
-		return nil, ErrEmailRequired
+		return nil, apperror.BadRequest("email is required")
 	}
 	return s.repo.SearchByEmail(ctx, query)
 }

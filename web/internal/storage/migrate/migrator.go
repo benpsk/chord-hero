@@ -19,9 +19,9 @@ const migrationsTable = "schema_migrations"
 // EnsureTable creates the bookkeeping table required to track applied migrations.
 func EnsureTable(ctx context.Context, pool *pgxpool.Pool) error {
 	_, err := pool.Exec(ctx, `
-        CREATE TABLE IF NOT EXISTS schema_migrations (
-            name TEXT PRIMARY KEY,
-            applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        create table if not exists schema_migrations (
+            name text primary key,
+            applied_at timestamptz not null default now()
         )
     `)
 	if err != nil {
@@ -91,7 +91,7 @@ func Apply(ctx context.Context, pool *pgxpool.Pool, dir string) ([]string, error
 
 func migrationApplied(ctx context.Context, pool *pgxpool.Pool, name string) (bool, error) {
 	var exists bool
-	err := pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE name = $1)`, name).Scan(&exists)
+	err := pool.QueryRow(ctx, `select exists (select 1 from schema_migrations where name = $1)`, name).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("check migration %s: %w", name, err)
 	}
@@ -121,14 +121,14 @@ func runMigration(ctx context.Context, pool *pgxpool.Pool, name, statement strin
 }
 
 func recordMigration(ctx context.Context, pool *pgxpool.Pool, name string) error {
-	if _, err := pool.Exec(ctx, `INSERT INTO schema_migrations (name) VALUES ($1)`, name); err != nil {
+	if _, err := pool.Exec(ctx, `insert into schema_migrations (name) values ($1)`, name); err != nil {
 		return fmt.Errorf("record migration %s: %w", name, err)
 	}
 	return nil
 }
 
 func recordMigrationTx(ctx context.Context, tx pgx.Tx, name string) error {
-	if _, err := tx.Exec(ctx, `INSERT INTO schema_migrations (name) VALUES ($1)`, name); err != nil {
+	if _, err := tx.Exec(ctx, `insert into schema_migrations (name) values ($1)`, name); err != nil {
 		return fmt.Errorf("record migration %s: %w", name, err)
 	}
 	return nil

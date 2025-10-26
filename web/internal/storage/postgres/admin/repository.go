@@ -26,9 +26,9 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 func (r *Repository) FindByUsername(ctx context.Context, username string) (adminauthsvc.User, error) {
 	var user adminauthsvc.User
 	err := r.db.QueryRow(ctx, `
-		SELECT id, username, password_hash
-		FROM admin_users
-		WHERE username = $1
+		select id, username, password_hash
+		from admin_users
+		where username = $1
 	`, username).Scan(&user.ID, &user.Username, &user.PasswordHash)
 	if err != nil {
 		if err == pgx.ErrNoRows {

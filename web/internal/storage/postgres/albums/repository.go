@@ -45,7 +45,7 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 		whereClause = " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	countQuery := "SELECT COUNT(*) FROM albums a" + whereClause
+	countQuery := "select count(*) from albums a" + whereClause
 	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&result.Total); err != nil {
 		return result, fmt.Errorf("count albums: %w", err)
 	}
@@ -163,9 +163,9 @@ func (r *Repository) attachBookmarks(ctx context.Context, params albumsvc.ListPa
 	argPos := 1
 
 	builder.WriteString(`
-        SELECT s.album_id, COUNT(DISTINCT s.id) AS playlist_count
-        FROM playlist_song ps
-        JOIN songs s ON s.id = ps.song_id
+        select s.album_id, count(distinct s.id) as playlist_count
+        from playlist_song ps
+        join songs s on s.id = ps.song_id
     `)
 
 	if params.UserID != nil {

@@ -43,12 +43,7 @@ func getHandler(db *pgxpool.Pool) login.Handler {
 func TestHandler_Request(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer db.Close()
-	// Clean up before test
-	_, err := db.Exec(context.Background(), "delete from users")
-	if err != nil {
-		t.Fatalf("failed to clean up users table: %v", err)
-	}
-	_, err = db.Exec(context.Background(), "DELETE FROM user_login_codes")
+	_, err = db.Exec(context.Background(), "delete from user_login_codes")
 	if err != nil {
 		t.Fatalf("failed to clean up user_login_codes table: %v", err)
 	}
@@ -93,7 +88,7 @@ func TestHandler_Request_Fail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to clean up users table: %v", err)
 	}
-	_, err = db.Exec(context.Background(), "DELETE FROM user_login_codes")
+	_, err = db.Exec(context.Background(), "delete from user_login_codes")
 	if err != nil {
 		t.Fatalf("failed to clean up user_login_codes table: %v", err)
 	}
@@ -302,7 +297,7 @@ func TestHandler_Me(t *testing.T) {
 
 	username := "test@test.com"
 	var userID int
-	err := db.QueryRow(context.Background(), "INSERT INTO users (email, role) VALUES ($1, 'user') RETURNING id", username).Scan(&userID)
+	err := db.QueryRow(context.Background(), "insert into users (email, role) values ($1, 'user') returning id", username).Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
@@ -343,7 +338,7 @@ func TestHandler_Me_Fail(t *testing.T) {
 
 	username := "test@test.com"
 	var userID int
-	err := db.QueryRow(context.Background(), "INSERT INTO users (email, role) VALUES ($1, 'user') RETURNING id", username).Scan(&userID)
+	err := db.QueryRow(context.Background(), "insert into users (email, role) values ($1, 'user') returning id", username).Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}

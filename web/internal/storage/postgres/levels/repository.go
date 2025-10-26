@@ -22,9 +22,9 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // List retrieves all levels ordered by name.
 func (r *Repository) List(ctx context.Context) ([]levelsvc.Level, error) {
 	rows, err := r.db.Query(ctx, `
-        SELECT id, name
-        FROM levels
-        ORDER BY name ASC
+        select id, name
+        from levels
+        order by name asc
     `)
 	if err != nil {
 		return nil, fmt.Errorf("list levels: %w", err)

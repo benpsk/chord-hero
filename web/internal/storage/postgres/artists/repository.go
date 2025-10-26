@@ -44,7 +44,7 @@ func (r *Repository) List(ctx context.Context, params artistsvc.ListParams) (art
 		whereClause = " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	countQuery := "SELECT COUNT(*) FROM artists ar" + whereClause
+	countQuery := "select count(*) from artists ar" + whereClause
 	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&result.Total); err != nil {
 		return result, fmt.Errorf("count artists: %w", err)
 	}
@@ -57,17 +57,17 @@ func (r *Repository) List(ctx context.Context, params artistsvc.ListParams) (art
 	offsetPlaceholder := fmt.Sprintf("$%d", argPos+2)
 
 	listQuery := fmt.Sprintf(`
-        WITH artist_totals AS (
-            SELECT sa.artist_id, COUNT(DISTINCT sa.song_id) AS total_songs
-            FROM artist_song sa
-            GROUP BY sa.artist_id
+        with artist_totals as (
+            select sa.artist_id, count(distinct sa.song_id) as total_songs
+            from artist_song sa
+            group by sa.artist_id
         )
-        SELECT ar.id, ar.name, COALESCE(at.total_songs, 0) AS total_songs
-        FROM artists ar
-        LEFT JOIN artist_totals at ON at.artist_id = ar.id
+        select ar.id, ar.name, coalesce(at.total_songs, 0) as total_songs
+        from artists ar
+        left join artist_totals at on at.artist_id = ar.id
         %s
-        ORDER BY ar.name ASC
-        LIMIT %s OFFSET %s
+        order by ar.name asc
+        limit %s offset %s
     `, whereClause, limitPlaceholder, offsetPlaceholder)
 
 	listArgs := append([]any{}, args...)

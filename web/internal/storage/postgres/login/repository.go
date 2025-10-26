@@ -62,7 +62,7 @@ func (r *Repository) CreateLoginCode(ctx context.Context, userID int, code strin
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	if _, err := tx.Exec(ctx, `DELETE FROM user_login_codes WHERE user_id = $1`, userID); err != nil {
+	if _, err := tx.Exec(ctx, `delete from user_login_codes where user_id = $1`, userID); err != nil {
 		return fmt.Errorf("delete previous login codes: %w", err)
 	}
 

@@ -19,19 +19,19 @@ func TestHandler_List(t *testing.T) {
 	defer db.Close()
 
 	// Clean up before test
-	_, err := db.Exec(context.Background(), "DELETE FROM levels")
+	_, err := db.Exec(context.Background(), "delete from levels")
 	if err != nil {
 		t.Fatalf("failed to clean up levels table: %v", err)
 	}
 
 	// Seed data
-	_, err = db.Exec(context.Background(), "INSERT INTO levels (name) VALUES ('Easy'), ('Medium'), ('Hard')")
+	_, err = db.Exec(context.Background(), "insert into levels (name) values ('Easy'), ('Medium'), ('Hard')")
 	if err != nil {
 		t.Fatalf("failed to seed levels table: %v", err)
 	}
 
 	// Get the IDs of the inserted levels
-	rows, err := db.Query(context.Background(), "SELECT id, name FROM levels ORDER BY name ASC")
+	rows, err := db.Query(context.Background(), "select id, name from levels order by name asc")
 	if err != nil {
 		t.Fatalf("failed to query levels table: %v", err)
 	}

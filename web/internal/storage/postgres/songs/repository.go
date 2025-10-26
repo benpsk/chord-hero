@@ -51,31 +51,31 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 
 	if params.AlbumID != nil {
 		placeholder := nextPlaceholder()
-		conditions = append(conditions, fmt.Sprintf("EXISTS (SELECT 1 FROM album_song als WHERE als.song_id = s.id AND als.album_id = %s)", placeholder))
+		conditions = append(conditions, fmt.Sprintf("exists (select 1 from album_song als where als.song_id = s.id and als.album_id = %s)", placeholder))
 		args = append(args, *params.AlbumID)
 	}
 
 	if params.ArtistID != nil {
 		placeholder := nextPlaceholder()
-		conditions = append(conditions, fmt.Sprintf("EXISTS (SELECT 1 FROM artist_song sa WHERE sa.song_id = s.id AND sa.artist_id = %s)", placeholder))
+		conditions = append(conditions, fmt.Sprintf("exists (select 1 from artist_song sa where sa.song_id = s.id and sa.artist_id = %s)", placeholder))
 		args = append(args, *params.ArtistID)
 	}
 
 	if params.WriterID != nil {
 		placeholder := nextPlaceholder()
-		conditions = append(conditions, fmt.Sprintf("EXISTS (SELECT 1 FROM song_writer sw WHERE sw.song_id = s.id AND sw.writer_id = %s)", placeholder))
+		conditions = append(conditions, fmt.Sprintf("exists (select 1 from song_writer sw where sw.song_id = s.id and sw.writer_id = %s)", placeholder))
 		args = append(args, *params.WriterID)
 	}
 
 	if params.PlaylistID != nil {
 		placeholder := nextPlaceholder()
-		conditions = append(conditions, fmt.Sprintf("EXISTS (SELECT 1 FROM playlist_song ps WHERE ps.song_id = s.id AND ps.playlist_id = %s)", placeholder))
+		conditions = append(conditions, fmt.Sprintf("exists (select 1 from playlist_song ps where ps.song_id = s.id and ps.playlist_id = %s)", placeholder))
 		args = append(args, *params.PlaylistID)
 	}
 
 	if params.ReleaseYear != nil {
 		placeholder := nextPlaceholder()
-		conditions = append(conditions, fmt.Sprintf("COALESCE((SELECT a.release_year FROM albums a WHERE a.id = als.album_id), s.release_year) = %s", placeholder))
+		conditions = append(conditions, fmt.Sprintf("coalesce((select a.release_year from albums a where a.id = als.album_id), s.release_year) = %s", placeholder))
 		args = append(args, *params.ReleaseYear)
 	}
 
@@ -84,7 +84,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		whereClause = " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	countQuery := "SELECT COUNT(*) FROM songs s" + whereClause
+	countQuery := "select count(*) from songs s" + whereClause
 
 	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&result.Total); err != nil {
 		return result, fmt.Errorf("count songs: %w", err)
@@ -388,14 +388,14 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 	defer tx.Rollback(ctx) //nolint:errcheck
 
 	cmdTag, err := tx.Exec(ctx, `
-		UPDATE songs
-		SET title = $1,
+		update songs
+		set title = $1,
 		    level_id = $2,
 		    key = $3,
 		    language_id = $4,
 		    lyric = $5,
 		    release_year = $6
-		WHERE id = $7
+		where id = $7
 	`, params.Title,
 		nullableInt(params.LevelID),
 		nullableString(params.Key),
@@ -411,13 +411,13 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 		return apperror.NotFound("song not found")
 	}
 
-	if _, err := tx.Exec(ctx, `DELETE FROM artist_song WHERE song_id = $1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `delete from artist_song where song_id = $1`, id); err != nil {
 		return fmt.Errorf("clear artist relations: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM song_writer WHERE song_id = $1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `delete from song_writer where song_id = $1`, id); err != nil {
 		return fmt.Errorf("clear writer relations: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM album_song WHERE song_id = $1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `delete from album_song where song_id = $1`, id); err != nil {
 		return fmt.Errorf("clear album relations: %w", err)
 	}
 
@@ -467,7 +467,7 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 
 // Delete removes a song and cascades related records via FK constraints.
 func (r *Repository) Delete(ctx context.Context, id int) error {
-	cmdTag, err := r.db.Exec(ctx, `DELETE FROM songs WHERE id = $1`, id)
+	cmdTag, err := r.db.Exec(ctx, `delete from songs where id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("delete song: %w", err)
 	}
@@ -486,9 +486,9 @@ func (r *Repository) AssignLevel(ctx context.Context, songID, levelID, userID in
 	defer tx.Rollback(ctx) //nolint:errcheck
 
 	cmdTag, err := tx.Exec(ctx, `
-        UPDATE songs
-        SET level_id = $1
-        WHERE id = $2
+        update songs
+        set level_id = $1
+        where id = $2
     `, levelID, songID)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -523,11 +523,11 @@ func (r *Repository) AssignLevel(ctx context.Context, songID, levelID, userID in
 
 func (r *Repository) attachArtists(ctx context.Context, songIDs []int32, songIndex map[int]int, songs *[]songsvc.Song) error {
 	query := `
-        SELECT sa.song_id, ar.id, ar.name
-        FROM artist_song sa
-        JOIN artists ar ON ar.id = sa.artist_id
-        WHERE sa.song_id = ANY($1::int4[])
-        ORDER BY ar.name ASC
+        select sa.song_id, ar.id, ar.name
+        from artist_song sa
+        join artists ar on ar.id = sa.artist_id
+        where sa.song_id = any($1::int4[])
+        order by ar.name asc
     `
 
 	rows, err := r.db.Query(ctx, query, songIDs)
@@ -554,11 +554,11 @@ func (r *Repository) attachArtists(ctx context.Context, songIDs []int32, songInd
 
 func (r *Repository) attachWriters(ctx context.Context, songIDs []int32, songIndex map[int]int, songs *[]songsvc.Song) error {
 	query := `
-        SELECT sw.song_id, w.id, w.name
-        FROM song_writer sw
-        JOIN writers w ON w.id = sw.writer_id
-        WHERE sw.song_id = ANY($1::int4[])
-        ORDER BY w.name ASC
+        select sw.song_id, w.id, w.name
+        from song_writer sw
+        join writers w on w.id = sw.writer_id
+        where sw.song_id = any($1::int4[])
+        order by w.name asc
     `
 
 	rows, err := r.db.Query(ctx, query, songIDs)
@@ -585,12 +585,12 @@ func (r *Repository) attachWriters(ctx context.Context, songIDs []int32, songInd
 
 func (r *Repository) attachAlbums(ctx context.Context, songIDs []int32, songIndex map[int]int, songs *[]songsvc.Song) error {
 	query := `
-        SELECT s.id, a.id, a.name, a.release_year
-        FROM songs s
-        JOIN album_song als ON als.song_id = s.id
-        JOIN albums a ON a.id = als.album_id
-        WHERE s.id = ANY($1::int4[])
-        ORDER BY a.name ASC
+        select s.id, a.id, a.name, a.release_year
+        from songs s
+        join album_song als on als.song_id = s.id
+        join albums a on a.id = als.album_id
+        where s.id = any($1::int4[])
+        order by a.name asc
     `
 
 	rows, err := r.db.Query(ctx, query, songIDs)
@@ -630,13 +630,13 @@ func (r *Repository) attachBookmarks(ctx context.Context, params songsvc.ListPar
 	var builder strings.Builder
 	args := []any{songIDs}
 
-	builder.WriteString("SELECT DISTINCT ps.song_id FROM playlist_song ps")
+	builder.WriteString("select distinct ps.song_id from playlist_song ps")
 
 	if params.UserID != nil {
-		builder.WriteString(" JOIN playlists p ON p.id = ps.playlist_id")
+		builder.WriteString(" join playlists p on p.id = ps.playlist_id")
 	}
 
-	builder.WriteString(" WHERE ps.song_id = ANY($1::int4[])")
+	builder.WriteString(" where ps.song_id = any($1::int4[])")
 
 	if params.PlaylistID != nil {
 		argPos++

@@ -24,10 +24,10 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // TrendingSets retrieves curated trending collections.
 func (r *Repository) TrendingSets(ctx context.Context) ([]trendingsvc.Trending, error) {
 	rows, err := r.db.Query(ctx, `
-        SELECT ts.id, ts.name, ts.level_id, l.name, ts.description
-        FROM trending_songs ts
-        LEFT JOIN levels l ON l.id = ts.level_id
-        ORDER BY ts.id ASC
+        select ts.id, ts.name, ts.level_id, l.name, ts.description
+        from trending_songs ts
+        left join levels l on l.id = ts.level_id
+        order by ts.id asc
     `)
 	if err != nil {
 		return nil, fmt.Errorf("list trendings: %w", err)

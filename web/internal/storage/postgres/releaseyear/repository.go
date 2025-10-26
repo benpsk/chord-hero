@@ -29,14 +29,14 @@ func (r *Repository) List(ctx context.Context, params releaseyearsvc.ListParams)
 	}
 
 	countQuery := `
-        WITH song_years AS (
-            SELECT DISTINCT COALESCE(a.release_year, s.release_year) AS year_value
-            FROM songs s
-            LEFT JOIN album_song als ON als.song_id = s.id
-            LEFT JOIN albums a ON als.album_id = a.id
-            WHERE COALESCE(a.release_year, s.release_year) IS NOT NULL
+        with song_years as (
+            select distinct coalesce(a.release_year, s.release_year) as year_value
+            from songs s
+            left join album_song als on als.song_id = s.id
+            left join albums a on als.album_id = a.id
+            where coalesce(a.release_year, s.release_year) is not null
         )
-        SELECT COUNT(*) FROM song_years
+        select count(*) from song_years
     `
 
 	if err := r.db.QueryRow(ctx, countQuery).Scan(&result.Total); err != nil {
@@ -48,18 +48,18 @@ func (r *Repository) List(ctx context.Context, params releaseyearsvc.ListParams)
 	}
 
 	query := `
-        WITH song_years AS (
-            SELECT COALESCE(a.release_year, s.release_year) AS year_value
-            FROM songs s
-            LEFT JOIN album_song als ON als.song_id = s.id
-            LEFT JOIN albums a ON als.album_id = a.id
-            WHERE COALESCE(a.release_year, s.release_year) IS NOT NULL
+        with song_years as (
+            select coalesce(a.release_year, s.release_year) as year_value
+            from songs s
+            left join album_song als on als.song_id = s.id
+            left join albums a on als.album_id = a.id
+            where coalesce(a.release_year, s.release_year) is not null
         )
-        SELECT year_value, COUNT(*) AS total
-        FROM song_years
-        GROUP BY year_value
-        ORDER BY year_value DESC
-        LIMIT $1 OFFSET $2
+        select year_value, count(*) as total
+        from song_years
+        group by year_value
+        order by year_value desc
+        limit $1 offset $2
     `
 
 	rows, err := r.db.Query(ctx, query, params.PerPage, offset(params.Page, params.PerPage))

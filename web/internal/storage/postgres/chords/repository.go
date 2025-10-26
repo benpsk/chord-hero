@@ -29,10 +29,10 @@ func (r *Repository) Find(ctx context.Context, name string) (chords.Chord, error
 	chord := chords.Chord{}
 
 	row := r.db.QueryRow(ctx, `
-        SELECT id, name
-        FROM chords
-        WHERE LOWER(name) = LOWER($1)
-        LIMIT 1
+        select id, name
+        from chords
+        where lower(name) = lower($1)
+        limit 1
     `, strings.TrimSpace(name))
 
 	if err := row.Scan(&chord.ID, &chord.Name); err != nil {
@@ -53,10 +53,10 @@ func (r *Repository) Find(ctx context.Context, name string) (chords.Chord, error
 
 func (r *Repository) fetchPositions(ctx context.Context, chordID int) ([]chords.Position, error) {
 	rows, err := r.db.Query(ctx, `
-        SELECT id, base_fret, frets, fingers
-        FROM chord_positions
-        WHERE chord_id = $1
-        ORDER BY id ASC
+        select id, base_fret, frets, fingers
+        from chord_positions
+        where chord_id = $1
+        order by id asc
     `, chordID)
 	if err != nil {
 		return nil, fmt.Errorf("list chord positions: %w", err)

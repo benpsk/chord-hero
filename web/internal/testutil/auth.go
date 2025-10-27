@@ -6,12 +6,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lyricapp/lyric/web/internal/config"
 	"github.com/lyricapp/lyric/web/internal/http/middleware/auth"
+	"github.com/lyricapp/lyric/web/internal/storage"
 )
 
-func AuthToken(t *testing.T, db *pgxpool.Pool, userID int) (*chi.Mux, string) {
+func AuthToken(t *testing.T, db storage.Querier, userID int) (*chi.Mux, string) {
 	// Create a token
 	cfg, err := config.Load()
 	if err != nil {

@@ -10,19 +10,19 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/lyricapp/lyric/web/internal/apperror"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
+	"github.com/lyricapp/lyric/web/internal/storage"
 )
 
 // Repository provides Postgres-backed song queries.
 type Repository struct {
-	db *pgxpool.Pool
+	db storage.Querier
 }
 
 // NewRepository constructs a Repository instance.
-func NewRepository(db *pgxpool.Pool) *Repository {
+func NewRepository(db storage.Querier) *Repository {
 	return &Repository{db: db}
 }
 
@@ -73,8 +73,10 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		args = append(args, *params.PlaylistID)
 	}
 
+	joinClause := ""
 	if params.ReleaseYear != nil {
 		placeholder := nextPlaceholder()
+		joinClause = " left join album_song als on als.song_id = s.id"
 		conditions = append(conditions, fmt.Sprintf("coalesce((select a.release_year from albums a where a.id = als.album_id), s.release_year) = %s", placeholder))
 		args = append(args, *params.ReleaseYear)
 	}
@@ -84,7 +86,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		whereClause = " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	countQuery := "select count(*) from songs s" + whereClause
+	countQuery := "select count(*) from songs s" + joinClause + whereClause
 
 	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&result.Total); err != nil {
 		return result, fmt.Errorf("count songs: %w", err)
@@ -113,9 +115,10 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
         left join levels l on l.id = s.level_id
         left join languages la on la.id = s.language_id
         %s
+        %s
         order by s.id desc
         limit %s offset %s
-    `, whereClause, limitPlaceholder, offsetPlaceholder)
+    `, joinClause, whereClause, limitPlaceholder, offsetPlaceholder)
 
 	listArgs := append([]any{}, args...)
 	listArgs = append(listArgs, params.PerPage, offset(params.Page, params.PerPage))
@@ -395,7 +398,7 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 		    language_id = $4,
 		    lyric = $5,
 		    release_year = $6
-		where id = $7
+		where id = $7 and created_by = $8
 	`, params.Title,
 		nullableInt(params.LevelID),
 		nullableString(params.Key),
@@ -403,8 +406,13 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 		nullableString(params.Lyric),
 		nullableInt(params.ReleaseYear),
 		id,
+		params.UserID,
 	)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+			return apperror.BadRequest("A related resources does not exist")
+		}
 		return fmt.Errorf("update song: %w", err)
 	}
 	if cmdTag.RowsAffected() == 0 {

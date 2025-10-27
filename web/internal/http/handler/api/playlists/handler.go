@@ -58,7 +58,6 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 		handler.Error(w, err)
 		return
 	}
-
 	handler.Success(w, http.StatusOK, result)
 }
 

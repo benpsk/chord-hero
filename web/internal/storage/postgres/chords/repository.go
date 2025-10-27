@@ -8,19 +8,19 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/lyricapp/lyric/web/internal/apperror"
 	chords "github.com/lyricapp/lyric/web/internal/services/chords"
+	"github.com/lyricapp/lyric/web/internal/storage"
 )
 
 // Repository provides Postgres-backed chord lookups.
 type Repository struct {
-	db *pgxpool.Pool
+	db storage.Querier
 }
 
 // NewRepository constructs a Repository instance.
-func NewRepository(db *pgxpool.Pool) *Repository {
+func NewRepository(db storage.Querier) *Repository {
 	return &Repository{db: db}
 }
 

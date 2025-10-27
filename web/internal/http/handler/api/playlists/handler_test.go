@@ -9,41 +9,38 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/lyricapp/lyric/web/internal/http/handler"
 	"github.com/lyricapp/lyric/web/internal/http/handler/api/playlists"
 	playlistsvc "github.com/lyricapp/lyric/web/internal/services/playlists"
+	"github.com/lyricapp/lyric/web/internal/storage"
 	playlistrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/playlists"
 	"github.com/lyricapp/lyric/web/internal/testutil"
 )
 
+func getHandler(storage storage.Querier) playlists.Handler {
+	repo := playlistrepo.NewRepository(storage)
+	svc := playlistsvc.NewService(repo)
+	return playlists.New(svc)
+}
+
 func TestHandler_Create_Success(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer db.Close()
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
 
-	// Clean up before test
-	_, err := db.Exec(context.Background(), "DELETE FROM playlists")
-	if err != nil {
-		t.Fatalf("failed to clean up playlists table: %v", err)
-	}
-	_, err = db.Exec(context.Background(), "DELETE FROM users")
-	if err != nil {
-		t.Fatalf("failed to clean up users table: %v", err)
-	}
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
 
-	// Seed user
 	var userID int
-	err = db.QueryRow(context.Background(), "INSERT INTO users (email, role) VALUES ('test@test.com', 'user') RETURNING id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'user') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, db, userID)
-	// Create a new repository and service.
-	repo := playlistrepo.NewRepository(db)
-	svc := playlistsvc.NewService(repo)
-	handler := playlists.New(svc)
+	r, accessToken := testutil.AuthToken(t, tx, userID)
+	h := getHandler(tx)
 
-	// 2. Mount your REAL handler
-	r.Post("/api/playlists", handler.Create)
+	r.Post("/api/playlists", h.Create)
 	requestBody, _ := json.Marshal(map[string]string{"name": "My Playlist"})
 	req, err := http.NewRequest("POST", "/api/playlists", bytes.NewBuffer(requestBody))
 	if err != nil {
@@ -61,47 +58,36 @@ func TestHandler_Create_Success(t *testing.T) {
 			status, http.StatusCreated)
 	}
 
-	// Check that the response body is what we expect.
-	var respBody map[string]map[string]interface{}
-	err = json.NewDecoder(rr.Body).Decode(&respBody)
+	var res handler.ResponseMessage[map[string]any]
+	decoder := json.NewDecoder(rr.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&res)
 	if err != nil {
-		t.Fatalf("failed to unmarshal response body: %v", err)
+		t.Fatalf("Failed to decode or response format is wrong: %v", err)
 	}
-	if _, ok := respBody["data"]["playlist_id"]; !ok {
+	if _, ok := res.Data["message"]; !ok {
 		t.Errorf("handler returned unexpected body: playlist_id not found")
 	}
 }
 
 func TestHandler_Create_Fail(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer db.Close()
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
 
-	// Clean up before test
-	_, err := db.Exec(context.Background(), "DELETE FROM playlists")
-	if err != nil {
-		t.Fatalf("failed to clean up playlists table: %v", err)
-	}
-	_, err = db.Exec(context.Background(), "DELETE FROM users")
-	if err != nil {
-		t.Fatalf("failed to clean up users table: %v", err)
-	}
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
 
-	// Seed user
 	var userID int
-	err = db.QueryRow(context.Background(), "INSERT INTO users (email, role) VALUES ('test@test.com', 'user') RETURNING id").Scan(&userID)
+	err := tx.QueryRow(ctx, "INSERT INTO users (email, role) VALUES ('test@test.com', 'user') RETURNING id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, db, userID)
+	r, accessToken := testutil.AuthToken(t, tx, userID)
+	h := getHandler(tx)
 
-	// Create a new repository and service.
-	repo := playlistrepo.NewRepository(db)
-	svc := playlistsvc.NewService(repo)
-	handler := playlists.New(svc)
-
-	// 2. Mount your REAL handler
-	r.Post("/api/playlists", handler.Create)
+	r.Post("/api/playlists", h.Create)
 
 	testCases := []struct {
 		name               string
@@ -142,13 +128,102 @@ func TestHandler_Create_Fail(t *testing.T) {
 					status, tc.expectedStatusCode)
 			}
 
-			var respBody map[string]map[string]string
-			err = json.Unmarshal(rr.Body.Bytes(), &respBody)
+			var res handler.ErrorResponse[map[string]string]
+			decoder := json.NewDecoder(rr.Body)
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&res)
 			if err != nil {
-				t.Fatalf("failed to unmarshal response body: %v", err)
+				t.Fatalf("Failed to decode or response format is wrong: %v", err)
 			}
-			if _, ok := respBody["errors"][tc.expectedErrorKey]; !ok {
+
+			if _, ok := res.Errors[tc.expectedErrorKey]; !ok {
 				t.Errorf("handler returned unexpected body: error key %s not found", tc.expectedErrorKey)
+			}
+		})
+	}
+}
+
+func TestHandler_List_Validation(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to seed user: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, tx, userID)
+
+	h := getHandler(tx)
+	r.Get("/api/playlists", h.List)
+
+	testCases := []struct {
+		name        string
+		queryParams string
+		expectedKey string
+	}{
+		{
+			name:        "invalid page",
+			queryParams: "page=abc",
+			expectedKey: "page",
+		},
+		{
+			name:        "zero page",
+			queryParams: "page=0",
+			expectedKey: "page",
+		},
+		{
+			name:        "negative page",
+			queryParams: "page=-1",
+			expectedKey: "page",
+		},
+		{
+			name:        "invalid per_page",
+			queryParams: "per_page=abc",
+			expectedKey: "per_page",
+		},
+		{
+			name:        "zero per_page",
+			queryParams: "per_page=0",
+			expectedKey: "per_page",
+		},
+		{
+			name:        "negative per_page",
+			queryParams: "per_page=-1",
+			expectedKey: "per_page",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/api/playlists?"+tc.queryParams, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+			rr := httptest.NewRecorder()
+			r.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != http.StatusUnprocessableEntity {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusUnprocessableEntity)
+			}
+
+			var res handler.ErrorResponse[map[string]string]
+			decoder := json.NewDecoder(rr.Body)
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&res)
+			if err != nil {
+				t.Fatalf("Failed to decode or response format is wrong: %v", err)
+			}
+
+			if _, ok := res.Errors[tc.expectedKey]; !ok {
+				t.Errorf("expected error key %s not found", tc.expectedKey)
 			}
 		})
 	}

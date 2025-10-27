@@ -6,18 +6,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	trendingsvc "github.com/lyricapp/lyric/web/internal/services/trending"
+	"github.com/lyricapp/lyric/web/internal/storage"
 )
 
 // Repository provides Postgres-backed trending queries.
 type Repository struct {
-	db *pgxpool.Pool
+	db storage.Querier
 }
 
 // NewRepository constructs a Repository instance.
-func NewRepository(db *pgxpool.Pool) *Repository {
+func NewRepository(db storage.Querier) *Repository {
 	return &Repository{db: db}
 }
 

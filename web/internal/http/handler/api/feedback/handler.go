@@ -53,7 +53,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	feedback, err := h.svc.Create(r.Context(), feedbacksvc.CreateInput{
+	_, err := h.svc.Create(r.Context(), feedbacksvc.CreateInput{
 		UserID:  userID,
 		Message: message,
 	})
@@ -63,8 +63,8 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	handler.Success(
-		w, 
-		http.StatusCreated, 
-		map[string]any{"message": "Feedback submitted", "feedback": feedback},
-		)
+		w,
+		http.StatusCreated,
+		map[string]string{"message": "Feedback submitted"},
+	)
 }

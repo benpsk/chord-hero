@@ -1,0 +1,699 @@
+package songs_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/lyricapp/lyric/web/internal/http/handler"
+	"github.com/lyricapp/lyric/web/internal/http/handler/api/songs"
+	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
+	"github.com/lyricapp/lyric/web/internal/storage"
+	songrepo "github.com/lyricapp/lyric/web/internal/storage/postgres/songs"
+	"github.com/lyricapp/lyric/web/internal/testutil"
+)
+
+func getHandler(conn storage.Querier) songs.Handler {
+	repo := songrepo.NewRepository(conn)
+	svc := songsvc.NewService(repo)
+	return songs.New(svc)
+}
+
+func TestHandler_List(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID, langID, levelID, songID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to insert users: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert languages: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into songs (title, created_by, language_id, level_id, key, lyric) values ('test song', $1, $2, $3, 'C', 'test lyric') returning id", userID, langID, levelID).Scan(&songID)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+
+	req, err := http.NewRequest("GET", "/api/songs", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := getHandler(tx)
+	rr := httptest.NewRecorder()
+	h.List(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res handler.PageResponse[songsvc.Song]
+	decoder := json.NewDecoder(rr.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&res)
+	if err != nil {
+		t.Fatalf("Failed to decode or response format is wrong: %v", err)
+	}
+
+	if res.Total != 1 {
+		t.Fatalf("total count not match")
+	}
+	if len(res.Data) != 1 {
+		t.Fatalf("data count not match")
+	}
+}
+
+func TestHandler_List_Validation(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	testCases := []struct {
+		name        string
+		queryParams string
+		expectedKey string
+	}{
+		{
+			name:        "invalid page",
+			queryParams: "page=abc",
+			expectedKey: "page",
+		},
+		{
+			name:        "invalid per_page",
+			queryParams: "per_page=abc",
+			expectedKey: "per_page",
+		},
+		{
+			name:        "invalid album_id",
+			queryParams: "album_id=abc",
+			expectedKey: "album_id",
+		},
+		{
+			name:        "invalid artist_id",
+			queryParams: "artist_id=abc",
+			expectedKey: "artist_id",
+		},
+		{
+			name:        "invalid writer_id",
+			queryParams: "writer_id=abc",
+			expectedKey: "writer_id",
+		},
+		{
+			name:        "invalid release_year",
+			queryParams: "release_year=abc",
+			expectedKey: "release_year",
+		},
+		{
+			name:        "invalid playlist_id",
+			queryParams: "playlist_id=abc",
+			expectedKey: "playlist_id",
+		},
+		{
+			name:        "invalid user_id",
+			queryParams: "user_id=abc",
+			expectedKey: "user_id",
+		},
+	}
+
+	h := getHandler(tx)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/api/songs?"+tc.queryParams, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			h.List(rr, req)
+
+			if status := rr.Code; status != http.StatusUnprocessableEntity {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusUnprocessableEntity)
+			}
+
+			var res handler.ErrorResponse[map[string]string]
+			decoder := json.NewDecoder(rr.Body)
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&res)
+			if err != nil {
+				t.Fatalf("Failed to decode or response format is wrong: %v", err)
+			}
+
+			if _, ok := res.Errors[tc.expectedKey]; !ok {
+				t.Errorf("expected error key %s not found", tc.expectedKey)
+			}
+		})
+	}
+}
+
+func TestHandler_List_Filters(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID, langID, levelID, albumID, artistID, writerID, playlistID, songID1, songID2 int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to insert users: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert languages: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into albums (name, release_year) values ('test album', 2022) returning id").Scan(&albumID)
+	if err != nil {
+		t.Fatalf("failed to insert albums: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into artists (name) values ('test artist') returning id").Scan(&artistID)
+	if err != nil {
+		t.Fatalf("failed to insert artists: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into writers (name) values ('test writer') returning id").Scan(&writerID)
+	if err != nil {
+		t.Fatalf("failed to insert writers: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into playlists (name, user_id) values ('test playlist', $1) returning id", userID).Scan(&playlistID)
+	if err != nil {
+		t.Fatalf("failed to insert palylists: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into songs (title, created_by, language_id, level_id, release_year) values ('song 1', $1, $2, $3, 2022) returning id", userID, langID, levelID).Scan(&songID1)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into songs (title, created_by, language_id, level_id) values ('song 2', $1, $2, $3) returning id", userID, langID, levelID).Scan(&songID2)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+	_, err = tx.Exec(ctx, "insert into album_song (album_id, song_id) values ($1, $2)", albumID, songID1)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+	_, err = tx.Exec(ctx, "insert into artist_song (artist_id, song_id) values ($1, $2)", artistID, songID1)
+	if err != nil {
+		t.Fatalf("failed to insert artist_song: %v", err)
+	}
+	_, err = tx.Exec(ctx, "insert into song_writer (writer_id, song_id) values ($1, $2)", writerID, songID1)
+	if err != nil {
+		t.Fatalf("failed to insert song_writer: %v", err)
+	}
+	_, err = tx.Exec(ctx, "insert into playlist_song (playlist_id, song_id) values ($1, $2)", playlistID, songID1)
+	if err != nil {
+		t.Fatalf("failed to insert playlist_song: %v", err)
+	}
+
+	testCases := []struct {
+		name          string
+		queryParams   string
+		expectedCount int
+	}{
+		{
+			name:          "filter by album_id",
+			queryParams:   fmt.Sprintf("album_id=%d", albumID),
+			expectedCount: 1,
+		},
+		{
+			name:          "filter by artist_id",
+			queryParams:   fmt.Sprintf("artist_id=%d", artistID),
+			expectedCount: 1,
+		},
+		{
+			name:          "filter by writer_id",
+			queryParams:   fmt.Sprintf("writer_id=%d", writerID),
+			expectedCount: 1,
+		},
+		{
+			name:          "filter by release_year",
+			queryParams:   "release_year=2022",
+			expectedCount: 1,
+		},
+		{
+			name:          "filter by playlist_id",
+			queryParams:   fmt.Sprintf("playlist_id=%d", playlistID),
+			expectedCount: 1,
+		},
+		{
+			name:          "filter by search",
+			queryParams:   "search=song 1",
+			expectedCount: 1,
+		},
+	}
+	h := getHandler(tx)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/api/songs?"+tc.queryParams, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			h.List(rr, req)
+
+			if status := rr.Code; status != http.StatusOK {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+			}
+
+			var res handler.PageResponse[songsvc.Song]
+			decoder := json.NewDecoder(rr.Body)
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&res)
+			if err != nil {
+				t.Fatalf("Failed to decode or response format is wrong: %v", err)
+			}
+
+			if res.Total != tc.expectedCount {
+				t.Errorf("unexpected number of items: got %d want %d", res.Total, tc.expectedCount)
+			}
+			if len(res.Data) != tc.expectedCount {
+				t.Errorf("unexpected number of items: got %d want %d", len(res.Data), tc.expectedCount)
+			}
+		})
+	}
+}
+
+func TestHandler_Create_Success(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID, langID, levelID, artistID, writerID, albumID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to insert users: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert lanugage: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into artists (name) values ('test artist') returning id").Scan(&artistID)
+	if err != nil {
+		t.Fatalf("failed to insert artists: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into writers (name) values ('test writer') returning id").Scan(&writerID)
+	if err != nil {
+		t.Fatalf("failed to insert writers: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into albums (name) values ('test album') returning id").Scan(&albumID)
+	if err != nil {
+		t.Fatalf("failed to insert albums: %v", err)
+	}
+
+	payload := map[string]any{
+		"title":        "test song",
+		"level_id":     levelID,
+		"language_id":  langID,
+		"key":          "C",
+		"lyric":        "test lyric",
+		"release_year": 2022,
+		"artist_ids":   []int{artistID},
+		"writer_ids":   []int{writerID},
+		"album_ids":    []int{albumID},
+	}
+	body, _ := json.Marshal(payload)
+
+	req, err := http.NewRequest("POST", "/api/songs", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, tx, userID)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	h := getHandler(tx)
+	r.Post("/api/songs", h.Create)
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusCreated {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
+	}
+
+	var res handler.ResponseMessage[map[string]any]
+	decoder := json.NewDecoder(rr.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&res)
+	if err != nil {
+		t.Fatalf("failed to decode or response format is wrong: %v", err)
+	}
+
+	if _, ok := res.Data["song_id"]; !ok {
+		t.Errorf("song_id not found in response")
+	}
+}
+
+func TestHandler_Create_Fail(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID, langID, levelID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to insert users: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert languages: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, tx, userID)
+	h := getHandler(tx)
+	r.Post("/api/songs", h.Create)
+
+	testCases := []struct {
+		name        string
+		payload     map[string]any
+		expectedKey string
+	}{
+		{"missing title", map[string]any{"level_id": 1, "language_id": 1, "lyric": "lyric"}, "title"},
+		{"missing level_id", map[string]any{"title": "t", "language_id": 1, "lyric": "lyric"}, "level_id"},
+		{"invalid level_id", map[string]any{"title": "t", "level_id": 0, "language_id": 1, "lyric": "lyric"}, "level_id"},
+		{"missing language_id", map[string]any{"title": "t", "level_id": 1, "lyric": "lyric"}, "language_id"},
+		{"invalid language_id", map[string]any{"title": "t", "level_id": 1, "language_id": 0, "lyric": "lyric"}, "language_id"},
+		{"missing lyric", map[string]any{"title": "t", "level_id": 1, "language_id": 1}, "lyric"},
+		{"invalid release_year", map[string]any{"title": "t", "level_id": 1, "language_id": 1, "lyric": "lyric", "release_year": 0}, "release_year"},
+		{"invalid album_ids", map[string]any{"title": "t", "level_id": 1, "language_id": 1, "lyric": "lyric", "album_ids": []int{0}}, "album_ids"},
+		{"invalid artist_ids", map[string]any{"title": "t", "level_id": 1, "language_id": 1, "lyric": "lyric", "artist_ids": []int{0}}, "artist_ids"},
+		{"invalid writer_ids", map[string]any{"title": "t", "level_id": 1, "language_id": 1, "lyric": "lyric", "writer_ids": []int{0}}, "writer_ids"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			body, _ := json.Marshal(tc.payload)
+			req, err := http.NewRequest("POST", "/api/songs", bytes.NewBuffer(body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+			rr := httptest.NewRecorder()
+			r.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != http.StatusUnprocessableEntity {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusUnprocessableEntity)
+			}
+
+			var res handler.ErrorResponse[map[string]string]
+			decoder := json.NewDecoder(rr.Body)
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&res)
+			if err != nil {
+				t.Fatalf("failed to decode or response format is wrong: %v", err)
+			}
+
+			if _, ok := res.Errors[tc.expectedKey]; !ok {
+				t.Errorf("expected error key %s not found", tc.expectedKey)
+			}
+		})
+	}
+
+	t.Run("unauthorized", func(t *testing.T) {
+		payload := map[string]any{"title": "t", "level_id": 1, "language_id": 1, "lyric": "lyric"}
+		body, _ := json.Marshal(payload)
+		req, err := http.NewRequest("POST", "/api/songs", bytes.NewBuffer(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rr := httptest.NewRecorder()
+		r.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusUnauthorized {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusUnauthorized)
+		}
+	})
+}
+
+func TestHandler_Update_Success(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID, langID, levelID, songID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to insert users: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert languages: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into songs (title, created_by, language_id, level_id) values ('test song', $1, $2, $3) returning id", userID, langID, levelID).Scan(&songID)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+
+	payload := map[string]any{
+		"title":       "updated song",
+		"level_id":    levelID,
+		"language_id": langID,
+		"lyric":       "updated lyric",
+	}
+	body, _ := json.Marshal(payload)
+
+	r, accessToken := testutil.AuthToken(t, tx, userID)
+	h := getHandler(tx)
+	r.Put("/api/songs/{id}", h.Update)
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("/api/songs/%d", songID), bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var updatedTitle string
+	tx.QueryRow(ctx, "select title from songs where id = $1", songID).Scan(&updatedTitle)
+	if updatedTitle != "updated song" {
+		t.Errorf("song title was not updated")
+	}
+}
+
+func TestHandler_Update_Fail(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID, langID, levelID, songID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to insert users: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert languages: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into songs (title, created_by, language_id, level_id) values ('test song', $1, $2, $3) returning id", userID, langID, levelID).Scan(&songID)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, tx, userID)
+	h:= getHandler(tx)
+	r.Put("/api/songs/{id}", h.Update)
+
+	testCases := []struct {
+		name               string
+		songID             string
+		payload            map[string]any
+		authorized         bool
+		expectedStatusCode int
+	}{
+		{"missing title", fmt.Sprintf("%d", songID), map[string]any{"level_id": 1, "language_id": 1, "lyric": "lyric"}, true, http.StatusUnprocessableEntity},
+		{"unauthorized", fmt.Sprintf("%d", songID), map[string]any{"title": "t", "level_id": 1, "language_id": 1, "lyric": "lyric"}, false, http.StatusUnauthorized},
+		{"invalid song id", "abc", map[string]any{"title": "t", "level_id": 1, "language_id": 1, "lyric": "lyric"}, true, http.StatusBadRequest},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			body, _ := json.Marshal(tc.payload)
+			req, err := http.NewRequest("PUT", fmt.Sprintf("/api/songs/%s", tc.songID), bytes.NewBuffer(body))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tc.authorized {
+				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+			}
+
+			rr := httptest.NewRecorder()
+			r.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tc.expectedStatusCode {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tc.expectedStatusCode)
+			}
+		})
+	}
+}
+func TestHandler_AssignLevel_Success(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID, langID, levelID, songID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to insert users: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert languages: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into songs (title, created_by, language_id) values ('test song', $1, $2) returning id", userID, langID).Scan(&songID)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, tx, userID)
+	h := getHandler(tx)
+	r.Post("/api/songs/{song_id}/levels/{level_id}", h.AssignLevel)
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("/api/songs/%d/levels/%d", songID, levelID), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var updatedLevelID int
+	tx.QueryRow(ctx, "select level_id from songs where id = $1", songID).Scan(&updatedLevelID)
+	if updatedLevelID != levelID {
+		t.Errorf("song level was not updated")
+	}
+}
+
+func TestHandler_AssignLevel_Fail(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID, langID, levelID, songID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to insert users: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert languages: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into songs (title, created_by, language_id) values ('test song', $1, $2) returning id", userID, langID).Scan(&songID)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, tx, userID)
+	h := getHandler(tx)
+	r.Post("/api/songs/{song_id}/levels/{level_id}", h.AssignLevel)
+
+	testCases := []struct {
+		name               string
+		songID             string
+		levelID            string
+		authorized         bool
+		expectedStatusCode int
+	}{
+		{"unauthorized", fmt.Sprintf("%d", songID), fmt.Sprintf("%d", levelID), false, http.StatusUnauthorized},
+		{"invalid song id", "abc", fmt.Sprintf("%d", levelID), true, http.StatusBadRequest},
+		{"invalid level id", fmt.Sprintf("%d", songID), "abc", true, http.StatusBadRequest},
+		{"song not found", "999", fmt.Sprintf("%d", levelID), true, http.StatusNotFound},
+		{"level not found", fmt.Sprintf("%d", songID), "999", true, http.StatusBadRequest},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("POST", fmt.Sprintf("/api/songs/%s/levels/%s", tc.songID, tc.levelID), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.authorized {
+				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+			}
+
+			rr := httptest.NewRecorder()
+			r.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tc.expectedStatusCode {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tc.expectedStatusCode)
+			}
+		})
+	}
+}

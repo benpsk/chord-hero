@@ -9,19 +9,19 @@ import (
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/lyricapp/lyric/web/internal/apperror"
 	playlistsvc "github.com/lyricapp/lyric/web/internal/services/playlists"
+	"github.com/lyricapp/lyric/web/internal/storage"
 )
 
 // Repository provides Postgres-backed playlist data access.
 type Repository struct {
-	db *pgxpool.Pool
+	db storage.Querier
 }
 
 // NewRepository constructs a Repository instance.
-func NewRepository(db *pgxpool.Pool) *Repository {
+func NewRepository(db storage.Querier) *Repository {
 	return &Repository{db: db}
 }
 

@@ -16,6 +16,22 @@ type PaginationResponse struct {
 	Total   int `json:"total"`
 }
 
+type Response[T any] struct {
+	Data []T `json:"data"`
+}
+type ResponseMessage[T any] struct {
+	Data T `json:"data"`
+}
+type PageResponse[T any] struct {
+	Data    []T `json:"data"`
+	Page    int `json:"page"`
+	PerPage int `json:"per_page"`
+	Total   int `json:"total"`
+}
+type ErrorResponse[T any] struct {
+	Errors T `json:"errors"`
+}
+
 func Error(w http.ResponseWriter, err error) {
 	var appErr *apperror.AppError
 

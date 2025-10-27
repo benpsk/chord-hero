@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	artistsvc "github.com/lyricapp/lyric/web/internal/services/artists"
+	"github.com/lyricapp/lyric/web/internal/storage"
 )
 
 // Repository provides Postgres-backed access to artist data.
 type Repository struct {
-	db *pgxpool.Pool
+	db storage.Querier
 }
 
 // NewRepository constructs a Repository instance.
-func NewRepository(db *pgxpool.Pool) *Repository {
+func NewRepository(db storage.Querier) *Repository {
 	return &Repository{db: db}
 }
 

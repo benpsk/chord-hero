@@ -72,13 +72,18 @@
 - Use idiomatic package naming (short, lower-case) and keep files focused on a single concern.
 - Prefer dependency injection for handlers/services to simplify testing.
 - Document exported functions and types with GoDoc comments when they are part of the public API surface.
-- Always use all lower-case for sql syntax
+- Always use all lower-case for any sql syntax.
 
-### API Design & Testing Guidelines
+### API Design 
 - Keep handlers thin; delegate business logic to services under `internal/`.
 - Return JSON responses with clear error structures; log errors using a shared logger.
 - Validate incoming data before processing; centralize request parsing helpers.
-- Add table-driven tests for handlers and services; aim for coverage on new code paths.
+
+### Testing Guidelines 
+- Mainly write feature tests including all db and others.
+- Don't mock any services or dbs. 
+- No external library, just pure go testing. 
+- Add table-driven tests for multiple cases.
 
 ### Database & Migrations
 - Connect to PostgreSQL via pgx pools configured in `internal/storage/postgres`.

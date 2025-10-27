@@ -45,6 +45,11 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 		handler.Error(w, err)
 		return
 	}
-
-	handler.Success(w, http.StatusOK, result)
+	page := handler.PaginationResponse{
+		Data: result.Data,
+		Page: result.Page,
+		PerPage: result.PerPage,
+		Total: result.Total,
+	}
+	handler.Success(w, http.StatusOK, page)
 }

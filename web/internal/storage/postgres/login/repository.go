@@ -7,19 +7,19 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/lyricapp/lyric/web/internal/apperror"
 	loginsvc "github.com/lyricapp/lyric/web/internal/services/login"
+	"github.com/lyricapp/lyric/web/internal/storage"
 )
 
 // Repository persists login OTP flows.
 type Repository struct {
-	db *pgxpool.Pool
+	db storage.Querier
 }
 
 // NewRepository constructs a Repository instance.
-func NewRepository(db *pgxpool.Pool) *Repository {
+func NewRepository(db storage.Querier) *Repository {
 	return &Repository{db: db}
 }
 

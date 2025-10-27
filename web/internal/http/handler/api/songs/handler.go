@@ -171,6 +171,12 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 // Create stores a new song using the shared admin schema.
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
+	userID, authErr := util.CurrentUserID(r)
+	if authErr != nil {
+		handler.Error(w, authErr)
+		return
+	}
+
 	payload, err := decodeSongPayload(r)
 	if err != nil {
 		handler.Error(w, err)
@@ -183,7 +189,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := songsvc.CreateParams{MutationParams: mutation}
+	params := songsvc.CreateParams{MutationParams: mutation, CreatedBy: &userID}
 	songID, err := h.svc.Create(r.Context(), params)
 	if err != nil {
 		handler.Error(w, err)
@@ -198,10 +204,15 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Update mutates an existing song using the shared admin schema.
 func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
+	userID, authErr := util.CurrentUserID(r)
+	if authErr != nil {
+		handler.Error(w, authErr)
+		return
+	}
 	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
 	songID, err := strconv.Atoi(rawID)
 	if err != nil || songID <= 0 {
-		handler.Error(w, err)
+		handler.Error(w, apperror.BadRequest("Invalid song id"))
 		return
 	}
 
@@ -219,6 +230,7 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.svc.Update(r.Context(), songID, songsvc.UpdateParams{
 		MutationParams: mutation,
+		UserID:         userID,
 	}); err != nil {
 		handler.Error(w, err)
 		return
@@ -236,13 +248,13 @@ func (h Handler) AssignLevel(w http.ResponseWriter, r *http.Request) {
 
 	songID, err := strconv.Atoi(strings.TrimSpace(songIDValue))
 	if err != nil || songID <= 0 {
-		handler.Error(w, err)
+		handler.Error(w, apperror.BadRequest("Invalid song id"))
 		return
 	}
 
 	levelID, err := strconv.Atoi(strings.TrimSpace(levelIDValue))
 	if err != nil || levelID <= 0 {
-		handler.Error(w, err)
+		handler.Error(w, apperror.BadRequest("Invalid level id"))
 		return
 	}
 	userID, authErr := util.CurrentUserID(r)

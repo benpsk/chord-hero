@@ -53,6 +53,7 @@ type CreateParams struct {
 // UpdateParams captures the fields required to update an existing song record.
 type UpdateParams struct {
 	MutationParams
+	UserID int
 }
 
 // ListResult represents a paginated song collection.

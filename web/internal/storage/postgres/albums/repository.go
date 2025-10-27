@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	albumsvc "github.com/lyricapp/lyric/web/internal/services/albums"
+	"github.com/lyricapp/lyric/web/internal/storage"
 )
 
 // Repository provides Postgres-backed album queries.
 type Repository struct {
-	db *pgxpool.Pool
+	//	db *pgxpool.Pool
+	db storage.Querier
 }
 
 // NewRepository constructs a Repository instance.
-func NewRepository(db *pgxpool.Pool) *Repository {
+func NewRepository(db storage.Querier) *Repository {
 	return &Repository{db: db}
 }
 
@@ -108,7 +108,7 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 			name        string
 			releaseYear sql.NullInt32
 			totalSongs  int
-			artists []albumsvc.Artist
+			artists     []albumsvc.Artist
 		)
 
 		if err := rows.Scan(&id, &name, &releaseYear, &totalSongs, &artists); err != nil {
@@ -116,9 +116,9 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 		}
 
 		album := albumsvc.Album{
-			ID:    id,
-			Name:  name,
-			Total: totalSongs,
+			ID:      id,
+			Name:    name,
+			Total:   totalSongs,
 			Artists: artists,
 		}
 
@@ -142,79 +142,8 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 		return result, nil
 	}
 
-	if err := r.attachBookmarks(ctx, params, albumIDs, albumTotals, albumIndex, &albums); err != nil {
-		return result, err
-	}
-
 	result.Data = albums
 	return result, nil
-}
-
-func (r *Repository) attachBookmarks(ctx context.Context, params albumsvc.ListParams, albumIDs []int32, totals map[int]int, albumIndex map[int]int, albums *[]albumsvc.Album) error {
-	if len(albumIDs) == 0 {
-		return nil
-	}
-	if params.UserID == nil && params.PlaylistID == nil {
-		return nil
-	}
-
-	var builder strings.Builder
-	args := []any{albumIDs}
-	argPos := 1
-
-	builder.WriteString(`
-        select s.album_id, count(distinct s.id) as playlist_count
-        from playlist_song ps
-        join songs s on s.id = ps.song_id
-    `)
-
-	if params.UserID != nil {
-		builder.WriteString("JOIN playlists p ON p.id = ps.playlist_id\n")
-	}
-
-	builder.WriteString("WHERE s.album_id = ANY($1::int4[])\n")
-
-	if params.PlaylistID != nil {
-		argPos++
-		builder.WriteString(fmt.Sprintf("AND ps.playlist_id = $%d\n", argPos))
-		args = append(args, *params.PlaylistID)
-	}
-
-	if params.UserID != nil {
-		argPos++
-		builder.WriteString(fmt.Sprintf("AND p.user_id = $%d\n", argPos))
-		args = append(args, *params.UserID)
-	}
-
-	builder.WriteString("GROUP BY s.album_id")
-
-	rows, err := r.db.Query(ctx, builder.String(), args...)
-	if err != nil {
-		return fmt.Errorf("list album bookmarks: %w", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var albumID int
-		var playlistCount int
-
-		if err := rows.Scan(&albumID, &playlistCount); err != nil {
-			return fmt.Errorf("scan album bookmark: %w", err)
-		}
-
-		total, ok := totals[albumID]
-		if !ok || total == 0 {
-			continue
-		}
-
-		if playlistCount >= total {
-			if idx, ok := albumIndex[albumID]; ok {
-				(*albums)[idx].IsBookmark = true
-			}
-		}
-	}
-
-	return rows.Err()
 }
 
 func offset(page, perPage int) int {

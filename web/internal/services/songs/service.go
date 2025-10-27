@@ -2,6 +2,7 @@ package songs
 
 import (
 	"context"
+	"log"
 	"strings"
 
 	"github.com/lyricapp/lyric/web/internal/apperror"
@@ -153,6 +154,7 @@ func (s *service) Get(ctx context.Context, id int) (Song, error) {
 // Update applies new values to an existing song.
 func (s *service) Update(ctx context.Context, id int, params UpdateParams) error {
 	if id <= 0 {
+		log.Println("her")
 		return apperror.NotFound("song not found")
 	}
 

@@ -129,6 +129,8 @@ func (p songPayload) toMutationParams() (songsvc.MutationParams, error) {
 
 // List responds with a paginated list of songs following the shared API shape.
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
+
+	userID, _ := util.CurrentUserID(r)
 	query := r.URL.Query()
 	params := songsvc.ListParams{}
 	validationErrors := map[string]string{}
@@ -153,6 +155,11 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	if len(validationErrors) > 0 {
 		handler.Error(w, apperror.Validation("failed validation", validationErrors))
 		return
+	}
+	if userID != 0 && params.UserID != nil {
+		params.UserID = &userID
+	} else {
+		params.UserID = nil
 	}
 
 	result, err := h.svc.List(r.Context(), params)

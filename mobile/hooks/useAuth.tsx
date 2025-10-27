@@ -54,7 +54,7 @@ type AuthContextValue = {
   refreshUser: () => Promise<void>;
 };
 
-const AUTH_TOKEN_STORAGE_KEY = 'mm_song_auth_token';
+const AUTH_TOKEN_STORAGE_KEY = 'chord_hero_auth_token';
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 

@@ -8,10 +8,9 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lyricapp/lyric/web/internal/config"
 	"github.com/lyricapp/lyric/web/internal/http/middleware/auth"
-	"github.com/lyricapp/lyric/web/internal/storage"
 )
 
-func AuthToken(t *testing.T, db storage.Querier, userID int) (*chi.Mux, string) {
+func AuthToken(t *testing.T, userID int) (*chi.Mux, string) {
 	// Create a token
 	cfg, err := config.Load()
 	if err != nil {
@@ -26,9 +25,9 @@ func AuthToken(t *testing.T, db storage.Querier, userID int) (*chi.Mux, string) 
 	_, tokenString, _ := tokenAuth.Encode(claims)
 
 	r := chi.NewRouter()
-
-	// 1. Mount your REAL JWT middleware
 	r.Use(jwtauth.Verifier(tokenAuth))
 	r.Use(auth.Authenticator(tokenAuth))
+
 	return r, tokenString
 }
+

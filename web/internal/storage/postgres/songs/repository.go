@@ -49,6 +49,12 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		args = append(args, "%"+search+"%")
 	}
 
+	if params.UserID != nil {
+		placeholder := nextPlaceholder()
+		conditions = append(conditions, fmt.Sprintf("created_by = %s", placeholder))
+		args = append(args, *params.UserID)
+	}
+
 	if params.AlbumID != nil {
 		placeholder := nextPlaceholder()
 		conditions = append(conditions, fmt.Sprintf("exists (select 1 from album_song als where als.song_id = s.id and als.album_id = %s)", placeholder))

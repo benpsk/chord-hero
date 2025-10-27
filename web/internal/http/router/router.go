@@ -115,10 +115,10 @@ func New(application *app.Application) chi.Router {
 	apiUsers := usersapi.New(application.Services.Users)
 	tokenAuth := application.Services.Login.TokenAuth()
 	r.Route("/api", func(api chi.Router) {
+		api.Use(jwtauth.Verifier(tokenAuth))
 		api.Post("/login", apiLogin.Request)
 		api.Post("/code", apiLogin.Verify)
 		api.Group(func(protected chi.Router) {
-			protected.Use(jwtauth.Verifier(tokenAuth))
 			protected.Use(authmw.Authenticator(tokenAuth))
 			protected.Post("/me", apiLogin.Me)
 			protected.Post("/songs", apiSongs.Create)

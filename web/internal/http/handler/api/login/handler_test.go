@@ -319,7 +319,7 @@ func TestHandler_Me(t *testing.T) {
 	h := getHandler(tx)
 	rr := httptest.NewRecorder()
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	r.Post("/api/me", h.Me)
 
 	req, _ := http.NewRequest("POST", "/api/me", nil)
@@ -363,7 +363,7 @@ func TestHandler_Me_Fail(t *testing.T) {
 	h := getHandler(tx)
 	rr := httptest.NewRecorder()
 
-	r, _ := testutil.AuthToken(t, tx, userID)
+	r, _ := testutil.AuthToken(t, userID)
 	r.Post("/api/me", h.Me)
 
 	req, _ := http.NewRequest("POST", "/api/me", nil)

@@ -204,7 +204,7 @@ func TestHandler_List_Filters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to insert songs: %v", err)
 	}
-	err = tx.QueryRow(ctx, "insert into songs (title, created_by, language_id, level_id) values ('song 2', $1, $2, $3) returning id", userID, langID, levelID).Scan(&songID2)
+	err = tx.QueryRow(ctx, "insert into songs (title, language_id, level_id) values ('song 2', $1, $2) returning id", langID, levelID).Scan(&songID2)
 	if err != nil {
 		t.Fatalf("failed to insert songs: %v", err)
 	}
@@ -260,8 +260,15 @@ func TestHandler_List_Filters(t *testing.T) {
 			queryParams:   "search=song 1",
 			expectedCount: 1,
 		},
+		{
+			name:          "filter by user",
+			queryParams:   "user_id=100", // does not matter cuz will replace with current user
+			expectedCount: 1,
+		},
 	}
 	h := getHandler(tx)
+	r, accessToken := testutil.AuthToken(t, userID)
+	r.Get("/api/songs", h.List)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -269,9 +276,10 @@ func TestHandler_List_Filters(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 			rr := httptest.NewRecorder()
-			h.List(rr, req)
+			r.ServeHTTP(rr, req)
 
 			if status := rr.Code; status != http.StatusOK {
 				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -347,7 +355,7 @@ func TestHandler_Create_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	h := getHandler(tx)
@@ -395,7 +403,7 @@ func TestHandler_Create_Fail(t *testing.T) {
 		t.Fatalf("failed to insert levels: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	h := getHandler(tx)
 	r.Post("/api/songs", h.Create)
 
@@ -497,7 +505,7 @@ func TestHandler_Update_Success(t *testing.T) {
 	}
 	body, _ := json.Marshal(payload)
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	h := getHandler(tx)
 	r.Put("/api/songs/{id}", h.Update)
 
@@ -547,8 +555,8 @@ func TestHandler_Update_Fail(t *testing.T) {
 		t.Fatalf("failed to insert songs: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
-	h:= getHandler(tx)
+	r, accessToken := testutil.AuthToken(t, userID)
+	h := getHandler(tx)
 	r.Put("/api/songs/{id}", h.Update)
 
 	testCases := []struct {
@@ -610,7 +618,7 @@ func TestHandler_AssignLevel_Success(t *testing.T) {
 		t.Fatalf("failed to insert songs: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	h := getHandler(tx)
 	r.Post("/api/songs/{song_id}/levels/{level_id}", h.AssignLevel)
 
@@ -660,7 +668,7 @@ func TestHandler_AssignLevel_Fail(t *testing.T) {
 		t.Fatalf("failed to insert songs: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	h := getHandler(tx)
 	r.Post("/api/songs/{song_id}/levels/{level_id}", h.AssignLevel)
 

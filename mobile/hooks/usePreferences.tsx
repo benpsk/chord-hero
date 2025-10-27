@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type ThemePreference = 'system' | 'light' | 'dark';
 type LanguagePreference = 'en' | 'mm';
 
-const THEME_PREFERENCE_STORAGE_KEY = '@mm-song/theme-preference';
+const THEME_PREFERENCE_STORAGE_KEY = '@chord-hero/theme-preference';
 
 type PreferencesContextValue = {
   themePreference: ThemePreference;

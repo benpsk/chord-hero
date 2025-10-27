@@ -40,7 +40,7 @@ func TestHandler_Create_Success(t *testing.T) {
 	}
 
 	h := getHandler(tx)
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	r.Post("/api/feedback", h.Create)
 
 	requestBody, _ := json.Marshal(map[string]string{"message": "My Playlist"})
@@ -79,7 +79,7 @@ func TestHandler_Create_Fail(t *testing.T) {
 		t.Fatalf("Failed to insert users: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	r.Post("/api/feedback", h.Create)
 
 	testCases := []struct {

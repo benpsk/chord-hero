@@ -23,6 +23,60 @@ func getHandler(storage storage.Querier) playlists.Handler {
 	return playlists.New(svc)
 }
 
+
+func TestHandler_List(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('abc@mail.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to seed users table: %v", err)
+	}
+	_, err = tx.Exec(ctx, "insert into playlists (name, user_id) values ('my playlist 1', $1), ('my plylist 2', $1)", userID)
+	if err != nil {
+		t.Fatalf("failed to seed playlists table: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, userID)
+	h := getHandler(tx)
+	
+	r.Get("/api/playlists", h.List)
+
+	req, err := http.NewRequest("GET", "/api/playlists", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("h returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	var res handler.PageResponse[playlistsvc.Playlist]
+	decoder := json.NewDecoder(rr.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&res)
+	if err != nil {
+		t.Fatalf("failed to decode or response format is wrong: %v", err)
+	}
+	if len(res.Data) != 2 {
+		t.Fatalf("data mot match")
+	}
+	if res.Total != 2 {
+		t.Fatalf("total count not match")
+	}
+}
+
 func TestHandler_Create_Success(t *testing.T) {
 	conn := testutil.SetupDB(t)
 	defer conn.Close()
@@ -37,7 +91,7 @@ func TestHandler_Create_Success(t *testing.T) {
 		t.Fatalf("failed to seed user: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	h := getHandler(tx)
 
 	r.Post("/api/playlists", h.Create)
@@ -84,7 +138,7 @@ func TestHandler_Create_Fail(t *testing.T) {
 		t.Fatalf("failed to seed user: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 	h := getHandler(tx)
 
 	r.Post("/api/playlists", h.Create)
@@ -157,7 +211,7 @@ func TestHandler_List_Validation(t *testing.T) {
 		t.Fatalf("failed to seed user: %v", err)
 	}
 
-	r, accessToken := testutil.AuthToken(t, tx, userID)
+	r, accessToken := testutil.AuthToken(t, userID)
 
 	h := getHandler(tx)
 	r.Get("/api/playlists", h.List)

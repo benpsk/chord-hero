@@ -149,6 +149,10 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	params.ReleaseYear = util.ParseOptionalInt(query.Get("release_year"), "release_year", validationErrors)
 	params.PlaylistID = util.ParseOptionalPositiveInt(query.Get("playlist_id"), "playlist_id", validationErrors)
 	params.UserID = util.ParseOptionalPositiveInt(query.Get("user_id"), "user_id", validationErrors)
+	params.LevelID = util.ParseOptionalPositiveInt(query.Get("level_id"), "level_id", validationErrors)
+	if strings.TrimSpace(query.Get("is_trending")) == "1" {
+		params.IsTrending = true
+	}
 
 	params.Search = util.ParseOptionalSearch(query.Get("search"))
 

@@ -1,22 +1,47 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { Chip, IconButton, Menu, Surface, TextInput, useTheme } from 'react-native-paper';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { ActivityIndicator, Chip, IconButton, Menu, Surface, TextInput, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { FILTER_LANGUAGES, HOME_DETAILS, type FilterLanguage } from '@/constants/home';
+import { MOCK_PLAYLISTS } from '@/constants/playlists';
 import { usePreferences } from '@/hooks/usePreferences';
+import { TrackList } from '@/components/search/TrackList';
+import type { SongRecord } from '@/hooks/useSongsSearch';
+import { useTrendingLevelSongs } from '@/hooks/useTrendingLevelSongs';
+import { PlaylistSelectionModal } from '@/components/search/PlaylistSelectionModal';
+import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 
 export default function ChartDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, name, level, level_id } = useLocalSearchParams<{ id: string; name?: string; level?: string; level_id?: string }>();
+  const router = useRouter();
   const theme = useTheme();
   const detail = id ? HOME_DETAILS[id] : undefined;
   const { themePreference } = usePreferences();
+  const { isAuthenticated } = useAuth();
 
-  const [selectedLanguages, setSelectedLanguages] = useState<FilterLanguage[]>(['English']);
+  const [selectedLanguages, setSelectedLanguages] = useState<FilterLanguage[]>([]);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [bookmarkedTracks, setBookmarkedTracks] = useState<Set<string>>(new Set());
+  const [bookmarkedItems, setBookmarkedItems] = useState<Set<string>>(new Set());
+  const [trackPlaylistMap, setTrackPlaylistMap] = useState<Record<string, string[]>>({});
+  const [isPlaylistModalVisible, setPlaylistModalVisible] = useState(false);
+  const [activeTrack, setActiveTrack] = useState<SongRecord | null>(null);
+  const [draftSelectedPlaylists, setDraftSelectedPlaylists] = useState<Set<string>>(() => new Set());
+  const [loginPromptVisible, setLoginPromptVisible] = useState(false);
+
+  const levelId = useMemo(() => {
+    if (!level_id) return undefined;
+    const parsed = Number(level_id);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }, [level_id]);
+
+  const { data: trendingSongsResponse, isLoading: isTrendingLoading } = useTrendingLevelSongs(levelId);
+
+  const songs = useMemo(() => trendingSongsResponse?.data ?? [], [trendingSongsResponse]);
+  const playlists = useMemo(() => MOCK_PLAYLISTS, []);
 
   const closeMenu = useCallback(() => setMenuVisible(false), []);
   const toggleMenu = useCallback(() => {
@@ -34,26 +59,95 @@ export default function ChartDetailScreen() {
     });
   }, []);
 
-  const toggleBookmark = useCallback((trackId: string) => {
-    setBookmarkedTracks((prev) => {
+  const handleClosePlaylistModal = useCallback(() => {
+    setPlaylistModalVisible(false);
+    setActiveTrack(null);
+    setDraftSelectedPlaylists(() => new Set());
+  }, []);
+
+  const handleOpenPlaylistModal = useCallback((track: SongRecord) => {
+    if (!isAuthenticated) {
+      setLoginPromptVisible(true);
+      return;
+    }
+    const trackKey = `track-${track.id}`;
+    const existingSelections = trackPlaylistMap[trackKey] ?? [];
+    setDraftSelectedPlaylists(() => new Set(existingSelections));
+    setActiveTrack(track);
+    setPlaylistModalVisible(true);
+  }, [isAuthenticated, trackPlaylistMap]);
+
+  const handleTogglePlaylistSelection = useCallback((playlistId: string) => {
+    setDraftSelectedPlaylists((prev) => {
       const next = new Set(prev);
-      if (next.has(trackId)) {
-        next.delete(trackId);
+      if (next.has(playlistId)) {
+        next.delete(playlistId);
       } else {
-        next.add(trackId);
+        next.add(playlistId);
       }
       return next;
     });
   }, []);
 
-  const filteredTracks = useMemo(() => {
-    if (!detail) return [];
-    if (selectedLanguages.length === 0) return detail.tracks;
-    return detail.tracks.filter((track) => {
-      if (!track.language) return true;
-      return selectedLanguages.includes(track.language);
+  const handleConfirmPlaylists = useCallback(() => {
+    if (!activeTrack) {
+      handleClosePlaylistModal();
+      return;
+    }
+
+    const trackKey = `track-${activeTrack.id}`;
+    const selectedArray = Array.from(draftSelectedPlaylists);
+
+    setTrackPlaylistMap((prev) => {
+      const next = { ...prev };
+      if (selectedArray.length > 0) {
+        next[trackKey] = selectedArray;
+      } else {
+        delete next[trackKey];
+      }
+      return next;
     });
-  }, [detail, selectedLanguages]);
+
+    setBookmarkedItems((prev) => {
+      const next = new Set(prev);
+      if (selectedArray.length > 0) {
+        next.add(trackKey);
+      } else {
+        next.delete(trackKey);
+      }
+      return next;
+    });
+
+    handleClosePlaylistModal();
+  }, [activeTrack, draftSelectedPlaylists, handleClosePlaylistModal]);
+
+  const handleTrackPress = useCallback((track: SongRecord) => {
+    router.push({ pathname: '/song/[id]', params: { id: String(track.id), item: JSON.stringify(track) } });
+  }, [router]);
+
+  const handleDismissLoginPrompt = useCallback(() => {
+    setLoginPromptVisible(false);
+  }, []);
+
+  const handleNavigateToLogin = useCallback(() => {
+    setLoginPromptVisible(false);
+    router.push('/login');
+  }, [router]);
+
+  const filteredSongs = useMemo(() => {
+    if (selectedLanguages.length === 0) {
+      return songs;
+    }
+    return songs.filter((track) => {
+      const languageName = track.language?.name ?? '';
+      return selectedLanguages.some((lang) => lang.toLowerCase() === languageName.toLowerCase());
+    });
+  }, [songs, selectedLanguages]);
+
+  const chartTitle = name ?? detail?.cardTitle ?? detail?.heading ?? 'Chart';
+  const chartLevel = level ?? detail?.cardSubtitle ?? '';
+  const heading = detail?.heading ?? chartTitle;
+  const description = detail?.description ?? 'Weekly highlights';
 
   const styles = useMemo(
     () =>
@@ -65,44 +159,45 @@ export default function ChartDetailScreen() {
         content: {
           paddingHorizontal: 24,
           paddingBottom: 48,
-          paddingTop: 16,
-          gap: 24,
+          paddingTop: 12,
+          gap: 20,
         },
         headerRow: {
           flexDirection: 'row',
-          gap: 16,
+          gap: 12,
           alignItems: 'center',
         },
         coverCard: {
-          width: 128,
-          height: 128,
-          borderRadius: 24,
-          padding: 16,
+          width: 104,
+          height: 104,
+          borderRadius: 20,
+          padding: 14,
           justifyContent: 'center',
           alignItems: 'center',
-          gap: 6,
+          gap: 4,
         },
         coverTitle: {
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: '700',
           textAlign: 'center',
           color: theme.colors.onSurface,
         },
         coverSubtitle: {
-          fontSize: 16,
-          fontWeight: '500',
+          fontWeight: '700',
           textAlign: 'center',
-          color: theme.colors.onSurface,
+          color: theme.colors.secondary,
+        },
+        headerInfo: {
+          flex: 1,
+          gap: 4,
         },
         headingText: {
-          fontSize: 24,
-          fontWeight: '700',
+          fontSize: 18,
+          fontWeight: '600',
           color: theme.colors.onSurface,
         },
         descriptionText: {
-          fontSize: 15,
-          marginTop: 4,
-          color: theme.colors.onSurface,
+          color: theme.colors.onSurfaceVariant,
         },
         filterRow: {
           flexDirection: 'row',
@@ -115,8 +210,7 @@ export default function ChartDetailScreen() {
         menuPressable: {
           flex: 1,
         },
-        filterInput: {
-        },
+        filterInput: {},
         menuContent: {
           backgroundColor: theme.colors.background,
           borderColor: theme.colors.secondary,
@@ -133,65 +227,42 @@ export default function ChartDetailScreen() {
           gap: 16,
           zIndex: 1,
         },
-        trackCard: {
-          borderBottomWidth: 1,
-          borderBottomColor: theme.colors.tertiary,
-          paddingBottom: 12,
-          marginBottom: 12,
-        },
-        trackRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-        },
-        trackInfo: {
-          flex: 1,
-        },
-        trackTitle: {
-          fontSize: 16,
-          fontWeight: '700',
-          color: theme.colors.onBackground,
-        },
-        trackDescription: {
-          fontSize: 13,
-          marginTop: 2,
-          color: theme.colors.onBackground,
-        },
-        trackActions: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-        },
-        bookmarkButton: {
-          margin: -8,
-        },
-        metaPill: {
-          paddingHorizontal: 10,
+        levelBadge: {
+          alignSelf: 'flex-start',
+          paddingHorizontal: 12,
           paddingVertical: 4,
-          borderRadius: 12,
-          backgroundColor: theme.colors.secondary,
+          borderRadius: 999,
+          backgroundColor: theme.colors.secondaryContainer,
         },
-        metaText: {
-          color: theme.colors.onSecondary,
-          fontSize: 12,
+        levelBadgeText: {
+          color: theme.colors.onSecondaryContainer,
           fontWeight: '600',
+          letterSpacing: 0.3,
+        },
+        trackListContent: {
+          paddingBottom: 12,
+        },
+        loadingContainer: {
+          paddingVertical: 48,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
         emptyState: {
           alignItems: 'center',
           paddingVertical: 60,
         },
         emptyText: {
-          fontSize: 16,
+          color: theme.colors.onSurfaceVariant,
+          fontSize: 14,
         },
       }),
     [
-      theme.colors.tertiary,
       theme.colors.onSurface,
       theme.colors.background,
-      theme.colors.onBackground,
-      theme.colors.onSecondary,
-      theme.colors.secondary
+      theme.colors.secondary,
+      theme.colors.onSecondaryContainer,
+      theme.colors.secondaryContainer,
+      theme.colors.onSurfaceVariant
     ]
   );
 
@@ -199,7 +270,7 @@ export default function ChartDetailScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Stack.Screen
         options={{
-          title: detail?.heading ?? 'Chart',
+          title: heading,
           headerRight: () => (
             <IconButton
               icon="share-variant"
@@ -216,12 +287,17 @@ export default function ChartDetailScreen() {
         showsVerticalScrollIndicator={false}>
         <Animated.View style={styles.headerRow} entering={FadeInUp.delay(80).duration(320)}>
           <Surface style={styles.coverCard} elevation={themePreference === 'dark' ? 1 : 2}>
-            <Text style={styles.coverTitle}>{detail?.cardTitle ?? 'Top 50'}</Text>
-            <Text style={styles.coverSubtitle}>{detail?.cardSubtitle ?? ''}</Text>
+            <Text style={styles.coverTitle}>{chartTitle}</Text>
+            {!!chartLevel && <Text style={styles.coverSubtitle}>{chartLevel}</Text>}
           </Surface>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headingText}>{detail?.heading ?? 'Chart'}</Text>
-            <Text style={styles.descriptionText}>{detail?.description ?? 'Weekly highlights'}</Text>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headingText}>{heading}</Text>
+            <Text style={styles.descriptionText}>{description}</Text>
+            {!!chartLevel && (
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelBadgeText}>{chartLevel}</Text>
+              </View>
+            )}
           </View>
         </Animated.View>
 
@@ -280,45 +356,42 @@ export default function ChartDetailScreen() {
         )}
 
         <Animated.View style={styles.section} entering={FadeInUp.delay(200).duration(340)}>
-          {filteredTracks.map((track, index) => (
-            <Animated.View key={track.id} entering={FadeInUp.delay(220 + index * 40).duration(300)}>
-              <View style={styles.trackCard}>
-                <View style={styles.trackRow}>
-                  <View style={styles.trackInfo}>
-                    <Text style={styles.trackTitle} numberOfLines={1}>
-                      {track.title}
-                    </Text>
-                    <Text style={styles.trackDescription} numberOfLines={1}>
-                      {track.artists}
-                    </Text>
-                  </View>
-                  <View style={styles.trackActions}>
-                    <View style={styles.metaPill}>
-                      <Text style={styles.metaText}>{track.key}</Text>
-                    </View>
-                    <View style={styles.metaPill}>
-                      <Text style={styles.metaText}>{track.difficulty}</Text>
-                    </View>
-                    <IconButton
-                      icon={bookmarkedTracks.has(track.id) ? 'bookmark' : 'bookmark-outline'}
-                      size={22}
-                      iconColor={bookmarkedTracks.has(track.id) ? theme.colors.primary : theme.colors.secondary}
-                      onPress={() => toggleBookmark(track.id)}
-                      accessibilityLabel={bookmarkedTracks.has(track.id) ? 'Remove bookmark' : 'Add bookmark'}
-                      style={styles.bookmarkButton}
-                    />
-                  </View>
+          {isTrendingLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator animating size="small" />
+            </View>
+          ) : (
+            <TrackList
+              tracks={filteredSongs}
+              bookmarkedItems={bookmarkedItems}
+              onPressBookmark={handleOpenPlaylistModal}
+              onPressTrack={handleTrackPress}
+              contentContainerStyle={styles.trackListContent}
+              ListEmptyComponent={() => (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No tracks available yet.</Text>
                 </View>
-              </View>
-            </Animated.View>
-          ))}
-          {filteredTracks.length === 0 && (
-            <Animated.View style={styles.emptyState} entering={FadeInUp.delay(220).duration(320)}>
-              <Text style={styles.emptyText}>No tracks available yet.</Text>
-            </Animated.View>
+              )}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+            />
           )}
         </Animated.View>
       </Animated.ScrollView>
+      <PlaylistSelectionModal
+        visible={isPlaylistModalVisible}
+        trackTitle={activeTrack?.title}
+        playlists={playlists}
+        selectedIds={draftSelectedPlaylists}
+        onTogglePlaylist={handleTogglePlaylistSelection}
+        onConfirm={handleConfirmPlaylists}
+        onCancel={handleClosePlaylistModal}
+      />
+      <LoginRequiredDialog
+        visible={loginPromptVisible}
+        onDismiss={handleDismissLoginPrompt}
+        onLogin={handleNavigateToLogin}
+      />
     </SafeAreaView>
   );
 }

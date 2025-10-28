@@ -144,7 +144,7 @@ export default function LibraryScreen() {
     [theme.colors.background, theme.colors.primary]
   );
 
-  const shareSearchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const shareSearchDebounceRef = useRef<NodeJS.Timeout | number>(null);
   const previousAuthRef = useRef(isAuthenticated);
 
   useEffect(() => {
@@ -260,7 +260,7 @@ export default function LibraryScreen() {
         });
 
         if (!playlist?.id) {
-          playlist = refreshedPlaylists.reduce<PlaylistSummary | null>((acc, item) => {
+          playlist = refreshedPlaylists.reduce<PlaylistSummary | undefined>((acc, item) => {
             if (!item?.id) return acc;
             const currentId = Number(item.id);
             if (!Number.isFinite(currentId)) {
@@ -274,7 +274,7 @@ export default function LibraryScreen() {
               return item;
             }
             return acc;
-          }, null);
+          }, playlist);
         }
       }
 

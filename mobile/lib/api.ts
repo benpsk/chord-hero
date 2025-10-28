@@ -20,9 +20,7 @@ function extractMessage(errors?: ErrorBag) {
   if (typeof errors.message === 'string' && errors.message.trim()) {
     return errors.message;
   }
-
-  const parts = Object.values(errors).filter((value) => typeof value === 'string') as string[];
-  return parts.length ? parts.join(', ') : 'Request failed';
+  return "";
 }
 
 type RequestOptions = Omit<RequestInit, 'body'> & {

@@ -8,7 +8,7 @@ export type CreateSongPayload = {
   key: string;
   language_id: number;
   lyric: string;
-  release_year?: number | null;
+  release_year?: number | string | null;
   album_ids?: number[];
   artist_ids?: number[];
   writer_ids?: number[];

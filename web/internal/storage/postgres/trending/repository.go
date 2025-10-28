@@ -119,7 +119,7 @@ func (r *Repository) TrendingAlbums(ctx context.Context) ([]trendingsvc.Trending
 			ap.album_id,
 			al.name as album_name,
 			ap.total_plays,
-			aaa.artists
+			coalesce(aaa.artists, '[]'::jsonb) as artists
 		from
 			album_plays as ap
 		join

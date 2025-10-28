@@ -171,7 +171,7 @@ func TestHandler_List_Filters(t *testing.T) {
 	tx, _ := conn.Begin(ctx)
 	defer tx.Rollback(ctx)
 
-	var userID, langID, levelID, albumID, artistID, writerID, playlistID, songID1, songID2 int
+	var userID, langID, levelID, levelID2, albumID, artistID, writerID, playlistID, songID1, songID2 int
 	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
@@ -181,6 +181,10 @@ func TestHandler_List_Filters(t *testing.T) {
 		t.Fatalf("failed to insert languages: %v", err)
 	}
 	err = tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('intermediate') returning id").Scan(&levelID2)
 	if err != nil {
 		t.Fatalf("failed to insert levels: %v", err)
 	}
@@ -204,7 +208,7 @@ func TestHandler_List_Filters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to insert songs: %v", err)
 	}
-	err = tx.QueryRow(ctx, "insert into songs (title, language_id, level_id) values ('song 2', $1, $2) returning id", langID, levelID).Scan(&songID2)
+	err = tx.QueryRow(ctx, "insert into songs (title, language_id, level_id) values ('song 2', $1, $2) returning id", langID, levelID2).Scan(&songID2)
 	if err != nil {
 		t.Fatalf("failed to insert songs: %v", err)
 	}
@@ -248,6 +252,11 @@ func TestHandler_List_Filters(t *testing.T) {
 		{
 			name:          "filter by release_year",
 			queryParams:   "release_year=2022",
+			expectedCount: 1,
+		},
+		{
+			name:          "filter by level_id",
+			queryParams:   fmt.Sprintf("level_id=%d", levelID),
 			expectedCount: 1,
 		},
 		{
@@ -300,6 +309,103 @@ func TestHandler_List_Filters(t *testing.T) {
 				t.Errorf("unexpected number of items: got %d want %d", len(res.Data), tc.expectedCount)
 			}
 		})
+	}
+}
+
+func TestHandler_List_Trending(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID, langID, levelID, otherLevelID int
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('trend@user.com', 'user') returning id").Scan(&userID)
+	if err != nil {
+		t.Fatalf("failed to insert users: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('french') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert languages: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('advanced') returning id").Scan(&levelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into levels (name) values ('expert') returning id").Scan(&otherLevelID)
+	if err != nil {
+		t.Fatalf("failed to insert levels: %v", err)
+	}
+
+	var topSongID, otherSongID, differentLevelSongID int
+	err = tx.QueryRow(ctx, "insert into songs (title, language_id, level_id, created_by) values ('top song', $1, $2, $3) returning id", langID, levelID, userID).Scan(&topSongID)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into songs (title, language_id, level_id, created_by) values ('other song', $1, $2, $3) returning id", langID, levelID, userID).Scan(&otherSongID)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into songs (title, language_id, level_id, created_by) values ('different level song', $1, $2, $3) returning id", langID, otherLevelID, userID).Scan(&differentLevelSongID)
+	if err != nil {
+		t.Fatalf("failed to insert songs: %v", err)
+	}
+
+	// Insert plays to create trending ordering.
+	for i := 0; i < 3; i++ {
+		_, err = tx.Exec(ctx, "insert into plays (song_id, user_id, created_at) values ($1, $2, now())", topSongID, userID)
+		if err != nil {
+			t.Fatalf("failed to insert plays: %v", err)
+		}
+	}
+	_, err = tx.Exec(ctx, "insert into plays (song_id, user_id, created_at) values ($1, $2, now())", otherSongID, userID)
+	if err != nil {
+		t.Fatalf("failed to insert plays: %v", err)
+	}
+	for i := 0; i < 5; i++ {
+		_, err = tx.Exec(ctx, "insert into plays (song_id, user_id, created_at) values ($1, $2, now())", differentLevelSongID, userID)
+		if err != nil {
+			t.Fatalf("failed to insert plays: %v", err)
+		}
+	}
+
+	h := getHandler(tx)
+	r, accessToken := testutil.AuthToken(t, userID)
+	r.Get("/api/songs", h.List)
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("/api/songs?level_id=%d&is_trending=1", levelID), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res handler.PageResponse[songsvc.Song]
+	decoder := json.NewDecoder(rr.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&res)
+	if err != nil {
+		t.Fatalf("Failed to decode or response format is wrong: %v", err)
+	}
+
+	if res.Total != 2 {
+		t.Fatalf("unexpected number of items: got %d want %d", res.Total, 2)
+	}
+	if len(res.Data) != 2 {
+		t.Fatalf("unexpected number of items: got %d want %d", len(res.Data), 2)
+	}
+	if res.Data[0].ID != topSongID {
+		t.Fatalf("expected top song first, got song id %d", res.Data[0].ID)
+	}
+	if res.Data[1].ID != otherSongID {
+		t.Fatalf("expected other song second, got song id %d", res.Data[1].ID)
 	}
 }
 

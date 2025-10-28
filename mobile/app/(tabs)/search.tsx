@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Divider, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Track } from '@/components/search/Track';
+import { TrackList } from '@/components/search/TrackList';
 import { Album, type SearchAlbumItem } from '@/components/search/Album';
 import { Stat } from '@/components/search/Stat';
 import { SearchEmptyState } from '@/components/search/SearchEmptyState';
@@ -238,23 +238,14 @@ export default function SearchScreen() {
     [router]
   );
 
-  // 1. Create a single, dynamic renderItem function with useCallback
-  const renderItem = useCallback(({ item }: { item: any }) => {
-    // 2. Use a switch statement to check the active tab
+  const handleTracksEndReached = useCallback(() => {
+    if (hasNextSongs && !isFetchingNextSongs) {
+      fetchNextSongs();
+    }
+  }, [hasNextSongs, isFetchingNextSongs, fetchNextSongs]);
+
+  const renderNonTrackItem = useCallback(({ item }: { item: any }) => {
     switch (activeTab) {
-      case 'tracks':
-        return (
-          <Track
-            item={item} // Pass the item as a 'track' prop
-            bookmarkedItems={bookmarkedItems}
-            onPressBookmark={handleOpenPlaylistModal}
-            onPressTrack={handleTrackPress}
-          />
-        );
-      case 'artists':
-        return (
-          <Stat item={item} />
-        );
       case 'albums':
         return (
           <Album
@@ -262,32 +253,20 @@ export default function SearchScreen() {
             bookmarkedItems={bookmarkedItems}
             onToggleBookmark={toggleBookmark}
           />
-        )
+        );
+      case 'artists':
+        return <Stat item={item} />;
       case 'writers':
-        return (
-          <Stat item={item} />
-        );
+        return <Stat item={item} />;
       case 'releaseYears':
-        return (
-          <Stat
-            unitLabel="songs"
-            item={item} />
-        );
+        return <Stat unitLabel="songs" item={item} />;
       default:
         return null;
     }
-  }, [
-    activeTab,
-    bookmarkedItems,
-    toggleBookmark,
-    handleOpenPlaylistModal,
-    handleTrackPress,
-  ]);
+  }, [activeTab, bookmarkedItems, toggleBookmark]);
 
-  const isFetchingNext = useMemo(() => {
+  const nonTrackLoading = useMemo(() => {
     switch (activeTab) {
-      case 'tracks':
-        return isFetchingNextSongs;
       case 'albums':
         return isFetchingNextAlbums;
       case 'artists':
@@ -301,17 +280,16 @@ export default function SearchScreen() {
     }
   }, [
     activeTab,
-    isFetchingNextSongs,
     isFetchingNextAlbums,
     isFetchingNextArtists,
     isFetchingNextWriters,
     isFetchingNextReleaseYears,
   ]);
 
-  // 2. Your renderFooter function is now clean and simple.
-  const renderFooter = useCallback(() => (
-    <ListFooter isLoading={isFetchingNext} />
-  ), [isFetchingNext]);
+  const nonTrackFooter = useMemo(
+    () => <ListFooter isLoading={nonTrackLoading} />,
+    [nonTrackLoading]
+  );
 
   const listContentStyle = useMemo(
     () => ({
@@ -354,23 +332,14 @@ export default function SearchScreen() {
     releaseYears,
   ]);
 
-  const handleEndReached = useCallback(() => {
-    // Use a switch statement to route the logic
-    console.log('End reached for tab:', activeTab);
+  const handleNonTrackEndReached = useCallback(() => {
     switch (activeTab) {
-      case 'tracks':
-        // Check the conditions specifically for songs
-        if (hasNextSongs && !isFetchingNextSongs) {
-          fetchNextSongs();
-        }
-        break;
       case 'albums':
         if (hasNextAlbums && !isFetchingNextAlbums) {
           fetchNextAlbums();
         }
         break;
       case 'artists':
-        // Check the conditions specifically for artists
         if (hasNextArtists && !isFetchingNextArtists) {
           fetchNextArtists();
         }
@@ -386,19 +355,30 @@ export default function SearchScreen() {
         }
         break;
       default:
-        // Do nothing if the tab is not recognized
         break;
     }
   }, [
-    // IMPORTANT: Include ALL variables from ALL tabs in the dependency array
     activeTab,
-    hasNextSongs, isFetchingNextSongs, fetchNextSongs,
-    hasNextAlbums, isFetchingNextAlbums, fetchNextAlbums,
-    hasNextArtists, isFetchingNextArtists, fetchNextArtists,
-    hasNextWriters, isFetchingNextWriters, fetchNextWriters,
-    hasNextReleaseYears, isFetchingNextReleaseYears, fetchNextReleaseYears,
-    // ... add dependencies for your other tabs
+    hasNextAlbums,
+    isFetchingNextAlbums,
+    fetchNextAlbums,
+    hasNextArtists,
+    isFetchingNextArtists,
+    fetchNextArtists,
+    hasNextWriters,
+    isFetchingNextWriters,
+    fetchNextWriters,
+    hasNextReleaseYears,
+    isFetchingNextReleaseYears,
+    fetchNextReleaseYears,
   ]);
+
+  const trackListFooter = useMemo(
+    () => <ListFooter isLoading={isFetchingNextSongs} />,
+    [isFetchingNextSongs]
+  );
+
+  const isTrackTab = activeTab === 'tracks';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -415,20 +395,32 @@ export default function SearchScreen() {
           setActiveTab={setActiveTab}
           activeResultsCount={listData.length}
         />
-        <FlatList
-          data={listData}
-          renderItem={renderItem}
-          keyExtractor={item => item.id}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.5}
-          contentContainerStyle={listContentStyle}
-          ListFooterComponent={renderFooter}
-          ListEmptyComponent={SearchEmptyState}
-          ItemSeparatorComponent={() =>
-                <Divider/>
-          }
-          showsVerticalScrollIndicator={false}
-        />
+        {isTrackTab ? (
+          <TrackList
+            tracks={songsRecords}
+            bookmarkedItems={bookmarkedItems}
+            onPressBookmark={handleOpenPlaylistModal}
+            onPressTrack={handleTrackPress}
+            contentContainerStyle={listContentStyle}
+            onEndReached={handleTracksEndReached}
+            ListFooterComponent={trackListFooter}
+            ListEmptyComponent={SearchEmptyState}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <FlatList
+            data={listData}
+            renderItem={renderNonTrackItem}
+            keyExtractor={(item) => String(item.id)}
+            onEndReached={handleNonTrackEndReached}
+            onEndReachedThreshold={0.5}
+            contentContainerStyle={listContentStyle}
+            ListFooterComponent={nonTrackFooter}
+            ListEmptyComponent={SearchEmptyState}
+            ItemSeparatorComponent={Divider}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </Animated.View>
       <PlaylistSelectionModal
         visible={isPlaylistModalVisible}

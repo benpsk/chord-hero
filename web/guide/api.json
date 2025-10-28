@@ -37,7 +37,7 @@
 
 -- GET /api/songs
   - lists all songs by alphabetically order
-  - filter param => ?album_id=1, ?artist_id=1, ?writer_id=1, ?release_year=2000, ?search=hello [filter by name], ?playlist_id=1
+  - filter param => ?album_id=1, ?artist_id=1, ?writer_id=1, ?release_year=2000, ?search=hello [filter by name], ?playlist_id=1, ?is_trending=true and level_id
     - release year will check first album release_year then song release_year
 {
   "data": [

@@ -30,6 +30,8 @@ type ListParams struct {
 	PlaylistID  *int
 	Search      string
 	UserID      *int
+	LevelID     *int
+	IsTrending  bool
 }
 
 // MutationParams captures shared song fields used across create and update flows.

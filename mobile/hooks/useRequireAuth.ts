@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { Route, useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
 
@@ -18,7 +18,7 @@ export function useRequireAuth(options: UseRequireAuthOptions = {}) {
     }
 
     if (!isAuthenticated) {
-      router.replace(redirectTo);
+      router.replace(redirectTo as Route);
     }
   }, [isAuthenticated, isChecking, redirectTo, router]);
 

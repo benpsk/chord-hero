@@ -9,15 +9,16 @@ export type Response<T> = {
 export type TrendingSong = {
   id: number;
   name: string;
-  level?: string;
+  level_id: number;
+  level: string;
   description?: string;
 };
 
 export type TrendingAlbum = {
   id: number;
   name: string;
-  total_plays?: number;
-  artists?: Array<{
+  total_plays: number;
+  artists: Array<{
     id: number;
     name: string;
   }>;
@@ -26,7 +27,7 @@ export type TrendingAlbum = {
 export type TrendingArtist = {
   id: number;
   name: string;
-  total_plays?: number;
+  total_plays: number;
 };
 
 const staleTime = 5 * 60 * 1000;

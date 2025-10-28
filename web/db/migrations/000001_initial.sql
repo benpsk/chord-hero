@@ -236,7 +236,6 @@ execute procedure update_updated_at_column();
 
 create table if not exists plays (
     id serial primary key,
-    datetime timestamp not null default now(),
     song_id int not null,
     user_id int,
     created_at timestamp not null default now(),

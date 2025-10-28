@@ -79,12 +79,40 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		args = append(args, *params.PlaylistID)
 	}
 
-	joinClause := ""
+	if params.LevelID != nil {
+		placeholder := nextPlaceholder()
+		conditions = append(conditions, fmt.Sprintf("s.level_id = %s", placeholder))
+		args = append(args, *params.LevelID)
+	}
+
+	joins := make([]string, 0)
+	withClause := ""
+	orderClause := "order by s.id desc"
+
+	if params.IsTrending && params.LevelID != nil {
+		withClause = `
+        with play_counts as (
+            select
+                p.song_id,
+                count(*) as total_plays
+            from plays p
+            where p.created_at >= now() - interval '30 days'
+            group by p.song_id
+        )`
+		joins = append(joins, "join play_counts pc on pc.song_id = s.id")
+		orderClause = "order by pc.total_plays desc, s.id desc"
+	}
+
 	if params.ReleaseYear != nil {
 		placeholder := nextPlaceholder()
-		joinClause = " left join album_song als on als.song_id = s.id"
+		joins = append(joins, "left join album_song als on als.song_id = s.id")
 		conditions = append(conditions, fmt.Sprintf("coalesce((select a.release_year from albums a where a.id = als.album_id), s.release_year) = %s", placeholder))
 		args = append(args, *params.ReleaseYear)
+	}
+
+	joinClause := ""
+	if len(joins) > 0 {
+		joinClause = " " + strings.Join(joins, " ")
 	}
 
 	whereClause := ""
@@ -93,6 +121,9 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 	}
 
 	countQuery := "select count(*) from songs s" + joinClause + whereClause
+	if withClause != "" {
+		countQuery = withClause + "\n" + countQuery
+	}
 
 	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&result.Total); err != nil {
 		return result, fmt.Errorf("count songs: %w", err)
@@ -122,9 +153,13 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
         left join languages la on la.id = s.language_id
         %s
         %s
-        order by s.id desc
+        %s
         limit %s offset %s
-    `, joinClause, whereClause, limitPlaceholder, offsetPlaceholder)
+    `, joinClause, whereClause, orderClause, limitPlaceholder, offsetPlaceholder)
+
+	if withClause != "" {
+		listQuery = withClause + "\n" + listQuery
+	}
 
 	listArgs := append([]any{}, args...)
 	listArgs = append(listArgs, params.PerPage, offset(params.Page, params.PerPage))

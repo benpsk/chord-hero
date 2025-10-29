@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 
 export default function ChartDetailScreen() {
-  const { id, name, level, level_id } = useLocalSearchParams<{ id: string; name?: string; level?: string; level_id?: string }>();
+  const { id, name, level, level_id, description } = useLocalSearchParams<{ id: string; name: string; level: string; level_id: string, description: string }>();
   const router = useRouter();
   const theme = useTheme();
   const detail = id ? HOME_DETAILS[id] : undefined;
@@ -147,7 +147,6 @@ export default function ChartDetailScreen() {
   const chartTitle = name ?? detail?.cardTitle ?? detail?.heading ?? 'Chart';
   const chartLevel = level ?? detail?.cardSubtitle ?? '';
   const heading = detail?.heading ?? chartTitle;
-  const description = detail?.description ?? 'Weekly highlights';
 
   const styles = useMemo(
     () =>
@@ -168,24 +167,17 @@ export default function ChartDetailScreen() {
           alignItems: 'center',
         },
         coverCard: {
-          width: 104,
-          height: 104,
+          height: 60,
           borderRadius: 20,
           padding: 14,
           justifyContent: 'center',
           alignItems: 'center',
           gap: 4,
         },
-        coverTitle: {
-          fontSize: 18,
-          fontWeight: '700',
-          textAlign: 'center',
-          color: theme.colors.onSurface,
-        },
         coverSubtitle: {
           fontWeight: '700',
           textAlign: 'center',
-          color: theme.colors.secondary,
+          color: theme.colors.tertiary
         },
         headerInfo: {
           flex: 1,
@@ -253,13 +245,13 @@ export default function ChartDetailScreen() {
         },
         emptyText: {
           color: theme.colors.onSurfaceVariant,
-          fontSize: 14,
         },
       }),
     [
       theme.colors.onSurface,
       theme.colors.background,
       theme.colors.secondary,
+      theme.colors.tertiary,
       theme.colors.onSecondaryContainer,
       theme.colors.secondaryContainer,
       theme.colors.onSurfaceVariant
@@ -287,17 +279,11 @@ export default function ChartDetailScreen() {
         showsVerticalScrollIndicator={false}>
         <Animated.View style={styles.headerRow} entering={FadeInUp.delay(80).duration(320)}>
           <Surface style={styles.coverCard} elevation={themePreference === 'dark' ? 1 : 2}>
-            <Text style={styles.coverTitle}>{chartTitle}</Text>
-            {!!chartLevel && <Text style={styles.coverSubtitle}>{chartLevel}</Text>}
+            <Text style={styles.coverSubtitle}>{chartLevel}</Text>
           </Surface>
           <View style={styles.headerInfo}>
             <Text style={styles.headingText}>{heading}</Text>
             <Text style={styles.descriptionText}>{description}</Text>
-            {!!chartLevel && (
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelBadgeText}>{chartLevel}</Text>
-              </View>
-            )}
           </View>
         </Animated.View>
 

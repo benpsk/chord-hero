@@ -83,7 +83,7 @@ export default function HomeScreen() {
   const handleOpenChart = (item: WeeklyChartItem) =>
     router.push({
       pathname: '/chart/[id]',
-      params: { id: item.id, name: item.name, level: item.level, level_id: String(item.level_id) },
+      params: { id: item.id, name: item.name, level: item.level, level_id: String(item.level_id), description: item.description },
     });
   const handleOpenSearch = () => console.log('ok');
 

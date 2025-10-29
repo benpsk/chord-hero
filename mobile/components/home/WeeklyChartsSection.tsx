@@ -64,6 +64,7 @@ export function WeeklyChartsSection({
           color: theme.colors.secondary,
         },
         title: {
+          fontWeight: '500',
           color: theme.colors.primary,
         },
         description: {

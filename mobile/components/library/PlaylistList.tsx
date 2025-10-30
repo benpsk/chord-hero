@@ -24,6 +24,7 @@ type Props = {
   onRetry: () => void;
   onNavigateToLogin: () => void;
   onCreatePlaylist: () => void;
+  onOpen: (playlist: PlaylistSummary) => void;
   onShare: (playlist: PlaylistSummary) => void;
   onEdit: (playlist: PlaylistSummary) => void;
   onDelete: (playlist: PlaylistSummary) => void;
@@ -42,6 +43,7 @@ export function PlaylistList({
   onRetry,
   onNavigateToLogin,
   onCreatePlaylist,
+  onOpen,
   onShare,
   onEdit,
   onDelete,
@@ -109,7 +111,7 @@ export function PlaylistList({
         const isOwner = playlist.is_owner === true;
 
         return (
-          <TouchableRipple key={playlist.id} onPress={() => {}} borderless={false}>
+          <TouchableRipple key={playlist.id} onPress={() => onOpen(playlist)} borderless={false}>
             <Animated.View entering={FadeInUp.delay(160 + index * 40).duration(320)}>
               {index > 0 && <View style={styles.rowSpacing} />}
               <View style={styles.libraryRow}>

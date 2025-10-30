@@ -10,10 +10,10 @@ export type SongRecord = {
   language: { id: number; name: string };
   lyric: string;
   release_year?: number | null;
-  is_bookmark?: boolean;
   artists?: Array<{ id: number; name: string | null }>;
   writers?: Array<{ id: number; name: string | null }>;
   albums?: Array<{ id: number; name: string | null; release_year?: number | null }>;
+  playlist_ids?: number[];
 };
 
 type PaginatedResponse<T> = {
@@ -25,38 +25,42 @@ type PaginatedResponse<T> = {
 
 export type UseSongsSearchParams = {
   search?: string;
+  userId?: number;
 };
-
-type SongsPage = PaginatedResponse<SongRecord>;
-
-function isPaginatedResponse(page: SongsPage): page is PaginatedResponse<SongRecord> {
-  return !!page && !Array.isArray(page);
-}
-
-function extractPageData(page: SongsPage): SongRecord[] {
-  if (!page) return [];
-  if (Array.isArray(page)) return page;
-  return Array.isArray(page.data) ? page.data : [];
-}
 
 function buildPath(params: UseSongsSearchParams | undefined, page: number) {
   const searchParams = new URLSearchParams();
   if (params?.search) {
     searchParams.set('search', params.search);
   }
+  if (typeof params?.userId === 'number' && Number.isFinite(params.userId)) {
+    searchParams.set('user_id', String(params.userId));
+  }
   searchParams.set('page', String(page));
   const query = searchParams.toString();
   return query ? `/api/songs?${query}` : '/api/songs';
 }
 
-export function useSongsSearch(params?: UseSongsSearchParams) {
+type UseSongsSearchOptions = {
+  enabled?: boolean;
+};
+
+export function useSongsSearch(params?: UseSongsSearchParams, options?: UseSongsSearchOptions) {
+  const enabled = options?.enabled ?? true;
   return useInfiniteQuery({
-    queryKey: ['songs', params?.search ?? ''],
+    queryKey: ['songs', params?.search ?? '', params?.userId ?? null],
     initialPageParam: 1,
-    queryFn: ({ pageParam }) => apiGet<PaginatedResponse<SongsPage>>(buildPath(params, pageParam)),
-    getNextPageParam: (lastPage, allPages) => {
-      const next = (lastPage.page * lastPage.per_page) < lastPage.total;
-      return next ? lastPage.page + 1 : null;
+    enabled,
+    queryFn: ({ pageParam }) => apiGet<PaginatedResponse<SongRecord>>(buildPath(params, pageParam)),
+    getNextPageParam: (lastPage) => {
+      if (!lastPage) {
+        return undefined;
+      }
+      const totalPages = Math.ceil(lastPage.total / lastPage.per_page);
+      if (lastPage.page >= totalPages) {
+        return undefined;
+      }
+      return lastPage.page + 1;
     },
   });
 }

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import { Text, TouchableRipple, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 export type SearchStatItem = {
@@ -12,12 +12,14 @@ export type SearchStatItem = {
 type SearchStatListProps = {
   item: SearchStatItem;
   unitLabel?: string;
+  onPress?: (item: SearchStatItem) => void;
   baseDelay?: number;
 };
 
 export function Stat({
   item,
   unitLabel = 'songs',
+  onPress,
   baseDelay = 200,
 }: SearchStatListProps) {
   const theme = useTheme();
@@ -46,16 +48,21 @@ export function Stat({
   );
 
   return (
-    <Animated.View
-      key={item.id}
-      style={styles.row}
-      entering={FadeInUp.delay(baseDelay + 40).duration(300)}>
-      <Text variant="titleSmall" numberOfLines={1}>
-        {item.name}
-      </Text>
-      <Text variant="bodySmall" style={styles.meta}>
-        {item.total} {unitLabel}
-      </Text>
+    <Animated.View entering={FadeInUp.delay(baseDelay + 40).duration(300)}>
+      <TouchableRipple
+        onPress={onPress ? () => onPress(item) : undefined}
+        borderless={false}
+        rippleColor={theme.colors.surfaceVariant}
+      >
+        <Animated.View style={styles.row}>
+          <Text variant="titleSmall" numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text variant="bodySmall" style={styles.meta}>
+            {item.total ?? 0} {unitLabel}
+          </Text>
+        </Animated.View>
+      </TouchableRipple>
     </Animated.View>
   );
 }

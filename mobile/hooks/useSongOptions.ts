@@ -16,7 +16,6 @@ function buildSongsPath(search: string) {
   if (trimmed) {
     params.set('search', trimmed);
   }
-  params.set('per_page', '50');
   const query = params.toString();
   return query ? `/api/songs?${query}` : '/api/songs';
 }

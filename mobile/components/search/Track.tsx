@@ -1,13 +1,17 @@
 import { SongRecord } from '@/hooks/useSongsSearch';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { IconButton, Surface, Text, useTheme } from 'react-native-paper';
+import { Checkbox, IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
 type TrackItemProps = {
   item: SongRecord;
   bookmarkedItems: Set<string>,
   onPressBookmark: (track: SongRecord) => void;
   onPressTrack: (item: SongRecord) => void;
+  showBookmark?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: number | string) => void;
 };
 
 // We pass the styles object as a prop for performance
@@ -16,6 +20,10 @@ export function Track({
   bookmarkedItems,
   onPressBookmark,
   onPressTrack,
+  showBookmark = true,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
 }: TrackItemProps) {
   const theme = useTheme();
 
@@ -30,6 +38,9 @@ export function Track({
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 16,
+        },
+        selectCheckbox: {
+          marginRight: 4,
         },
         trackInfo: {
           flex: 1,
@@ -58,13 +69,34 @@ export function Track({
 
   const trackKey = `track-${item.id}`;
   const isBookmarked = bookmarkedItems.has(trackKey);
+  const handlePress = () => {
+    if (selectable && onToggleSelect) {
+      onToggleSelect(item.id);
+      return;
+    }
+    onPressTrack(item);
+  };
+
+  const handleToggleSelection = () => {
+    if (onToggleSelect) {
+      onToggleSelect(item.id);
+    }
+  };
+
   return (
     <Surface elevation={0} >
       <Pressable
         style={styles.trackRipple}
-        onPress={() => onPressTrack(item)}
+        onPress={handlePress}
         accessibilityLabel={`View details for ${item.title}`}>
         <View style={styles.trackRow}>
+          {selectable ? (
+            <Checkbox
+              status={selected ? 'checked' : 'unchecked'}
+              onPress={handleToggleSelection}
+              style={styles.selectCheckbox}
+            />
+          ) : null}
           <View style={styles.trackInfo}>
             <Text variant="titleSmall" numberOfLines={1}>
               {item.title}
@@ -82,14 +114,16 @@ export function Track({
             <View style={styles.metaBadge}>
               <Text style={styles.metaText}>{item.level?.name ?? '—'}</Text>
             </View>
-            <IconButton
-              icon={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-              size={20}
-              iconColor={isBookmarked ? theme.colors.primary : theme.colors.secondary}
-              style={styles.iconButton}
-              onPress={() => onPressBookmark(item)}
-              accessibilityLabel="Manage playlists"
-            />
+            {showBookmark && !selectable ? (
+              <IconButton
+                icon={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                size={20}
+                iconColor={isBookmarked ? theme.colors.primary : theme.colors.secondary}
+                style={styles.iconButton}
+                onPress={() => onPressBookmark(item)}
+                accessibilityLabel="Manage playlists"
+              />
+            ) : null}
           </View>
         </View>
       </Pressable>

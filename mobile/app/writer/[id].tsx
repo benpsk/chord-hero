@@ -1,32 +1,49 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Chip, IconButton, Menu, Surface, TextInput, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Surface, TextInput, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { FILTER_LANGUAGES, HOME_DETAILS, type FilterLanguage } from '@/constants/home';
-import { usePreferences } from '@/hooks/usePreferences';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { TrackList } from '@/components/search/TrackList';
 import type { SongRecord } from '@/hooks/useSongsSearch';
-import { useTrendingLevelSongs } from '@/hooks/useTrendingLevelSongs';
 import { PlaylistSelectionModal } from '@/components/search/PlaylistSelectionModal';
 import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { useWriterSongs } from '@/hooks/useWriterSongs';
 import { usePlaylists } from '@/hooks/usePlaylists';
 import { apiPost } from '@/lib/api';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+export type WriterPreview = {
+  id: string;
+  name: string;
+  total?: number | null;
+};
 
-export default function ChartDetailScreen() {
-  const { id, name, level, level_id, description } = useLocalSearchParams<{ id: string; name: string; level: string; level_id: string, description: string }>();
+export default function WriterDetailScreen() {
+  const { id, item } = useLocalSearchParams<{
+    id: string;
+    item: string;
+  }>();
+
+  const writerIdParam = Array.isArray(id) ? id[0] : id;
+  const writerItemParam = Array.isArray(item) ? item[0] : item;
+
+  const writer = useMemo<WriterPreview | undefined>(() => {
+    if (!writerItemParam) return undefined;
+    try {
+      return JSON.parse(writerItemParam) as WriterPreview;
+    } catch {
+      return undefined;
+    }
+  }, [writerItemParam]);
+
   const router = useRouter();
   const theme = useTheme();
-  const detail = id ? HOME_DETAILS[id] : undefined;
-  const { themePreference } = usePreferences();
   const { isAuthenticated } = useAuth();
 
-  const [selectedLanguages, setSelectedLanguages] = useState<FilterLanguage[]>([]);
-  const [menuVisible, setMenuVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [bookmarkedItems, setBookmarkedItems] = useState<Set<string>>(new Set());
   const [trackPlaylistMap, setTrackPlaylistMap] = useState<Record<string, string[]>>({});
   const [isPlaylistModalVisible, setPlaylistModalVisible] = useState(false);
@@ -35,13 +52,13 @@ export default function ChartDetailScreen() {
   const [loginPromptVisible, setLoginPromptVisible] = useState(false);
   const [isSavingPlaylists, setIsSavingPlaylists] = useState(false);
 
-  const levelId = useMemo(() => {
-    if (!level_id) return undefined;
-    const parsed = Number(level_id);
+  const writerId = useMemo(() => {
+    if (!writerIdParam) return undefined;
+    const parsed = Number(writerIdParam);
     return Number.isNaN(parsed) ? undefined : parsed;
-  }, [level_id]);
+  }, [writerIdParam]);
 
-  const { data: trendingSongsResponse, isLoading: isTrendingLoading } = useTrendingLevelSongs(levelId);
+  const { data: writerSongsResponse, isLoading: isWriterLoading } = useWriterSongs(writerId);
   const playlistsQuery = usePlaylists(isAuthenticated);
   const queryClient = useQueryClient();
   const attachSongsMutation = useMutation({
@@ -62,7 +79,7 @@ export default function ChartDetailScreen() {
     },
   });
 
-  const songs = useMemo(() => trendingSongsResponse?.data ?? [], [trendingSongsResponse]);
+  const songs = useMemo(() => writerSongsResponse?.data ?? [], [writerSongsResponse]);
   const playlists = useMemo(
     () =>
       playlistsQuery.data?.data?.map((playlist) => ({
@@ -73,7 +90,7 @@ export default function ChartDetailScreen() {
   );
 
   useEffect(() => {
-    const source = trendingSongsResponse?.data;
+    const source = writerSongsResponse?.data;
     if (!source) {
       setTrackPlaylistMap({});
       setBookmarkedItems(new Set());
@@ -102,22 +119,23 @@ export default function ChartDetailScreen() {
 
     setTrackPlaylistMap(nextMap);
     setBookmarkedItems(nextBookmarks);
-  }, [trendingSongsResponse?.data]);
+  }, [writerSongsResponse?.data]);
+  const writerName = writer?.name ?? 'Writer';
 
-  const closeMenu = useCallback(() => setMenuVisible(false), []);
-  const toggleMenu = useCallback(() => {
-    setMenuVisible((prev) => !prev);
+  const totalTracks = writerSongsResponse?.total ?? songs.length;
+  const headerMeta = useMemo(() => {
+    if (isWriterLoading) {
+      return 'Loading tracks...';
+    }
+    return `${totalTracks} ${totalTracks === 1 ? 'track' : 'tracks'}`;
+  }, [isWriterLoading, totalTracks]);
+
+  const handleChangeSearchQuery = useCallback((value: string) => {
+    setSearchQuery(value);
   }, []);
 
-  const clearFilters = () => setSelectedLanguages([]);
-
-  const toggleLanguage = useCallback((lang: FilterLanguage) => {
-    setSelectedLanguages((prev) => {
-      if (prev.includes(lang)) {
-        return prev.filter((item) => item !== lang);
-      }
-      return [...prev, lang];
-    });
+  const handleClearSearchQuery = useCallback(() => {
+    setSearchQuery('');
   }, []);
 
   const handleClosePlaylistModal = useCallback(() => {
@@ -127,17 +145,20 @@ export default function ChartDetailScreen() {
     setIsSavingPlaylists(false);
   }, []);
 
-  const handleOpenPlaylistModal = useCallback((track: SongRecord) => {
-    if (!isAuthenticated) {
-      setLoginPromptVisible(true);
-      return;
-    }
-    const trackKey = `track-${track.id}`;
-    const existingSelections = trackPlaylistMap[trackKey] ?? [];
-    setDraftSelectedPlaylists(() => new Set(existingSelections));
-    setActiveTrack(track);
-    setPlaylistModalVisible(true);
-  }, [isAuthenticated, trackPlaylistMap]);
+  const handleOpenPlaylistModal = useCallback(
+    (track: SongRecord) => {
+      if (!isAuthenticated) {
+        setLoginPromptVisible(true);
+        return;
+      }
+      const trackKey = `track-${track.id}`;
+      const existingSelections = trackPlaylistMap[trackKey] ?? [];
+      setDraftSelectedPlaylists(() => new Set(existingSelections));
+      setActiveTrack(track);
+      setPlaylistModalVisible(true);
+    },
+    [isAuthenticated, trackPlaylistMap]
+  );
 
   const handleTogglePlaylistSelection = useCallback((playlistId: string) => {
     setDraftSelectedPlaylists((prev) => {
@@ -193,7 +214,7 @@ export default function ChartDetailScreen() {
 
       handleClosePlaylistModal();
     } catch (error) {
-      console.error('Failed to add chart song to playlists', error);
+      console.error('Failed to add writer song to playlists', error);
     } finally {
       setIsSavingPlaylists(false);
     }
@@ -204,9 +225,12 @@ export default function ChartDetailScreen() {
     handleClosePlaylistModal,
   ]);
 
-  const handleTrackPress = useCallback((track: SongRecord) => {
-    router.push({ pathname: '/song/[id]', params: { id: String(track.id), item: JSON.stringify(track) } });
-  }, [router]);
+  const handleTrackPress = useCallback(
+    (track: SongRecord) => {
+      router.push({ pathname: '/song/[id]', params: { id: String(track.id), item: JSON.stringify(track) } });
+    },
+    [router]
+  );
 
   const handleDismissLoginPrompt = useCallback(() => {
     setLoginPromptVisible(false);
@@ -218,18 +242,20 @@ export default function ChartDetailScreen() {
   }, [router]);
 
   const filteredSongs = useMemo(() => {
-    if (selectedLanguages.length === 0) {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
       return songs;
     }
-    return songs.filter((track) => {
-      const languageName = track.language?.name ?? '';
-      return selectedLanguages.some((lang) => lang.toLowerCase() === languageName.toLowerCase());
-    });
-  }, [songs, selectedLanguages]);
 
-  const chartTitle = name ?? detail?.cardTitle ?? detail?.heading ?? 'Chart';
-  const chartLevel = level ?? detail?.cardSubtitle ?? '';
-  const heading = detail?.heading ?? chartTitle;
+    return songs.filter((track) => {
+      const titleMatch = track.title?.toLowerCase().includes(normalizedQuery);
+      const artistMatch =
+        track.artists?.some((item) => (item?.name ?? '').toLowerCase().includes(normalizedQuery)) ?? false;
+      const writerMatch =
+        track.writers?.some((item) => (item?.name ?? '').toLowerCase().includes(normalizedQuery)) ?? false;
+      return titleMatch || artistMatch || writerMatch;
+    });
+  }, [songs, searchQuery]);
 
   const styles = useMemo(
     () =>
@@ -241,8 +267,8 @@ export default function ChartDetailScreen() {
         content: {
           paddingHorizontal: 24,
           paddingBottom: 48,
-          paddingTop: 12,
-          gap: 20,
+          paddingTop: 16,
+          gap: 24,
         },
         headerRow: {
           flexDirection: 'row',
@@ -251,6 +277,7 @@ export default function ChartDetailScreen() {
         },
         coverCard: {
           height: 60,
+          width: 60,
           borderRadius: 20,
           padding: 14,
           justifyContent: 'center',
@@ -260,59 +287,27 @@ export default function ChartDetailScreen() {
         coverSubtitle: {
           fontWeight: '700',
           textAlign: 'center',
-          color: theme.colors.tertiary
+          color: theme.colors.tertiary,
         },
         headerInfo: {
           flex: 1,
           gap: 4,
         },
         headingText: {
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: '600',
           color: theme.colors.onSurface,
         },
-        descriptionText: {
+        metaText: {
           color: theme.colors.onSurfaceVariant,
+          fontSize: 12,
         },
-        filterRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
+        searchRow: {
           zIndex: 20,
-        },
-        menuAnchor: {
-          flex: 1,
-        },
-        menuPressable: {
-          flex: 1,
-        },
-        filterInput: {},
-        menuContent: {
-          backgroundColor: theme.colors.background,
-          borderColor: theme.colors.secondary,
-          borderWidth: 1,
-        },
-        filtersRow: {
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 8,
-          marginTop: -8,
-          paddingLeft: 4,
         },
         section: {
           gap: 16,
           zIndex: 1,
-        },
-        levelBadge: {
-          alignSelf: 'flex-start',
-          paddingHorizontal: 12,
-          paddingVertical: 4,
-          borderRadius: 999,
-          backgroundColor: theme.colors.secondaryContainer,
-        },
-        levelBadgeText: {
-          color: theme.colors.onSecondaryContainer,
-          fontWeight: '600',
-          letterSpacing: 0.3,
         },
         trackListContent: {
           paddingBottom: 12,
@@ -330,30 +325,14 @@ export default function ChartDetailScreen() {
           color: theme.colors.onSurfaceVariant,
         },
       }),
-    [
-      theme.colors.onSurface,
-      theme.colors.background,
-      theme.colors.secondary,
-      theme.colors.tertiary,
-      theme.colors.onSecondaryContainer,
-      theme.colors.secondaryContainer,
-      theme.colors.onSurfaceVariant
-    ]
+    [theme.colors.background, theme.colors.onSurface, theme.colors.onSurfaceVariant, theme.colors.tertiary]
   );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Stack.Screen
         options={{
-          title: heading,
-          headerRight: () => (
-            <IconButton
-              icon="share-variant"
-              size={22}
-              onPress={() => { }}
-              accessibilityLabel="Share chart"
-            />
-          ),
+          title: writerName,
         }}
       />
       <Animated.ScrollView
@@ -361,71 +340,35 @@ export default function ChartDetailScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
         <Animated.View style={styles.headerRow} entering={FadeInUp.delay(80).duration(320)}>
-          <Surface style={styles.coverCard} elevation={themePreference === 'dark' ? 1 : 2}>
-            <Text style={styles.coverSubtitle}>{chartLevel}</Text>
+          <Surface style={styles.coverCard} elevation={2}>
+            <Text style={styles.coverSubtitle}>{writerName.slice(0, 2).toUpperCase()}</Text>
           </Surface>
           <View style={styles.headerInfo}>
-            <Text style={styles.headingText}>{heading}</Text>
-            <Text style={styles.descriptionText}>{description}</Text>
+            <Text style={styles.headingText} numberOfLines={1}>
+              {writerName}
+            </Text>
+            <Text style={styles.metaText}>{headerMeta}</Text>
           </View>
         </Animated.View>
 
-        <Animated.View style={styles.filterRow} entering={FadeInUp.delay(120).duration(320)}>
-          <View style={styles.menuAnchor}>
-            <Menu
-              visible={menuVisible}
-              onDismiss={closeMenu}
-              anchorPosition="bottom"
-              contentStyle={styles.menuContent}
-              anchor={
-                <Pressable
-                  onPress={toggleMenu}
-                  style={styles.menuPressable}
-                  accessibilityLabel="Filter languages"
-                  accessibilityState={{ expanded: menuVisible }}>
-                  <TextInput
-                    mode="outlined"
-                    value={selectedLanguages.join(', ')}
-                    placeholder="Filter languages"
-                    editable={false}
-                    showSoftInputOnFocus={false}
-                    left={<TextInput.Icon icon="filter-variant" onPress={toggleMenu} forceTextInputFocus={false} />}
-                    style={styles.filterInput}
-                    dense
-                    pointerEvents="box-none"
-                  />
-                </Pressable>
-              }>
-              {FILTER_LANGUAGES.map((lang) => {
-                const isSelected = selectedLanguages.includes(lang);
-                return (
-                  <Menu.Item
-                    key={lang}
-                    onPress={() => toggleLanguage(lang)}
-                    title={lang}
-                    leadingIcon={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                  />
-                );
-              })}
-              <Menu.Item onPress={() => { clearFilters(); closeMenu(); }} title="Clear languages" leadingIcon="close" />
-            </Menu>
-          </View>
+        <Animated.View style={styles.searchRow} entering={FadeInUp.delay(120).duration(320)}>
+          <TextInput
+            mode="outlined"
+            value={searchQuery}
+            placeholder="Search tracks"
+            onChangeText={handleChangeSearchQuery}
+            left={<TextInput.Icon icon="magnify" />}
+            right={
+              searchQuery
+                ? <TextInput.Icon icon="close-circle" onPress={handleClearSearchQuery} forceTextInputFocus={false} />
+                : undefined
+            }
+            dense
+          />
         </Animated.View>
-
-        {selectedLanguages.length > 0 && (
-          <Animated.View style={styles.filtersRow} entering={FadeInUp.delay(160).duration(300)}>
-            {selectedLanguages.map((lang) => (
-              <Chip
-                key={lang}
-                onClose={() => toggleLanguage(lang)}>
-                {lang}
-              </Chip>
-            ))}
-          </Animated.View>
-        )}
 
         <Animated.View style={styles.section} entering={FadeInUp.delay(200).duration(340)}>
-          {isTrendingLoading ? (
+          {isWriterLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator animating size="small" />
             </View>

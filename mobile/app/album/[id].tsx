@@ -1,9 +1,10 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Button, IconButton, Modal, Portal, Surface, TextInput, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { TrackList } from '@/components/search/TrackList';
 import type { SongRecord } from '@/hooks/useSongsSearch';
@@ -12,7 +13,8 @@ import { PlaylistSelectionModal } from '@/components/search/PlaylistSelectionMod
 import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { TrendingAlbumItem } from '@/components/home/TrendingAlbumsSection';
-import { usePlaylists, useAttachSongsToPlaylistMutation } from '@/hooks/usePlaylists';
+import { usePlaylists } from '@/hooks/usePlaylists';
+import { apiPost } from '@/lib/api';
 
 export default function AlbumDetailScreen() {
   const { id, item } = useLocalSearchParams<{
@@ -59,7 +61,24 @@ export default function AlbumDetailScreen() {
 
   const { data: albumSongsResponse, isLoading: isAlbumLoading } = useAlbumSongs(albumId);
   const playlistsQuery = usePlaylists(isAuthenticated);
-  const attachSongsMutation = useAttachSongsToPlaylistMutation();
+  const queryClient = useQueryClient();
+  const attachSongsMutation = useMutation({
+    mutationFn: async ({
+      songId,
+      playlistIds,
+    }: {
+      songId: number;
+      playlistIds: number[];
+    }) =>
+      apiPost<{ playlist_ids: number[] }, { data?: { message?: string } }>(
+        `/api/songs/${songId}/playlists`,
+        { playlist_ids: playlistIds }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      queryClient.invalidateQueries({ queryKey: ['playlist-song-options'] });
+    },
+  });
 
   const songs = useMemo(() => albumSongsResponse?.data ?? [], [albumSongsResponse]);
   const playlists = useMemo(
@@ -70,6 +89,38 @@ export default function AlbumDetailScreen() {
       })) ?? [],
     [playlistsQuery.data]
   );
+
+  useEffect(() => {
+    const source = albumSongsResponse?.data;
+    if (!source) {
+      setTrackPlaylistMap({});
+      setBookmarkedItems(new Set());
+      return;
+    }
+
+    const nextMap: Record<string, string[]> = {};
+    const nextBookmarks = new Set<string>();
+
+    source.forEach((song) => {
+      const playlistIds = song.playlist_ids ?? [];
+      if (playlistIds.length === 0) {
+        return;
+      }
+      const normalized = playlistIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .map((value) => value.toString());
+      if (normalized.length === 0) {
+        return;
+      }
+      const key = `track-${song.id}`;
+      nextMap[key] = normalized;
+      nextBookmarks.add(key);
+    });
+
+    setTrackPlaylistMap(nextMap);
+    setBookmarkedItems(nextBookmarks);
+  }, [albumSongsResponse?.data]);
   const albumName = album?.name ?? 'Album';
   const trackCountLabel = useMemo(() => {
     if (typeof album?.total === 'number' && album.total >= 0) {
@@ -140,24 +191,22 @@ export default function AlbumDetailScreen() {
 
     const trackKey = `track-${activeTrack.id}`;
     const selectedArray = Array.from(draftSelectedPlaylists);
+    const playlistIds = selectedArray
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    const normalizedPlaylistIds = playlistIds.map((value) => value.toString());
 
     try {
       setIsSavingPlaylists(true);
-      if (selectedArray.length > 0) {
-        await Promise.all(
-          selectedArray.map((playlistId) =>
-            attachSongsMutation.mutateAsync({
-              playlistId,
-              songIds: [activeTrack.id],
-            })
-          )
-        );
-      }
+      await attachSongsMutation.mutateAsync({
+        songId: activeTrack.id,
+        playlistIds,
+      });
 
       setTrackPlaylistMap((prev) => {
         const next = { ...prev };
-        if (selectedArray.length > 0) {
-          next[trackKey] = selectedArray;
+        if (normalizedPlaylistIds.length > 0) {
+          next[trackKey] = normalizedPlaylistIds;
         } else {
           delete next[trackKey];
         }
@@ -166,7 +215,7 @@ export default function AlbumDetailScreen() {
 
       setBookmarkedItems((prev) => {
         const next = new Set(prev);
-        if (selectedArray.length > 0) {
+        if (normalizedPlaylistIds.length > 0) {
           next.add(trackKey);
         } else {
           next.delete(trackKey);
@@ -174,10 +223,10 @@ export default function AlbumDetailScreen() {
         return next;
       });
 
-      setIsSavingPlaylists(false);
       handleClosePlaylistModal();
     } catch (error) {
       console.error('Failed to add album song to playlists', error);
+    } finally {
       setIsSavingPlaylists(false);
     }
   }, [

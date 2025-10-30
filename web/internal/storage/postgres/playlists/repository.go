@@ -145,8 +145,7 @@ func (r *Repository) Create(ctx context.Context, params playlistsvc.CreateParams
 	return playlistID, nil
 }
 
-// AddSongs associates songs with the provided playlist.
-func (r *Repository) AddSongs(ctx context.Context, userID int, playlistID int, songIDs []int) error {
+func (r *Repository) ensurePlaylistOwner(ctx context.Context, playlistID, userID int) error {
 	var exists bool
 	if err := r.db.QueryRow(ctx, `
         select exists(
@@ -156,24 +155,29 @@ func (r *Repository) AddSongs(ctx context.Context, userID int, playlistID int, s
 		return fmt.Errorf("check playlist ownership: %w", err)
 	}
 	if !exists {
-		return fmt.Errorf("unauthorized error")
+		return apperror.Unauthorized("unauthorized user")
 	}
+
+	return nil
+}
+
+// AddSongs associates songs with the provided playlist.
+func (r *Repository) AddSongs(ctx context.Context, userID int, playlistID int, songIDs []int) error {
+	if err := r.ensurePlaylistOwner(ctx, playlistID, userID); err != nil {
+		return err
+	}
+
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin add songs to playlist: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	if _, err := tx.Exec(ctx, `
-        delete from playlist_song where playlist_id = $1
-    `, playlistID); err != nil {
-		return fmt.Errorf("reset playlist songs: %w", err)
-	}
-
 	for _, songID := range songIDs {
 		if _, err := tx.Exec(ctx, `
             insert into playlist_song (playlist_id, song_id)
             values ($1, $2)
+						on conflict (playlist_id, song_id) do nothing
         `, playlistID, songID); err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
@@ -185,6 +189,34 @@ func (r *Repository) AddSongs(ctx context.Context, userID int, playlistID int, s
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit add songs to playlist: %w", err)
+	}
+
+	return nil
+}
+
+// RemoveSongs detaches the provided songs from the playlist.
+func (r *Repository) RemoveSongs(ctx context.Context, userID int, playlistID int, songIDs []int) error {
+	if err := r.ensurePlaylistOwner(ctx, playlistID, userID); err != nil {
+		return err
+	}
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin remove songs from playlist: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	for _, songID := range songIDs {
+		if _, err := tx.Exec(ctx, `
+            delete from playlist_song
+            where playlist_id = $1 and song_id = $2
+        `, playlistID, songID); err != nil {
+			return fmt.Errorf("remove song from playlist: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit remove songs from playlist: %w", err)
 	}
 
 	return nil

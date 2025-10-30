@@ -2,6 +2,7 @@ package songs
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -131,6 +132,7 @@ func (p songPayload) toMutationParams() (songsvc.MutationParams, error) {
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	userID, _ := util.CurrentUserID(r)
+	log.Println(userID)
 	query := r.URL.Query()
 	params := songsvc.ListParams{}
 	validationErrors := map[string]string{}
@@ -160,11 +162,12 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 		handler.Error(w, apperror.Validation("failed validation", validationErrors))
 		return
 	}
-	if userID != 0 && params.UserID != nil {
+	if params.UserID != nil {
 		params.UserID = &userID
 	} else {
 		params.UserID = nil
 	}
+	params.AuthenticatedUserID = &userID
 
 	result, err := h.svc.List(r.Context(), params)
 	if err != nil {
@@ -280,5 +283,46 @@ func (h Handler) AssignLevel(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.Success(w, http.StatusOK, map[string]string{
 		"message": "Level assigned successfully",
+	})
+}
+
+// SyncPlaylists updates the playlists associated with a song.
+func (h Handler) SyncPlaylists(w http.ResponseWriter, r *http.Request) {
+	userID, authErr := util.CurrentUserID(r)
+	if authErr != nil {
+		handler.Error(w, authErr)
+		return
+	}
+
+	songParam := strings.TrimSpace(chi.URLParam(r, "song_id"))
+	songID, err := strconv.Atoi(songParam)
+	if err != nil || songID <= 0 {
+		handler.Error(w, apperror.Validation("msg", map[string]string{"song_id": "song_id must be a positive integer"}))
+		return
+	}
+
+	var payload struct {
+		PlaylistIDs []int `json:"playlist_ids"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		handler.Error(w, apperror.BadRequest("invalid JSON payload"))
+		return
+	}
+
+	if payload.PlaylistIDs == nil {
+		handler.Error(w, apperror.Validation("msg", map[string]string{"playlist_ids": "playlist_ids must be provided"}))
+		return
+	}
+
+	if err := h.svc.SyncPlaylists(r.Context(), songID, userID, payload.PlaylistIDs); err != nil {
+		handler.Error(w, err)
+		return
+	}
+
+	handler.Success(w, http.StatusOK, map[string]string{
+		"message": "Song playlists updated successfully",
 	})
 }

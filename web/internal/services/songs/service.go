@@ -17,21 +17,23 @@ type Service interface {
 	Update(ctx context.Context, id int, params UpdateParams) error
 	Delete(ctx context.Context, id int) error
 	AssignLevel(ctx context.Context, songID, levelID, userID int) error
+	SyncPlaylists(ctx context.Context, songID, userID int, playlistIDs []int) error
 }
 
 // ListParams captures filtering options accepted by the list endpoint.
 type ListParams struct {
-	Page        int
-	PerPage     int
-	AlbumID     *int
-	ArtistID    *int
-	WriterID    *int
-	ReleaseYear *int
-	PlaylistID  *int
-	Search      string
-	UserID      *int
-	LevelID     *int
-	IsTrending  bool
+	Page                int
+	PerPage             int
+	AlbumID             *int
+	ArtistID            *int
+	WriterID            *int
+	ReleaseYear         *int
+	PlaylistID          *int
+	Search              string
+	UserID              *int
+	LevelID             *int
+	IsTrending          bool
+	AuthenticatedUserID *int
 }
 
 // MutationParams captures shared song fields used across create and update flows.
@@ -80,7 +82,7 @@ type Song struct {
 	Artists     []Person `json:"artists"`
 	Writers     []Person `json:"writers"`
 	Albums      []Album  `json:"albums"`
-	IsBookmark  bool     `json:"is_bookmark"`
+	PlaylistIDs []int    `json:"playlist_ids"`
 }
 
 // Person represents either an artist or writer.
@@ -115,6 +117,7 @@ type Repository interface {
 	Update(ctx context.Context, id int, params UpdateParams) error
 	Delete(ctx context.Context, id int) error
 	AssignLevel(ctx context.Context, songID, levelID, userID int) error
+	SyncPlaylists(ctx context.Context, songID, userID int, playlistIDs []int) error
 }
 
 type service struct {
@@ -189,6 +192,27 @@ func (s *service) AssignLevel(ctx context.Context, songID, levelID, userID int) 
 	}
 
 	return s.repo.AssignLevel(ctx, songID, levelID, userID)
+}
+
+// SyncPlaylists replaces the playlists associated with a song for the given user.
+func (s *service) SyncPlaylists(ctx context.Context, songID, userID int, playlistIDs []int) error {
+	if songID <= 0 {
+		return apperror.NotFound("song not found")
+	}
+
+	if userID <= 0 {
+		return apperror.Unauthorized("unauthorized user")
+	}
+
+	for _, id := range playlistIDs {
+		if id <= 0 {
+			return apperror.Validation("msg", map[string]string{"playlist_ids": "playlist_ids must contain positive integers"})
+		}
+	}
+
+	filtered := uniquePositive(playlistIDs)
+
+	return s.repo.SyncPlaylists(ctx, songID, userID, filtered)
 }
 
 func normaliseMutation(params *MutationParams) error {

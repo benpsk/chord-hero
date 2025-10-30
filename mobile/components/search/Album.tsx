@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { IconButton, Text, useTheme } from 'react-native-paper';
+import { Text, TouchableRipple, useTheme } from 'react-native-paper';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 export type SearchAlbumItem = {
@@ -8,25 +8,23 @@ export type SearchAlbumItem = {
   title: string;
   artist: string;
   trackCount: number;
+  releaseYear?: number | null;
+  artistDetails?: { id: number | string; name: string | null }[];
+  writerDetails?: { id: number | string; name: string | null }[];
 };
 
 type SearchAlbumsListProps = {
   album: SearchAlbumItem;
-  bookmarkedItems: Set<string>;
-  onToggleBookmark: (key: string) => void;
+  onPress?: (album: SearchAlbumItem) => void;
   baseDelay?: number;
 };
 
 export function Album({
   album,
-  bookmarkedItems,
-  onToggleBookmark,
+  onPress,
   baseDelay = 200,
 }: SearchAlbumsListProps) {
   const theme = useTheme();
-
-  const albumKey = `album-${album.id}`;
-  const isBookmarked = bookmarkedItems.has(albumKey);
 
   const styles = useMemo(
     () =>
@@ -61,9 +59,6 @@ export function Album({
           fontSize: 12,
           fontWeight: '600',
         },
-        iconButton: {
-          margin: -8,
-        },
         loadingMore: {
           paddingVertical: 16,
         },
@@ -75,31 +70,28 @@ export function Album({
   );
 
   return (
-    <Animated.View
-      key={album.id}
-      style={styles.albumRow}
-      entering={FadeInUp.delay(baseDelay + 40).duration(300)}>
-      <View style={styles.trackInfo}>
-        <Text variant="titleSmall" numberOfLines={1}>
-          {album.title}
-        </Text>
-        <Text variant="bodySmall" numberOfLines={1}>
-          {album.artist}
-        </Text>
-      </View>
-      <View style={styles.albumMeta}>
-        <View style={styles.metaBadge}>
-          <Text style={styles.metaText}>{album.trackCount}</Text>
+    <Animated.View entering={FadeInUp.delay(baseDelay + 40).duration(300)}>
+      <TouchableRipple
+        onPress={onPress ? () => onPress(album) : undefined}
+        borderless={false}
+        rippleColor={theme.colors.surfaceVariant}
+      >
+        <View style={styles.albumRow}>
+          <View style={styles.trackInfo}>
+            <Text variant="titleSmall" numberOfLines={1}>
+              {album.title}
+            </Text>
+            <Text variant="bodySmall" numberOfLines={1}>
+              {album.artist}
+            </Text>
+          </View>
+          <View style={styles.albumMeta}>
+            <View style={styles.metaBadge}>
+              <Text style={styles.metaText}>{album.trackCount}</Text>
+            </View>
+          </View>
         </View>
-        <IconButton
-          icon={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-          size={20}
-          iconColor={isBookmarked ? theme.colors.primary : theme.colors.secondary}
-          style={styles.iconButton}
-          onPress={() => onToggleBookmark(albumKey)}
-          accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-        />
-      </View>
+      </TouchableRipple>
     </Animated.View>
   );
 }

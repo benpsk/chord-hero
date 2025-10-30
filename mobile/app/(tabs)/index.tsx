@@ -86,7 +86,7 @@ export default function HomeScreen() {
     [theme.colors.background]
   );
 
-  const handleViewSaved = () => router.push('/(tabs)/library');
+  const handleViewSaved = () => router.push('/(tabs)/playlist');
   const handleOpenChart = (item: WeeklyChartItem) =>
     router.push({
       pathname: '/chart/[id]',

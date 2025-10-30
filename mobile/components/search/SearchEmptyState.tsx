@@ -12,7 +12,7 @@ type SearchEmptyStateProps = {
 
 export function SearchEmptyState({
   title = 'No data found!',
-  subtitle = 'Unable to load data, please come back',
+  subtitle = 'Please come back',
   delay = 200,
   style,
 }: SearchEmptyStateProps) {

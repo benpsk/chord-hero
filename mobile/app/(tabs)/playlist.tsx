@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FAB, IconButton, Portal, Text, useTheme } from 'react-native-paper';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
 import { useAuth } from '@/hooks/useAuth';
 import {
   PlaylistSummary,
-  useAttachSongsToPlaylistMutation,
   useCreatePlaylistMutation,
   useDeletePlaylistMutation,
   usePlaylists,
@@ -25,7 +25,7 @@ import { EditPlaylistModal } from '@/components/library/EditPlaylistModal';
 import { DeletePlaylistModal } from '@/components/library/DeletePlaylistModal';
 import { SharePlaylistModal } from '@/components/library/SharePlaylistModal';
 
-export default function LibraryScreen() {
+export default function PlaylistScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { isAuthenticated, isChecking } = useAuth();
@@ -55,24 +55,41 @@ export default function LibraryScreen() {
   const [deletingPlaylist, setDeletingPlaylist] = useState<PlaylistSummary | null>(null);
   const [deleteSubmitError, setDeleteSubmitError] = useState<string | null>(null);
 
-  const [shareModalVisible, setShareModalVisible] = useState(false);
   const [sharingPlaylist, setSharingPlaylist] = useState<PlaylistSummary | null>(null);
   const [shareSearch, setShareSearch] = useState('');
-  const [shareSearchResults, setShareSearchResults] = useState<
-    { id: number | string; email: string }[]
-  >([]);
+  const [shareSearchResults, setShareSearchResults] = useState<{ id: number | string; email: string }[]>([]);
   const [shareSearchLoading, setShareSearchLoading] = useState(false);
   const [shareSearchError, setShareSearchError] = useState<string | null>(null);
   const [shareSubmitError, setShareSubmitError] = useState<string | null>(null);
-  const [selectedShareUsers, setSelectedShareUsers] = useState<
-    Map<string, { id: number | string; email: string }>
-  >(() => new Map<string, { id: number | string; email: string }>());
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const shareModalVisibleRef = useRef(false);
+  const shareSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [selectedShareUsers, setSelectedShareUsers] = useState<Map<string, { id: number | string; email: string }>>(() => new Map());
 
   const [loginPromptVisible, setLoginPromptVisible] = useState(false);
 
   const playlistsQuery = usePlaylists(isAuthenticated && !isChecking);
+  const queryClient = useQueryClient();
+
   const createPlaylistMutation = useCreatePlaylistMutation();
-  const attachSongsMutation = useAttachSongsToPlaylistMutation();
+  const attachSongsMutation = useMutation({
+    mutationFn: async ({
+      playlistId,
+      songIds,
+    }: {
+      playlistId: number | string;
+      songIds: number[];
+    }) => {
+      return apiPost<{ song_ids: number[]; action: 'add' }, { data?: { message?: string } }>(
+        `/api/playlists/${playlistId}/songs`,
+        { song_ids: songIds, action: 'add' }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      queryClient.invalidateQueries({ queryKey: ['playlist-song-options'] });
+    },
+  });
   const { reset: resetCreatePlaylistMutation } = createPlaylistMutation;
   const { reset: resetAttachSongsMutation } = attachSongsMutation;
   const {
@@ -90,10 +107,7 @@ export default function LibraryScreen() {
     reset: resetSharePlaylistMutation,
     isPending: isSharingPlaylist,
   } = useSharePlaylistMutation();
-  const {
-    mutateAsync: leavePlaylistRequest,
-    reset: resetLeavePlaylistMutation,
-  } = useLeavePlaylistMutation();
+  const leavePlaylistMutation = useLeavePlaylistMutation();
 
   const playlists = useMemo(
     () => playlistsQuery.data?.data ?? [],
@@ -144,8 +158,11 @@ export default function LibraryScreen() {
     [theme.colors.background, theme.colors.primary]
   );
 
-  const shareSearchDebounceRef = useRef<NodeJS.Timeout | number>(null);
   const previousAuthRef = useRef(isAuthenticated);
+
+  useEffect(() => {
+    shareModalVisibleRef.current = shareModalVisible;
+  }, [shareModalVisible]);
 
   useEffect(() => {
     if (previousAuthRef.current && !isAuthenticated) {
@@ -178,7 +195,7 @@ export default function LibraryScreen() {
       resetUpdatePlaylistMutation();
       resetDeletePlaylistMutation();
       resetSharePlaylistMutation();
-      resetLeavePlaylistMutation();
+      leavePlaylistMutation.reset();
       resetCreatePlaylistMutation();
       resetAttachSongsMutation();
     }
@@ -189,7 +206,7 @@ export default function LibraryScreen() {
     resetCreatePlaylistMutation,
     resetDeletePlaylistMutation,
     resetSharePlaylistMutation,
-    resetLeavePlaylistMutation,
+    leavePlaylistMutation,
     resetUpdatePlaylistMutation,
   ]);
 
@@ -224,6 +241,36 @@ export default function LibraryScreen() {
     resetCreatePlaylistMutation();
     resetAttachSongsMutation();
   }, [isAuthenticated, resetAttachSongsMutation, resetCreatePlaylistMutation]);
+
+  const handleDismissLoginPrompt = useCallback(() => {
+    setLoginPromptVisible(false);
+  }, []);
+
+  const handleNavigateToLogin = useCallback(() => {
+    setLoginPromptVisible(false);
+    router.push('/login');
+  }, [router]);
+
+
+  useEffect(() => {
+    if (!addModalVisible || modalStep !== 'songs' || !createdPlaylist) {
+      return;
+    }
+    const options = songsQuery.data?.data ?? [];
+    if (!options || options.length === 0) {
+      return;
+    }
+    const playlistId = Number(createdPlaylist.id);
+    if (!Number.isFinite(playlistId) || playlistId <= 0) {
+      setSelectedSongIds(new Set());
+      return;
+    }
+    const preselected = options
+      .filter((song) => (song.playlist_ids ?? []).some((id) => Number(id) === playlistId))
+      .map((song) => song.id)
+      .filter((id) => id !== undefined && id !== null);
+    setSelectedSongIds(new Set(preselected as (number | string)[]));
+  }, [addModalVisible, modalStep, createdPlaylist, songsQuery.data]);
 
   const handleDraftNameChange = useCallback(
     (value: string) => {
@@ -296,7 +343,8 @@ export default function LibraryScreen() {
         setSubmitError('Unable to create playlist. Please try again.');
       }
     }
-  }, [createPlaylistMutation, draftName, playlistsQuery]);
+  }, [
+createPlaylistMutation, draftName, playlistsQuery]);
 
   const toggleSongSelection = useCallback((id: number | string) => {
     setSelectedSongIds((prev) => {
@@ -469,6 +517,18 @@ export default function LibraryScreen() {
     }
   }, [closeDeleteConfirm, deletePlaylistRequest, deletingPlaylist]);
 
+  const handleLeavePlaylist = useCallback(async (playlist: PlaylistSummary) => {
+    if (!playlist?.id) {
+      return;
+    }
+    setActiveMenuId(null);
+    try {
+      await leavePlaylistMutation.mutateAsync({ playlistId: playlist.id });
+    } catch (error) {
+      console.error('Failed to leave playlist', error);
+    }
+  }, [leavePlaylistMutation]);
+
   const closeShareModal = useCallback(() => {
     setShareModalVisible(false);
     setSharingPlaylist(null);
@@ -518,6 +578,21 @@ export default function LibraryScreen() {
     setShareSubmitError(null);
   }, []);
 
+  const handleShareConfirm = useCallback(async () => {
+    if (!sharingPlaylist) {
+      return;
+    }
+    const userIds = Array.from(selectedShareUsers.values()).map((user) => user.id);
+    try {
+      await sharePlaylistRequest({ playlistId: sharingPlaylist.id, userIds });
+      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      closeShareModal();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Please try again.';
+      setShareSubmitError(message);
+    }
+  }, [closeShareModal, queryClient, selectedShareUsers, sharePlaylistRequest, sharingPlaylist]);
+
   const toggleShareUser = useCallback((user: { id: number | string; email: string }) => {
     const key = String(user.id);
     setSelectedShareUsers((prev) => {
@@ -545,7 +620,7 @@ export default function LibraryScreen() {
   const shareSearchQuery = useMemo(() => shareSearch.trim(), [shareSearch]);
 
   useEffect(() => {
-    if (!shareModalVisible) {
+    if (!shareModalVisibleRef.current) {
       if (shareSearchDebounceRef.current) {
         clearTimeout(shareSearchDebounceRef.current);
         shareSearchDebounceRef.current = null;
@@ -608,7 +683,7 @@ export default function LibraryScreen() {
       clearTimeout(timeout);
       shareSearchDebounceRef.current = null;
     };
-  }, [shareModalVisible, shareSearchQuery]);
+  }, [shareSearchQuery]);
 
   const selectedShareUsersList = useMemo(
     () => Array.from(selectedShareUsers.values()),
@@ -620,66 +695,22 @@ export default function LibraryScreen() {
     [selectedShareUsers]
   );
 
-  const handleShareConfirm = useCallback(async () => {
-    if (!sharingPlaylist) {
-      setShareSubmitError('Playlist not found. Please try again.');
-      return;
-    }
-
-    const userIds = selectedShareUsersList.map((user) => user.id);
-    setShareSubmitError(null);
-
-    try {
-      await sharePlaylistRequest({
-        playlistId: sharingPlaylist.id,
-        userIds,
-      });
-      closeShareModal();
-    } catch (error) {
-      if (error instanceof ApiError) {
-        setShareSubmitError(error.message);
-      } else {
-        setShareSubmitError('Unable to update sharing settings. Please try again.');
-      }
-    }
-  }, [closeShareModal, selectedShareUsersList, sharePlaylistRequest, sharingPlaylist]);
-
-  const handleFabPress = useCallback(() => {
-    if (!isAuthenticated) {
-      setLoginPromptVisible(true);
-      return;
-    }
-    router.push('/song/create');
-  }, [isAuthenticated, router]);
-
-  const handleDismissLoginPrompt = useCallback(() => {
-    setLoginPromptVisible(false);
-  }, []);
-
-  const handleNavigateToLogin = useCallback(() => {
-    setLoginPromptVisible(false);
-    router.push('/login');
-  }, [router]);
-
-  const handleLeavePlaylist = useCallback(
-    async (playlist: PlaylistSummary) => {
-      setActiveMenuId(null);
-      try {
-        await leavePlaylistRequest({ playlistId: playlist.id });
-      } catch (error) {
-        if (error instanceof ApiError) {
-          Alert.alert('Unable to leave playlist', error.message);
-        } else {
-          Alert.alert('Unable to leave playlist', 'Please try again.');
-        }
-      }
-    },
-    [leavePlaylistRequest]
-  );
 
   const playlistsErrorMessage = playlistsQuery.error instanceof ApiError
     ? playlistsQuery.error.message
     : 'Unable to load playlists right now.';
+
+  const handleOpenPlaylist = useCallback((playlist: PlaylistSummary) => {
+    setActiveMenuId(null);
+    router.push({
+      pathname: '/playlist/[id]',
+      params: { id: String(playlist.id), item: JSON.stringify(playlist) },
+    });
+  }, [router]);
+
+  const handleFabPress = useCallback(() => {
+    router.push('/song/create');
+  }, [router]);
 
   const selectedCount = selectedSongIds.size;
   const currentPlaylistName = createdPlaylist?.name ?? draftName.trim();
@@ -696,7 +727,7 @@ export default function LibraryScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={styles.headerRow} entering={FadeInDown.duration(320)}>
-          <Text style={styles.headingTitle}>Your Library</Text>
+          <Text style={styles.headingTitle}>Your Playlists</Text>
           <IconButton
             icon="playlist-plus"
             size={22}
@@ -715,6 +746,7 @@ export default function LibraryScreen() {
           onRetry={playlistsQuery.refetch}
           onNavigateToLogin={handleNavigateToLogin}
           onCreatePlaylist={openAddModal}
+          onOpen={handleOpenPlaylist}
           onShare={openShareModal}
           onEdit={openEditModal}
           onDelete={openDeleteConfirm}

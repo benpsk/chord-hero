@@ -12,7 +12,7 @@ import (
 type Service interface {
 	List(ctx context.Context, params ListParams) (ListResult, error)
 	Create(ctx context.Context, params CreateParams) (int, error)
-	AddSongs(ctx context.Context, userID int, playlistID int, songIDs []int) error
+	UpdateSongs(ctx context.Context, userID int, playlistID int, songIDs []int, action string) error
 	Update(ctx context.Context, id int, params UpdateParams) error
 	Delete(ctx context.Context, id int, userID int) error
 	Share(ctx context.Context, playlistID int, ownerID int, userIDs []int) error
@@ -54,6 +54,7 @@ type Repository interface {
 	List(ctx context.Context, params ListParams) (ListResult, error)
 	Create(ctx context.Context, params CreateParams) (int, error)
 	AddSongs(ctx context.Context, userID int, playlistID int, songIDs []int) error
+	RemoveSongs(ctx context.Context, userID int, playlistID int, songIDs []int) error
 	Update(ctx context.Context, id int, params UpdateParams) error
 	Delete(ctx context.Context, id int, userID int) error
 	Share(ctx context.Context, playlistID int, ownerID int, userIDs []int) error
@@ -100,17 +101,30 @@ func (s *service) Create(ctx context.Context, params CreateParams) (int, error) 
 	return s.repo.Create(ctx, params)
 }
 
-func (s *service) AddSongs(ctx context.Context, userID, playlistID int, songIDs []int) error {
+func (s *service) UpdateSongs(ctx context.Context, userID, playlistID int, songIDs []int, action string) error {
 	if playlistID <= 0 {
 		return apperror.NotFound("playlist not found")
 	}
-
+	if userID <= 0 {
+		return apperror.Unauthorized("Unauthorized user")
+	}
+	action = strings.TrimSpace(strings.ToLower(action))
+	if action != "add" && action != "remove" {
+		return apperror.Validation("msg", map[string]string{"action": "action must be either add or remove"})
+	}
 	filtered := uniquePositive(songIDs)
 	if len(filtered) == 0 {
 		return apperror.BadRequest("invalid song_ids")
 	}
 
-	return s.repo.AddSongs(ctx, userID, playlistID, filtered)
+	switch action {
+	case "add":
+		return s.repo.AddSongs(ctx, userID, playlistID, filtered)
+	case "remove":
+		return s.repo.RemoveSongs(ctx, userID, playlistID, filtered)
+	default:
+		return apperror.BadRequest("invalid action")
+	}
 }
 
 // Update mutates playlist attributes belonging to the provided user.

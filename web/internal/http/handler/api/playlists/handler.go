@@ -2,7 +2,6 @@ package playlists
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -254,8 +253,8 @@ func (h Handler) Share(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// AddSongs attaches the provided songs to the playlist.
-func (h Handler) AddSongs(w http.ResponseWriter, r *http.Request) {
+// UpdateSongs applies the provided action to the playlist songs.
+func (h Handler) UpdateSongs(w http.ResponseWriter, r *http.Request) {
 	userID, authErr := util.CurrentUserID(r)
 	if authErr != nil {
 		handler.Error(w, authErr)
@@ -268,19 +267,30 @@ func (h Handler) AddSongs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawSongIDs := strings.TrimSpace(chi.URLParam(r, "song_ids"))
-	if rawSongIDs == "" {
-		handler.Error(w, apperror.Validation("msg", map[string]string{"song_ids": "song_ids must be provided as comma separated integers"}))
+	var payload struct {
+		SongIDs []int  `json:"song_ids"`
+		Action  string `json:"action"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		handler.Error(w, apperror.BadRequest("invalid JSON payload"))
 		return
 	}
 
-	ids, parseErr := parseSongIDs(rawSongIDs)
-	if parseErr != nil {
-		handler.Error(w, apperror.Validation("msg", map[string]string{"song_ids": parseErr.Error()}))
+	action := strings.TrimSpace(payload.Action)
+	if action == "" {
+		handler.Error(w, apperror.Validation("msg", map[string]string{"action": "action must be provided"}))
 		return
 	}
 
-	if err := h.svc.AddSongs(r.Context(), userID, playlistID, ids); err != nil {
+	if len(payload.SongIDs) == 0 {
+		handler.Error(w, apperror.Validation("msg", map[string]string{"song_ids": "song_ids must include at least one positive integer"}))
+		return
+	}
+
+	if err := h.svc.UpdateSongs(r.Context(), userID, playlistID, payload.SongIDs, action); err != nil {
 		handler.Error(w, err)
 		return
 	}
@@ -288,26 +298,4 @@ func (h Handler) AddSongs(w http.ResponseWriter, r *http.Request) {
 	handler.Success(w, http.StatusOK, map[string]string{
 		"message": "Playlist songs updated successfully",
 	})
-}
-
-func parseSongIDs(raw string) ([]int, error) {
-	parts := strings.Split(raw, ",")
-	ids := make([]int, 0, len(parts))
-	for _, part := range parts {
-		value := strings.TrimSpace(part)
-		if value == "" {
-			continue
-		}
-		id, err := strconv.Atoi(value)
-		if err != nil || id <= 0 {
-			return nil, errors.New("song_ids must be positive integers separated by commas")
-		}
-		ids = append(ids, id)
-	}
-
-	if len(ids) == 0 {
-		return nil, errors.New("song_ids must include at least one positive integer")
-	}
-
-	return ids, nil
 }

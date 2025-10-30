@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/jackc/pgerrcode"
@@ -194,13 +195,13 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		}
 
 		song := songsvc.Song{
-			ID:         id,
-			Title:      title,
-			Artists:    []songsvc.Person{},
-			Writers:    []songsvc.Person{},
-			Albums:     []songsvc.Album{},
-			IsBookmark: false,
-			Status:     status,
+			ID:          id,
+			Title:       title,
+			Artists:     []songsvc.Person{},
+			Writers:     []songsvc.Person{},
+			Albums:      []songsvc.Album{},
+			PlaylistIDs: []int{},
+			Status:      status,
 		}
 
 		if levelID.Valid {
@@ -251,7 +252,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 	if err := r.attachAlbums(ctx, songIDs, songIndex, &songs); err != nil {
 		return result, err
 	}
-	if err := r.attachBookmarks(ctx, params, songIDs, songIndex, &songs); err != nil {
+	if err := r.attachPlaylists(ctx, params, songIDs, songIndex, &songs); err != nil {
 		return result, err
 	}
 
@@ -330,6 +331,7 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
 	song.Artists = []songsvc.Person{}
 	song.Writers = []songsvc.Person{}
 	song.Albums = []songsvc.Album{}
+	song.PlaylistIDs = []int{}
 
 	songs := []songsvc.Song{song}
 	songIndex := map[int]int{id: 0}
@@ -570,6 +572,80 @@ func (r *Repository) AssignLevel(ctx context.Context, songID, levelID, userID in
 	return nil
 }
 
+// SyncPlaylists replaces the playlists associated with a song for the provided user.
+func (r *Repository) SyncPlaylists(ctx context.Context, songID, userID int, playlistIDs []int) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin sync song playlists: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	var songExists bool
+	if err := tx.QueryRow(ctx, `
+        select exists(select 1 from songs where id = $1)
+    `, songID).Scan(&songExists); err != nil {
+		return fmt.Errorf("check song exists: %w", err)
+	}
+	if !songExists {
+		return apperror.NotFound("song not found")
+	}
+
+	if len(playlistIDs) > 0 {
+		rows, err := tx.Query(ctx, `
+            select id
+            from playlists
+            where user_id = $1 and id = any($2::int4[])
+        `, userID, playlistIDs)
+		if err != nil {
+			return fmt.Errorf("verify playlist ownership: %w", err)
+		}
+		defer rows.Close()
+
+		owned := make(map[int]struct{}, len(playlistIDs))
+		for rows.Next() {
+			var id int
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("scan playlist ownership: %w", err)
+			}
+			owned[id] = struct{}{}
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("iterate playlist ownership: %w", err)
+		}
+
+		if len(owned) != len(playlistIDs) {
+			return apperror.Unauthorized("unauthorized playlist access")
+		}
+	}
+
+	if _, err := tx.Exec(ctx, `
+        delete from playlist_song
+        where song_id = $1
+          and playlist_id in (select id from playlists where user_id = $2)
+    `, songID, userID); err != nil {
+		return fmt.Errorf("clear existing song playlists: %w", err)
+	}
+
+	for _, playlistID := range playlistIDs {
+		if _, err := tx.Exec(ctx, `
+            insert into playlist_song (playlist_id, song_id)
+            values ($1, $2)
+        `, playlistID, songID); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
+				return apperror.BadRequest("invalid playlist or song reference")
+			}
+			return fmt.Errorf("insert song playlist relation: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit sync song playlists: %w", err)
+	}
+
+	return nil
+}
+
 func (r *Repository) attachArtists(ctx context.Context, songIDs []int32, songIndex map[int]int, songs *[]songsvc.Song) error {
 	query := `
         select sa.song_id, ar.id, ar.name
@@ -670,8 +746,9 @@ func (r *Repository) attachAlbums(ctx context.Context, songIDs []int32, songInde
 	return rows.Err()
 }
 
-func (r *Repository) attachBookmarks(ctx context.Context, params songsvc.ListParams, songIDs []int32, songIndex map[int]int, songs *[]songsvc.Song) error {
-	if params.UserID == nil && params.PlaylistID == nil {
+func (r *Repository) attachPlaylists(ctx context.Context, params songsvc.ListParams, songIDs []int32, songIndex map[int]int, songs *[]songsvc.Song) error {
+	log.Println(params.UserID)
+	if params.UserID == nil && params.PlaylistID == nil && params.AuthenticatedUserID == nil {
 		return nil
 	}
 
@@ -679,9 +756,9 @@ func (r *Repository) attachBookmarks(ctx context.Context, params songsvc.ListPar
 	var builder strings.Builder
 	args := []any{songIDs}
 
-	builder.WriteString("select distinct ps.song_id from playlist_song ps")
+	builder.WriteString("select ps.song_id, ps.playlist_id from playlist_song ps")
 
-	if params.UserID != nil {
+	if params.UserID != nil || params.AuthenticatedUserID != nil {
 		builder.WriteString(" join playlists p on p.id = ps.playlist_id")
 	}
 
@@ -693,26 +770,45 @@ func (r *Repository) attachBookmarks(ctx context.Context, params songsvc.ListPar
 		args = append(args, *params.PlaylistID)
 	}
 
-	if params.UserID != nil {
+	switch {
+	case params.UserID != nil:
 		argPos++
 		builder.WriteString(fmt.Sprintf(" AND p.user_id = $%d", argPos))
 		args = append(args, *params.UserID)
+	case params.AuthenticatedUserID != nil:
+		argPos++
+		builder.WriteString(fmt.Sprintf(" AND p.user_id = $%d", argPos))
+		args = append(args, *params.AuthenticatedUserID)
 	}
+
+	builder.WriteString(" order by ps.playlist_id asc")
 
 	rows, err := r.db.Query(ctx, builder.String(), args...)
 	if err != nil {
-		return fmt.Errorf("list bookmarks: %w", err)
+		return fmt.Errorf("list song playlists: %w", err)
 	}
 	defer rows.Close()
 
+	seen := make(map[int]map[int]struct{}, len(songIDs))
+
 	for rows.Next() {
-		var songID int
-		if err := rows.Scan(&songID); err != nil {
-			return fmt.Errorf("scan bookmark: %w", err)
+		var (
+			songID     int
+			playlistID int
+		)
+		if err := rows.Scan(&songID, &playlistID); err != nil {
+			return fmt.Errorf("scan song playlist: %w", err)
 		}
 
 		if idx, ok := songIndex[songID]; ok {
-			(*songs)[idx].IsBookmark = true
+			if _, exists := seen[songID]; !exists {
+				seen[songID] = make(map[int]struct{})
+			}
+			if _, exists := seen[songID][playlistID]; exists {
+				continue
+			}
+			seen[songID][playlistID] = struct{}{}
+			(*songs)[idx].PlaylistIDs = append((*songs)[idx].PlaylistIDs, playlistID)
 		}
 	}
 

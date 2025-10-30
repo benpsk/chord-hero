@@ -48,13 +48,13 @@
       "language": {
         "id": 1,
         "name": "Burmese"
-      }
+      },
       "lyric": "Intro: [G]... \n Amazing...",
       "release_year": null,
       "level": {
-        "id" 1,
+        "id": 1,
         "name": "Easy"
-      }
+      },
       "artists": [
         {"id": 1, "name": "John"}
       ],
@@ -64,7 +64,7 @@
       "albums": [
         {"id": 1, "name": "Whatever", "release_year": 2000}
       ],
-      "is_bookmark": true, -- check it's added to current user playlists or not
+      "playlist_ids": [1,2,3]
     }
   ],
   "page": 1,
@@ -297,8 +297,11 @@
   "role": "Contributor"
 }
 
--- POST /api/playlists/{playlist_id}/songs/{song_ids}
-  -- song_ids: 1,2,3
+-- POST /api/playlists/{playlist_id}/songs
+{
+  "song_ids": [1,2,3],
+  "action": "add" -- add or remove
+}
 
 -- GET /api/languages
 {
@@ -339,3 +342,8 @@
 }
 
 -- POST /api/playlists/{id}/leave
+
+-- POST /api/songs/{song_id}/playlists
+{
+  "playlist_ids": [1,2,3]
+}

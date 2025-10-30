@@ -15,9 +15,10 @@ type ListHeaderProps = {
   activeResultsCount: number;
 };
 
-type SearchTabKey = 'tracks' | 'albums' | 'artists' | 'writers' | 'releaseYears';
+type SearchTabKey = 'tracks' | 'myTracks' | 'albums' | 'artists' | 'writers' | 'releaseYears';
 const SEARCH_TABS: { key: SearchTabKey; label: string }[] = [
   { key: 'tracks', label: 'Tracks' },
+  { key: 'myTracks', label: 'My tracks' },
   { key: 'albums', label: 'Albums' },
   { key: 'artists', label: 'Artists' },
   { key: 'writers', label: 'Writers' },

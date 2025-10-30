@@ -15,11 +15,8 @@ import { apiPost, setAuthToken, ApiError } from '@/lib/api';
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 
 type AuthUser = {
-  id?: string | number | null;
-  name?: string | null;
-  username?: string | null;
-  email?: string | null;
-  role?: string | null;
+  username: string
+  role: string
   [key: string]: unknown;
 };
 
@@ -37,7 +34,7 @@ type CodeResponse = {
   [key: string]: unknown;
 };
 
-type MeResponse = AuthUser | { data: AuthUser };
+type MeResponse = { data: AuthUser };
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -136,14 +133,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return undefined;
   }, []);
 
-  const unwrapMeResponse = useCallback((response: MeResponse | null | undefined): AuthUser => {
+  const unwrapMeResponse = useCallback((response: MeResponse): AuthUser => {
     if (!response) {
       throw new Error('Invalid profile response.');
     }
-    if ('data' in response && response.data) {
-      return response.data;
-    }
-    return response;
+    return response.data;
   }, []);
 
   const fetchCurrentUser = useCallback(

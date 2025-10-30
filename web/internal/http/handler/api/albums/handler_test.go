@@ -29,8 +29,42 @@ func TestHandler_List(t *testing.T) {
 	tx, _ := conn.Begin(ctx)
 	defer tx.Rollback(ctx)
 
-	var albumID int
-	tx.QueryRow(ctx, "insert into albums (name, release_year) values ('test album', 2022) returning id").Scan(&albumID)
+	var (
+		albumID    int
+		artistID   int
+		writerID   int
+		userID     int
+		languageID int
+		songID     int
+	)
+
+	if err := tx.QueryRow(ctx, "insert into albums (name, release_year) values ('test album', 2022) returning id").Scan(&albumID); err != nil {
+		t.Fatalf("failed to insert album: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into artists (name) values ('test artist') returning id").Scan(&artistID); err != nil {
+		t.Fatalf("failed to insert artist: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into writers (name) values ('test writer') returning id").Scan(&writerID); err != nil {
+		t.Fatalf("failed to insert writer: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID); err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
+		t.Fatalf("failed to insert language: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into songs (title, created_by, language_id) values ('test song', $1, $2) returning id", userID, languageID).Scan(&songID); err != nil {
+		t.Fatalf("failed to insert song: %v", err)
+	}
+	if _, err := tx.Exec(ctx, "insert into album_song (album_id, song_id) values ($1, $2)", albumID, songID); err != nil {
+		t.Fatalf("failed to insert album_song: %v", err)
+	}
+	if _, err := tx.Exec(ctx, "insert into artist_song (artist_id, song_id) values ($1, $2)", artistID, songID); err != nil {
+		t.Fatalf("failed to insert artist_song: %v", err)
+	}
+	if _, err := tx.Exec(ctx, "insert into song_writer (writer_id, song_id) values ($1, $2)", writerID, songID); err != nil {
+		t.Fatalf("failed to insert song_writer: %v", err)
+	}
 
 	h := getHandler(tx)
 	rr := httptest.NewRecorder()
@@ -54,6 +88,20 @@ func TestHandler_List(t *testing.T) {
 	}
 	if len(resp.Data) != 1 {
 		t.Fatalf("data array not match")
+	}
+
+	album := resp.Data[0]
+	if album.Total != 1 {
+		t.Fatalf("unexpected total songs: got %d want %d", album.Total, 1)
+	}
+	if album.ReleaseYear == nil || *album.ReleaseYear != 2022 {
+		t.Fatalf("unexpected release year: got %+v", album.ReleaseYear)
+	}
+	if len(album.Artists) != 1 || album.Artists[0].ID != artistID {
+		t.Fatalf("unexpected artists payload: %+v", album.Artists)
+	}
+	if len(album.Writers) != 1 || album.Writers[0].ID != writerID {
+		t.Fatalf("unexpected writers payload: %+v", album.Writers)
 	}
 }
 

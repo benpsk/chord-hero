@@ -147,13 +147,12 @@ func (r *Repository) Create(ctx context.Context, params playlistsvc.CreateParams
 
 // AddSongs associates songs with the provided playlist.
 func (r *Repository) AddSongs(ctx context.Context, userID int, playlistID int, songIDs []int) error {
-
 	var exists bool
 	if err := r.db.QueryRow(ctx, `
-		select exists(
-				select 1 from playlists where id = $1 and user_id = $2
-		)
-		`, playlistID, userID).Scan(&exists); err != nil {
+        select exists(
+                select 1 from playlists where id = $1 and user_id = $2
+        )
+        `, playlistID, userID).Scan(&exists); err != nil {
 		return fmt.Errorf("check playlist ownership: %w", err)
 	}
 	if !exists {
@@ -165,12 +164,16 @@ func (r *Repository) AddSongs(ctx context.Context, userID int, playlistID int, s
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
+	if _, err := tx.Exec(ctx, `
+        delete from playlist_song where playlist_id = $1
+    `, playlistID); err != nil {
+		return fmt.Errorf("reset playlist songs: %w", err)
+	}
+
 	for _, songID := range songIDs {
 		if _, err := tx.Exec(ctx, `
             insert into playlist_song (playlist_id, song_id)
             values ($1, $2)
-            on conflict (playlist_id, song_id) do update
-            set updated_at = now()
         `, playlistID, songID); err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation {
@@ -215,44 +218,6 @@ func (r *Repository) Delete(ctx context.Context, id int, userID int) error {
 	if cmdTag.RowsAffected() == 0 {
 		return apperror.NotFound("playlist not found")
 	}
-	return nil
-}
-
-// RemoveSongs detaches songs from a playlist owned by the user.
-func (r *Repository) RemoveSongs(ctx context.Context, playlistID int, userID int, songIDs []int) error {
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin remove songs from playlist: %w", err)
-	}
-	defer tx.Rollback(ctx) //nolint:errcheck
-
-	var exists bool
-	if err := tx.QueryRow(ctx, `
-        select exists(
-            select 1
-            from playlists
-            where id = $1 and user_id = $2
-        )
-    `, playlistID, userID).Scan(&exists); err != nil {
-		return fmt.Errorf("check playlist ownership: %w", err)
-	}
-	if !exists {
-		return apperror.NotFound("playlist not found")
-	}
-
-	for _, songID := range songIDs {
-		if _, err := tx.Exec(ctx, `
-            delete from playlist_song
-            where playlist_id = $1 and song_id = $2
-        `, playlistID, songID); err != nil {
-			return fmt.Errorf("remove song %d from playlist: %w", songID, err)
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit remove songs from playlist: %w", err)
-	}
-
 	return nil
 }
 

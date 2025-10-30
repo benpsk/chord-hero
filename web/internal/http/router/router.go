@@ -129,7 +129,6 @@ func New(application *app.Application) chi.Router {
 			protected.Delete("/playlists/{id}", apiPlaylists.Delete)
 			protected.Post("/playlists/{id}/share", apiPlaylists.Share)
 			protected.Post("/playlists/{id}/leave", apiPlaylists.Leave)
-			protected.Post("/playlists/{id}/remove-songs", apiPlaylists.RemoveSongs)
 			protected.Post("/playlists/{playlist_id}/songs/{song_ids}", apiPlaylists.AddSongs)
 			protected.Post("/users", apiUsers.Search)
 			protected.Post("/feedback", apiFeedback.Create)

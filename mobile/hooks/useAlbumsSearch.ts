@@ -7,8 +7,11 @@ export type AlbumRecord = {
   name: string;
   total?: number | null;
   release_year?: number | null;
-  is_bookmark?: boolean;
   artists?: Array<{
+    id: number;
+    name: string | null;
+  }>;
+  writers?: Array<{
     id: number;
     name: string | null;
   }>;

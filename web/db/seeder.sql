@@ -12,7 +12,6 @@ truncate table artist_song restart identity cascade;
 truncate table album_song restart identity cascade;
 truncate table level_song restart identity cascade;
 truncate table songs restart identity cascade;
-truncate table album_artist restart identity cascade;
 truncate table albums restart identity cascade;
 truncate table artists restart identity cascade;
 truncate table writers restart identity cascade;

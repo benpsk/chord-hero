@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
@@ -8,12 +8,11 @@ import { HomeSectionHeader } from './HomeSectionHeader';
 export type PopularArtistItem = {
   id: string;
   name: string;
-  totalPlays: number;
 };
 
 type PopularArtistsSectionProps = {
   items: PopularArtistItem[];
-  onPressArtist: () => void;
+  onPressArtist: (artist: PopularArtistItem) => void;
   enteringDelay?: number;
 };
 
@@ -51,15 +50,11 @@ export function PopularArtistsSection({
         name: {
           fontWeight: '600',
         },
-        subtitle: {
-          color: theme.colors.secondary,
-          fontSize: 12,
-        },
         emptyText: {
           color: theme.colors.onSurfaceVariant,
         },
       }),
-    [theme.colors.onPrimary, theme.colors.primary, theme.colors.secondary, theme.colors.onSurfaceVariant]
+    [theme.colors.onPrimary, theme.colors.primary, theme.colors.onSurfaceVariant]
   );
 
   return (
@@ -72,28 +67,32 @@ export function PopularArtistsSection({
           items.map((artist, index) => (
             <Animated.View
               key={artist.id}
-              style={styles.row}
               entering={FadeInUp.delay(enteringDelay + 50 * index + 300).duration(320)}
             >
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {artist.name
-                    .split(' ')
-                    .map((word) => word[0])
-                    .join('')
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{artist.name}</Text>
-                <Text style={styles.subtitle}>Tap to explore songs</Text>
-              </View>
-              <IconButton
-                icon="chevron-right"
-                onPress={onPressArtist}
-                iconColor={theme.colors.secondary}
-              />
+              <Pressable
+                style={styles.row}
+                android_ripple={{ color: theme.colors.surfaceVariant }}
+                onPress={() => onPressArtist(artist)}
+              >
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {artist.name
+                      .split(' ')
+                      .map((word) => word[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name}>{artist.name}</Text>
+                </View>
+                <IconButton
+                  icon="chevron-right"
+                  onPress={() => onPressArtist(artist)}
+                  iconColor={theme.colors.secondary}
+                />
+              </Pressable>
             </Animated.View>
           ))
         )}

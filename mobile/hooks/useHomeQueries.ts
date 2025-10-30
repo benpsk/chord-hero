@@ -17,8 +17,13 @@ export type TrendingSong = {
 export type TrendingAlbum = {
   id: number;
   name: string;
-  total_plays: number;
+  total: number;
+  release_year?: number | null;
   artists: Array<{
+    id: number;
+    name: string;
+  }>;
+  writers: Array<{
     id: number;
     name: string;
   }>;
@@ -27,7 +32,6 @@ export type TrendingAlbum = {
 export type TrendingArtist = {
   id: number;
   name: string;
-  total_plays: number;
 };
 
 const staleTime = 5 * 60 * 1000;

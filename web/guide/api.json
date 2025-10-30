@@ -107,11 +107,16 @@
       "name": "Whatever",
       "total": 12,
       "release_year": 2000
-      "is_bookmark": false, -- true only when all of the album are added into current user playlists
       "artists": [
         {
           "id": 1,
           "name": "J J"
+        }
+      ],
+      "writers": [
+        {
+          "id": 1,
+          "name" "Ah Nge"
         }
       ]
     }
@@ -174,6 +179,12 @@
       "id": 1,
       "name": "my uname playlist",
       "is_owner": true,
+      "shared_with": [
+        {
+          "id": 1,
+          "email": "john@mail.com"
+        }
+      ],
       "total": 3
     },
   ],
@@ -221,11 +232,18 @@
     {
       "id": 1,
       "name": "Album 1",
-      "total_plays": 10,
+      "total": 12,
+      "release_year": 2000,
       "artists": [
         {
           "id": 1,
           "name": "J J"
+        }
+      ],
+      "writers": [
+        {
+          "id": 1,
+          "name": "Ah Nge"
         }
       ]
     }
@@ -238,7 +256,6 @@
     {
       "id": 1,
       "name": "J Cole",
-      "total_plays": 10
     }
   ]
 }
@@ -305,11 +322,6 @@
   "name": "Updated P01"
 } 
 
--- POST /api/playlists/{id}/remove-songs
-{
-  "song_ids": [1,2,3]
-}
-
 -- POST /api/playlists/{id}/share
 {
   "user_ids": [1,2,3]
@@ -327,5 +339,3 @@
 }
 
 -- POST /api/playlists/{id}/leave
-
-

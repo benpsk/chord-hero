@@ -23,7 +23,6 @@ func getHandler(storage storage.Querier) playlists.Handler {
 	return playlists.New(svc)
 }
 
-
 func TestHandler_List(t *testing.T) {
 	conn := testutil.SetupDB(t)
 	defer conn.Close()
@@ -44,7 +43,7 @@ func TestHandler_List(t *testing.T) {
 
 	r, accessToken := testutil.AuthToken(t, userID)
 	h := getHandler(tx)
-	
+
 	r.Get("/api/playlists", h.List)
 
 	req, err := http.NewRequest("GET", "/api/playlists", nil)
@@ -280,5 +279,89 @@ func TestHandler_List_Validation(t *testing.T) {
 				t.Errorf("expected error key %s not found", tc.expectedKey)
 			}
 		})
+	}
+}
+
+func TestHandler_AddSongs_ReplacesExisting(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var (
+		userID     int
+		languageID int
+		playlistID int
+		songIDs    []int
+	)
+
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID); err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
+		t.Fatalf("failed to insert language: %v", err)
+	}
+
+	songIDs = make([]int, 3)
+	for i := 0; i < 3; i++ {
+		if err := tx.QueryRow(ctx, "insert into songs (title, created_by, language_id) values ($1, $2, $3) returning id", fmt.Sprintf("song-%d", i+1), userID, languageID).Scan(&songIDs[i]); err != nil {
+			t.Fatalf("failed to insert song %d: %v", i+1, err)
+		}
+	}
+
+	if err := tx.QueryRow(ctx, "insert into playlists (name, user_id) values ('test playlist', $1) returning id", userID).Scan(&playlistID); err != nil {
+		t.Fatalf("failed to insert playlist: %v", err)
+	}
+
+	if _, err := tx.Exec(ctx, "insert into playlist_song (playlist_id, song_id) values ($1, $2), ($1, $3)", playlistID, songIDs[0], songIDs[1]); err != nil {
+		t.Fatalf("failed to seed playlist songs: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, userID)
+	h := getHandler(tx)
+	r.Post("/api/playlists/{playlist_id}/songs/{song_ids}", h.AddSongs)
+
+	requestPath := fmt.Sprintf("/api/playlists/%d/songs/%d,%d", playlistID, songIDs[2], songIDs[0])
+	req, err := http.NewRequest("POST", requestPath, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Fatalf("unexpected status code: got %d want %d", status, http.StatusOK)
+	}
+
+	rows, err := tx.Query(ctx, "select song_id from playlist_song where playlist_id = $1 order by created_at asc", playlistID)
+	if err != nil {
+		t.Fatalf("failed to query playlist songs: %v", err)
+	}
+	defer rows.Close()
+
+	got := make([]int, 0)
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			t.Fatalf("failed to scan song id: %v", err)
+		}
+		got = append(got, id)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iteration error: %v", err)
+	}
+
+	expected := []int{songIDs[2], songIDs[0]}
+	if len(got) != len(expected) {
+		t.Fatalf("unexpected song count: got %d want %d", len(got), len(expected))
+	}
+	for i, id := range expected {
+		if got[i] != id {
+			t.Fatalf("unexpected song order at position %d: got %d want %d", i, got[i], id)
+		}
 	}
 }

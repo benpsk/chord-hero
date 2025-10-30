@@ -8,13 +8,22 @@ import { HomeSectionHeader } from './HomeSectionHeader';
 export type TrendingAlbumItem = {
   id: string;
   name: string;
-  totalPlays: number;
-  artists: string;
+  total: number;
+  releaseYear?: number | null;
+  artistNames: string;
+  artists: {
+    id: number;
+    name: string;
+  }[];
+  writers: {
+    id: number;
+    name: string;
+  }[];
 };
 
 type TrendingAlbumsSectionProps = {
   items: TrendingAlbumItem[];
-  onPressAlbum: (id: string) => void;
+  onPressAlbum: (album: TrendingAlbumItem) => void;
   enteringDelay?: number;
 };
 
@@ -98,7 +107,7 @@ export function TrendingAlbumsSection({
                 key={album.id}
                 entering={FadeInUp.delay(enteringDelay + 40 * index + 240).duration(320)}
               >
-                <Card style={styles.card} mode="elevated" onPress={() => onPressAlbum(album.id)}>
+                <Card style={styles.card} mode="elevated" onPress={() => onPressAlbum(album)}>
                   <View style={styles.cover}>
                     <Text style={styles.initials}>{album.name.slice(0, 2).toUpperCase()}</Text>
                   </View>
@@ -108,12 +117,12 @@ export function TrendingAlbumsSection({
                       <IconButton
                         icon="chevron-right"
                         size={20}
-                        onPress={() => onPressAlbum(album.id)}
+                        onPress={() => onPressAlbum(album)}
                         iconColor={theme.colors.secondary}
                         style={styles.footerIcon}
                       />
                     </View>
-                    <Text style={styles.subtitle}>by {album.artists}</Text>
+                    <Text style={styles.subtitle}>by {album.artistNames}</Text>
                   </Card.Content>
                 </Card>
               </Animated.View>

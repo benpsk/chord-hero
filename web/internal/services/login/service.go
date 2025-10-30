@@ -259,7 +259,7 @@ func (s *service) CurrentUser(ctx context.Context, userID int) (User, error) {
 	if userID <= 0 {
 		return User{}, apperror.Unauthorized("Unauthorized")
 	}
-	return s.repo.FindUserByID(ctx, userID)
+	return s.repo.FindUserByID(ctx, userID) 
 }
 
 func isDigits(value string) bool {

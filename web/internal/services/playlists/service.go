@@ -15,7 +15,6 @@ type Service interface {
 	AddSongs(ctx context.Context, userID int, playlistID int, songIDs []int) error
 	Update(ctx context.Context, id int, params UpdateParams) error
 	Delete(ctx context.Context, id int, userID int) error
-	RemoveSongs(ctx context.Context, playlistID int, userID int, songIDs []int) error
 	Share(ctx context.Context, playlistID int, ownerID int, userIDs []int) error
 	Leave(ctx context.Context, playlistID int, userID int) error
 }
@@ -57,7 +56,6 @@ type Repository interface {
 	AddSongs(ctx context.Context, userID int, playlistID int, songIDs []int) error
 	Update(ctx context.Context, id int, params UpdateParams) error
 	Delete(ctx context.Context, id int, userID int) error
-	RemoveSongs(ctx context.Context, playlistID int, userID int, songIDs []int) error
 	Share(ctx context.Context, playlistID int, ownerID int, userIDs []int) error
 	Leave(ctx context.Context, playlistID int, userID int) error
 }
@@ -142,23 +140,6 @@ func (s *service) Delete(ctx context.Context, id int, userID int) error {
 		return apperror.Unauthorized("Unauthorized user")
 	}
 	return s.repo.Delete(ctx, id, userID)
-}
-
-// RemoveSongs detaches provided songs from a playlist owned by the user.
-func (s *service) RemoveSongs(ctx context.Context, playlistID int, userID int, songIDs []int) error {
-	if playlistID <= 0 {
-		return apperror.NotFound("playlist not found")
-	}
-	if userID <= 0 {
-		return apperror.Unauthorized("Unauthorized user")
-	}
-
-	filtered := uniquePositive(songIDs)
-	if len(filtered) == 0 {
-		return apperror.BadRequest("invalid song_ids")
-	}
-
-	return s.repo.RemoveSongs(ctx, playlistID, userID, filtered)
 }
 
 // Share synchronises shared users for a playlist owned by the inviter.

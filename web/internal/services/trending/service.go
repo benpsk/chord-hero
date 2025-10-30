@@ -23,19 +23,25 @@ type Artist struct {
 	Name string `json:"name"`
 }
 
+type Writer struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 // TrendingAlbum captures aggregate data for a popular album.
 type TrendingAlbum struct {
-	ID         int      `json:"id"`
-	Name       string   `json:"name"`
-	TotalPlays int      `json:"total_plays"`
-	Artists    []Artist `json:"artists"`
+	ID          int      `json:"id"`
+	Name        string   `json:"name"`
+	Total       int      `json:"total"`
+	ReleaseYear *int     `json:"release_year"`
+	Artists     []Artist `json:"artists"`
+	Writers     []Writer `json:"writers"`
 }
 
 // TrendingArtist captures aggregate data for a popular artist.
 type TrendingArtist struct {
 	ID         int    `json:"id"`
 	Name       string `json:"name"`
-	TotalPlays int    `json:"total_plays"`
 }
 
 // Repository encapsulates data access for trending resources.

@@ -5,12 +5,13 @@ import { useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-import { useTrendingAlbums, useTrendingArtists, useTrendingSongs } from '@/hooks/useHomeQueries';
+import { useTrendingAlbums, useTrendingArtists, useTrendingSongs, type TrendingArtist } from '@/hooks/useHomeQueries';
 import { HomeGreeting } from '@/components/home/HomeGreeting';
 import { WeeklyChartsSection, type WeeklyChartItem } from '@/components/home/WeeklyChartsSection';
 import { HomeInsightsCard } from '@/components/home/HomeInsightsCard';
-import { TrendingAlbumsSection } from '@/components/home/TrendingAlbumsSection';
+import { TrendingAlbumsSection, type TrendingAlbumItem } from '@/components/home/TrendingAlbumsSection';
 import { PopularArtistsSection } from '@/components/home/PopularArtistsSection';
+import { useAuth } from '@/hooks/useAuth';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -22,9 +23,12 @@ function getGreeting() {
 export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { user } = useAuth();
   const { data: trendingSongsData } = useTrendingSongs();
   const { data: trendingAlbumsData } = useTrendingAlbums();
   const { data: trendingArtistsData } = useTrendingArtists();
+
+  const displayName = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) :'Guest Musician';
 
   const weeklyCharts = useMemo(() => {
     const songs = trendingSongsData?.data ?? [];
@@ -46,8 +50,12 @@ export default function HomeScreen() {
       .map((item) => ({
         id: String(item.id),
         name: item.name,
-        totalPlays: item.total_plays,
-        artists: item.artists.join(", "),
+        total: item.total ?? 0,
+        releaseYear: item.release_year ?? null,
+        artistNames:
+          item.artists?.map((artist) => artist?.name).filter(Boolean).join(', ').substring(0, 20) || 'Various artists',
+        artists: item.artists ?? [],
+        writers: item.writers ?? [],
       }));
   }, [trendingAlbumsData]);
 
@@ -58,7 +66,6 @@ export default function HomeScreen() {
       .map((item) => ({
         id: String(item.id),
         name: item.name,
-        totalPlays: item.total_plays,
       }));
   }, [trendingArtistsData]);
 
@@ -85,7 +92,24 @@ export default function HomeScreen() {
       pathname: '/chart/[id]',
       params: { id: item.id, name: item.name, level: item.level, level_id: String(item.level_id), description: item.description },
     });
-  const handleOpenSearch = () => console.log('ok');
+  const handleOpenAlbum = (album: TrendingAlbumItem) => {
+    router.push({
+      pathname: '/album/[id]',
+      params: {
+        id: album.id,
+        item: JSON.stringify(album)
+      },
+    });
+  };
+  const handleOpenArtist = (artist: TrendingArtist) => {
+    router.push({
+      pathname: '/artist/[id]',
+      params: {
+        id: String(artist.id),
+        item: JSON.stringify({ id: String(artist.id), name: artist.name }),
+      },
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -93,7 +117,7 @@ export default function HomeScreen() {
         entering={FadeInUp.duration(360)}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <HomeGreeting greeting={getGreeting()} name="Ashley Scott" />
+        <HomeGreeting greeting={getGreeting()} name={displayName} />
 
         <WeeklyChartsSection
           items={weeklyCharts}
@@ -106,13 +130,15 @@ export default function HomeScreen() {
 
         <TrendingAlbumsSection
           items={trendingAlbums}
-          onPressAlbum={handleOpenSearch}
+          onPressAlbum={handleOpenAlbum}
           enteringDelay={220}
         />
 
         <PopularArtistsSection
           items={popularArtists}
-          onPressArtist={handleOpenSearch}
+          onPressArtist={(artist) =>
+            handleOpenArtist({ id: Number(artist.id), name: artist.name })
+          }
           enteringDelay={280}
         />
       </Animated.ScrollView>

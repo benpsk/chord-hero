@@ -99,33 +99,77 @@ func (r *Repository) TrendingAlbums(ctx context.Context) ([]trendingsvc.Trending
 			group by
 				aso.album_id
 		),
-		album_artists_agg as (
-			-- step 3: aggregate artists into a json array for each album
+		album_totals as (
 			select
-				aa.album_id,
-				jsonb_agg(
-					jsonb_build_object('id', ar.id, 'name', ar.name)
-					order by ar.name
-				) as artists
+				s.album_id,
+				count(distinct s.song_id) as total_songs
 			from
-				album_artist as aa
-			join
-				artists as ar on aa.artist_id = ar.id
+				album_song s
 			group by
-				aa.album_id
+				s.album_id
+		),
+		album_artists_agg as (
+			-- step 3: aggregate artists into a json array for each album using artist_song
+			select
+				sub.album_id,
+				jsonb_agg(
+					jsonb_build_object('id', sub.artist_id, 'name', sub.artist_name)
+				) as artists
+			from (
+				select distinct
+					als.album_id,
+					ar.id as artist_id,
+					ar.name as artist_name
+				from
+					album_song als
+				join
+					artist_song ars on als.song_id = ars.song_id
+				join
+					artists ar on ars.artist_id = ar.id
+			) as sub
+			group by
+				sub.album_id
+		),
+		album_writers_agg as (
+			-- step 4: aggregate writers into a json array for each album
+			select
+				sub.album_id,
+				jsonb_agg(
+					jsonb_build_object('id', sub.writer_id, 'name', sub.writer_name)
+				) as writers
+			from (
+				select distinct
+					als.album_id,
+					w.id as writer_id,
+					w.name as writer_name
+				from
+					album_song als
+				join
+					song_writer sw on als.song_id = sw.song_id
+				join
+					writers w on sw.writer_id = w.id
+			) as sub
+			group by
+				sub.album_id
 		)
 		-- final step: combine album play counts, names, and the new artist json
 		select
 			ap.album_id,
 			al.name as album_name,
-			ap.total_plays,
-			coalesce(aaa.artists, '[]'::jsonb) as artists
+			al.release_year,
+			coalesce(at.total_songs, 0) as total_songs,
+			coalesce(aaa.artists, '[]'::jsonb) as artists,
+			coalesce(awa.writers, '[]'::jsonb) as writers
 		from
 			album_plays as ap
 		join
 			albums as al on ap.album_id = al.id
+		left join
+			album_totals as at on ap.album_id = at.album_id
 		left join -- use left join in case an album has plays but no artists linked
 			album_artists_agg as aaa on ap.album_id = aaa.album_id
+		left join
+			album_writers_agg as awa on ap.album_id = awa.album_id
 		order by
 			ap.total_plays desc
 		limit $1
@@ -139,9 +183,16 @@ func (r *Repository) TrendingAlbums(ctx context.Context) ([]trendingsvc.Trending
 	albums := make([]trendingsvc.TrendingAlbum, 0, limit)
 
 	for rows.Next() {
-		var album trendingsvc.TrendingAlbum
-		if err := rows.Scan(&album.ID, &album.Name, &album.TotalPlays, &album.Artists); err != nil {
+		var (
+			album       trendingsvc.TrendingAlbum
+			releaseYear sql.NullInt32
+		)
+		if err := rows.Scan(&album.ID, &album.Name, &releaseYear, &album.Total, &album.Artists, &album.Writers); err != nil {
 			return nil, fmt.Errorf("scan trending album: %w", err)
+		}
+		if releaseYear.Valid {
+			value := int(releaseYear.Int32)
+			album.ReleaseYear = &value
 		}
 		albums = append(albums, album)
 	}
@@ -185,7 +236,8 @@ func (r *Repository) TrendingArtists(ctx context.Context) ([]trendingsvc.Trendin
 
 	for rows.Next() {
 		var artist trendingsvc.TrendingArtist
-		if err := rows.Scan(&artist.ID, &artist.Name, &artist.TotalPlays); err != nil {
+		total := 0
+		if err := rows.Scan(&artist.ID, &artist.Name, &total); err != nil {
 			return nil, fmt.Errorf("scan trending artist: %w", err)
 		}
 		artists = append(artists, artist)

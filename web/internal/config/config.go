@@ -17,14 +17,14 @@ const (
 	defaultDBConnLifetime     = 30 * time.Minute
 	defaultDBConnIdleTime     = 5 * time.Minute
 	defaultAdminSessionCookie = "admin_session"
-	defaultAdminSessionTTL    = 24 * time.Hour
+	defaultAdminSessionTTL    = 30 * 24 * time.Hour
 	defaultAppEnv             = "production"
 	defaultFrontendUrl        = "http://localhost:8080"
 	defaultAuthOTPLength      = 6
 	defaultAuthOTPTTL         = 5 * time.Minute
 	defaultSMTPPort           = 587
 	defaultAuthTokenSecret    = "change-me"
-	defaultAuthTokenTTL       = 24 * time.Hour
+	defaultAuthTokenTTL       = 30 * 24 * time.Hour
 )
 
 // Config collects runtime configuration for the web service.

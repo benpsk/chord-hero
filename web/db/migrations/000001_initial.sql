@@ -62,25 +62,6 @@ execute procedure update_updated_at_column();
 
 --bun:split
 
-create table if not exists album_artist (
-    artist_id int not null,
-    album_id int not null,
-    created_at timestamp not null default now(),
-    updated_at timestamp not null default now(),
-    primary key (artist_id, album_id),
-    foreign key (artist_id) references artists(id) on delete cascade,
-    foreign key (album_id) references albums(id) on delete cascade
-);
-
---bun:split
-
-create trigger update_album_artist_updated_at
-before update on album_artist
-for each row
-execute procedure update_updated_at_column();
-
---bun:split
-
 create table if not exists writers (
     id serial primary key,
     name varchar(255) not null,

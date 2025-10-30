@@ -64,25 +64,46 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
             group by s.album_id
         ),
 				album_artists_agg as (
-					-- step 3: aggregate artists into a json array for each album
 					select
-						aa.album_id,
+						sub.album_id,
 						jsonb_agg(
-							jsonb_build_object('id', ar.id, 'name', ar.name)
-							order by ar.name
+							jsonb_build_object('id', sub.artist_id, 'name', sub.artist_name)
 						) as artists
-					from
-						album_artist as aa
-					join
-						artists as ar on aa.artist_id = ar.id
-					group by
-						aa.album_id
+					from (
+						select distinct
+							als.album_id,
+							ar.id as artist_id,
+							ar.name as artist_name
+						from album_song als
+						join artist_song ars on als.song_id = ars.song_id
+						join artists ar on ars.artist_id = ar.id
+					) as sub
+					group by sub.album_id
+				),
+				album_writers_agg as (
+					select
+						sub.album_id,
+						jsonb_agg(
+							jsonb_build_object('id', sub.writer_id, 'name', sub.writer_name)
+						) as writers
+					from (
+						select distinct
+							als.album_id,
+							w.id as writer_id,
+							w.name as writer_name
+						from album_song als
+						join song_writer sw on als.song_id = sw.song_id
+						join writers w on sw.writer_id = w.id
+					) as sub
+					group by sub.album_id
 				)
         select a.id, a.name, a.release_year, coalesce(at.total_songs, 0) as total_songs,
-					aaa.artists
+					coalesce(aaa.artists, '[]'::jsonb) as artists,
+					coalesce(awa.writers, '[]'::jsonb) as writers
         from albums a
         left join album_totals at on at.album_id = a.id
 				left join album_artists_agg as aaa on a.id = aaa.album_id
+				left join album_writers_agg as awa on a.id = awa.album_id
         %s
         order by a.name asc
         limit %s offset %s
@@ -109,9 +130,10 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 			releaseYear sql.NullInt32
 			totalSongs  int
 			artists     []albumsvc.Artist
+			writers     []albumsvc.Writer
 		)
 
-		if err := rows.Scan(&id, &name, &releaseYear, &totalSongs, &artists); err != nil {
+		if err := rows.Scan(&id, &name, &releaseYear, &totalSongs, &artists, &writers); err != nil {
 			return result, fmt.Errorf("scan album: %w", err)
 		}
 
@@ -120,6 +142,7 @@ func (r *Repository) List(ctx context.Context, params albumsvc.ListParams) (albu
 			Name:    name,
 			Total:   totalSongs,
 			Artists: artists,
+			Writers: writers,
 		}
 
 		if releaseYear.Valid {

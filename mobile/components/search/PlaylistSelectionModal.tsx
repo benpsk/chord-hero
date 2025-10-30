@@ -1,16 +1,22 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { Button, Checkbox, Dialog, Portal, Text, useTheme } from 'react-native-paper';
-import type { Playlist } from '@/constants/playlists';
+
+type PlaylistItem = {
+  id: string;
+  name: string;
+};
 
 type PlaylistSelectionModalProps = {
   visible: boolean;
   trackTitle?: string;
-  playlists: Playlist[];
+  playlists: PlaylistItem[];
   selectedIds: Set<string>;
   onTogglePlaylist: (playlistId: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmDisabled?: boolean;
+  confirmLoading?: boolean;
 };
 
 export function PlaylistSelectionModal({
@@ -21,6 +27,8 @@ export function PlaylistSelectionModal({
   onTogglePlaylist,
   onConfirm,
   onCancel,
+  confirmDisabled = false,
+  confirmLoading = false,
 }: PlaylistSelectionModalProps) {
   const theme = useTheme();
 
@@ -55,20 +63,29 @@ export function PlaylistSelectionModal({
         <Dialog.Content>
           {!!trackTitle && <Text style={styles.subtitle}>{trackTitle}</Text>}
           <ScrollView style={styles.listWrapper}>
-            {playlists.map((playlist) => (
-              <Checkbox.Item
-                key={playlist.id}
-                label={playlist.name}
-                labelStyle={styles.checkboxLabel}
-                status={selectedIds.has(playlist.id) ? 'checked' : 'unchecked'}
-                onPress={() => onTogglePlaylist(playlist.id)}
-              />
-            ))}
+            {playlists.length === 0 ? (
+              <Text style={styles.subtitle}>No playlists available yet.</Text>
+            ) : (
+              playlists.map((playlist) => (
+                <Checkbox.Item
+                  key={playlist.id}
+                  label={playlist.name}
+                  labelStyle={styles.checkboxLabel}
+                  status={selectedIds.has(playlist.id) ? 'checked' : 'unchecked'}
+                  onPress={() => onTogglePlaylist(playlist.id)}
+                />
+              ))
+            )}
           </ScrollView>
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={onCancel}>Cancel</Button>
-          <Button mode="contained" onPress={onConfirm}>
+          <Button
+            mode="contained"
+            onPress={onConfirm}
+            disabled={confirmDisabled}
+            loading={confirmLoading}
+          >
             Confirm
           </Button>
         </Dialog.Actions>

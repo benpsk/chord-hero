@@ -12,11 +12,6 @@
 - name => string[255]
 - total => int
 
-## album_artist table 
-- artist_id => foreign key to artists table
-- album_id => foreign key to albums table
-- [artist_id, albums_id] pair unique
-
 ## writers table 
 - name => string[255]
 

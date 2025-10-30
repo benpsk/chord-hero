@@ -63,31 +63,17 @@ export default function ProfileScreen() {
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
   const isCheckingSession = status === 'checking';
   const isSignedIn = isAuthenticated;
-
-  const displayName = useMemo(() => {
-    if (isSignedIn) {
-      return (
-        user?.name?.trim() ||
-        user?.username?.split('@')[0]?.trim() ||
-        user?.email?.split('@')[0]?.trim() ||
-        'Musician'
-      );
-    }
-    if (isCheckingSession) {
-      return 'Checking session...';
-    }
-    return 'Guest musician';
-  }, [isCheckingSession, isSignedIn, user?.email, user?.name, user?.username]);
+  const displayName = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Guest Musician';
 
   const identityLabel = useMemo(() => {
     if (isSignedIn) {
-      return user?.username ?? user?.email ?? 'Signed in';
+      return user?.username ?? 'Signed in';
     }
     if (isCheckingSession) {
       return 'Please wait while we verify your account.';
     }
     return 'Tap login to sync your charts.';
-  }, [isCheckingSession, isSignedIn, user?.email, user?.username]);
+  }, [isCheckingSession, isSignedIn, user?.username]);
 
   const avatarLabel = isSignedIn ? getInitials(displayName) : 'CH';
 

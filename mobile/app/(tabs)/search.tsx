@@ -12,13 +12,13 @@ import { SearchEmptyState } from '@/components/search/SearchEmptyState';
 import { PlaylistSelectionModal } from '@/components/search/PlaylistSelectionModal';
 import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
 import { type FilterLanguage } from '@/constants/home';
-import { MOCK_PLAYLISTS } from '@/constants/playlists';
 import { SongRecord, useSongsSearch } from '@/hooks/useSongsSearch';
 import { AlbumRecord, useAlbumsSearch } from '@/hooks/useAlbumsSearch';
 import { ArtistRecord, useArtistsSearch } from '@/hooks/useArtistsSearch';
 import { useWritersSearch, WriterRecord } from '@/hooks/useWritersSearch';
 import { ReleaseYearRecord, useReleaseYearsSearch } from '@/hooks/useReleaseYearsSearch';
 import { useAuth } from '@/hooks/useAuth';
+import { usePlaylists, useAttachSongsToPlaylistMutation } from '@/hooks/usePlaylists';
 import ListHeader from '@/components/search/ListHeader';
 import ListFooter from '@/components/search/ListFooter';
 
@@ -47,6 +47,7 @@ export default function SearchScreen() {
   const [draftSelectedPlaylists, setDraftSelectedPlaylists] = useState<Set<string>>(() => new Set());
   const [activeTab, setActiveTab] = useState<SearchTabKey>('tracks');
   const [loginPromptVisible, setLoginPromptVisible] = useState(false);
+  const [isSavingPlaylists, setIsSavingPlaylists] = useState(false);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
@@ -82,6 +83,8 @@ export default function SearchScreen() {
     hasNextPage: hasNextReleaseYears,
     isFetchingNextPage: isFetchingNextReleaseYears,
   } = useReleaseYearsSearch(trimmedQuery ? { search: trimmedQuery } : undefined);
+  const playlistsQuery = usePlaylists(isAuthenticated);
+  const attachSongsMutation = useAttachSongsToPlaylistMutation();
 
   const styles = useMemo(
     () =>
@@ -146,7 +149,14 @@ export default function SearchScreen() {
         trackCount: typeof album.total === 'number' ? album.total : 0,
       }));
   }, [albumsRecords]);
-  const playlists = useMemo(() => MOCK_PLAYLISTS, []);
+  const playlists = useMemo(
+    () =>
+      playlistsQuery.data?.data?.map((playlist) => ({
+        id: String(playlist.id),
+        name: playlist.name,
+      })) ?? [],
+    [playlistsQuery.data]
+  );
   const toggleBookmark = useCallback((itemId: string) => {
     setBookmarkedItems((prev) => {
       const next = new Set(prev);
@@ -162,6 +172,7 @@ export default function SearchScreen() {
     setPlaylistModalVisible(false);
     setActiveTrack(null);
     setDraftSelectedPlaylists(() => new Set());
+    setIsSavingPlaylists(false);
   }, []);
 
   const handleOpenPlaylistModal = useCallback(
@@ -191,7 +202,7 @@ export default function SearchScreen() {
     });
   }, []);
 
-  const handleConfirmPlaylists = useCallback(() => {
+  const handleConfirmPlaylists = useCallback(async () => {
     if (!activeTrack) {
       handleClosePlaylistModal();
       return;
@@ -199,28 +210,51 @@ export default function SearchScreen() {
     const trackKey = `track-${activeTrack.id}`;
     const selectedArray = Array.from(draftSelectedPlaylists);
 
-    setTrackPlaylistMap((prev) => {
-      const next = { ...prev };
+    try {
+      setIsSavingPlaylists(true);
       if (selectedArray.length > 0) {
-        next[trackKey] = selectedArray;
-      } else {
-        delete next[trackKey];
+        await Promise.all(
+          selectedArray.map((playlistId) =>
+            attachSongsMutation.mutateAsync({
+              playlistId,
+              songIds: [activeTrack.id],
+            })
+          )
+        );
       }
-      return next;
-    });
 
-    setBookmarkedItems((prev) => {
-      const next = new Set(prev);
-      if (selectedArray.length > 0) {
-        next.add(trackKey);
-      } else {
-        next.delete(trackKey);
-      }
-      return next;
-    });
+      setTrackPlaylistMap((prev) => {
+        const next = { ...prev };
+        if (selectedArray.length > 0) {
+          next[trackKey] = selectedArray;
+        } else {
+          delete next[trackKey];
+        }
+        return next;
+      });
 
-    handleClosePlaylistModal();
-  }, [activeTrack, draftSelectedPlaylists, handleClosePlaylistModal]);
+      setBookmarkedItems((prev) => {
+        const next = new Set(prev);
+        if (selectedArray.length > 0) {
+          next.add(trackKey);
+        } else {
+          next.delete(trackKey);
+        }
+        return next;
+      });
+
+      setIsSavingPlaylists(false);
+      handleClosePlaylistModal();
+    } catch (error) {
+      console.error('Failed to add song to playlists', error);
+      setIsSavingPlaylists(false);
+    }
+  }, [
+    activeTrack,
+    attachSongsMutation,
+    draftSelectedPlaylists,
+    handleClosePlaylistModal,
+  ]);
 
   const handleDismissLoginPrompt = useCallback(() => {
     setLoginPromptVisible(false);
@@ -430,6 +464,8 @@ export default function SearchScreen() {
         onTogglePlaylist={handleTogglePlaylistSelection}
         onConfirm={handleConfirmPlaylists}
         onCancel={handleClosePlaylistModal}
+        confirmDisabled={isSavingPlaylists}
+        confirmLoading={isSavingPlaylists}
       />
       <LoginRequiredDialog
         visible={loginPromptVisible}

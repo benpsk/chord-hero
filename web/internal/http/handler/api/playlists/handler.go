@@ -209,55 +209,6 @@ func (h Handler) Leave(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// RemoveSongs detaches songs from the playlist.
-func (h Handler) RemoveSongs(w http.ResponseWriter, r *http.Request) {
-	userID, authErr := util.CurrentUserID(r)
-	if authErr != nil {
-		handler.Error(w, authErr)
-		return
-	}
-
-	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
-	playlistID, err := strconv.Atoi(rawID)
-	if err != nil || playlistID <= 0 {
-		handler.Error(w, err)
-		return
-	}
-
-	var payload struct {
-		SongIDs []int `json:"song_ids"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&payload); err != nil {
-		handler.Error(w, apperror.BadRequest("inalid JSON payload"))
-		return
-	}
-
-	validIds := make([]int, 0, len(payload.SongIDs))
-	for _, id := range payload.SongIDs {
-		if id <= 0 {
-			handler.Error(w, apperror.Validation("msg", map[string]string{"song_ids": "song_ids must include positive integers"}))
-			return
-		}
-		validIds = append(validIds, id)
-	}
-	if len(validIds) == 0 {
-		handler.Error(w, apperror.Validation("msg", map[string]string{"song_ids": "song_ids must include at least one positive integer"}))
-		return
-	}
-
-	if err := h.svc.RemoveSongs(r.Context(), playlistID, userID, validIds); err != nil {
-		handler.Error(w, err)
-		return
-	}
-
-	handler.Success(w, http.StatusOK, map[string]string{
-		"message": "Songs removed from playlist successfully",
-	})
-}
-
 // Share synchronises shared users for the playlist.
 func (h Handler) Share(w http.ResponseWriter, r *http.Request) {
 	userID, authErr := util.CurrentUserID(r)
@@ -335,7 +286,7 @@ func (h Handler) AddSongs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	handler.Success(w, http.StatusOK, map[string]string{
-		"message": "Songs added to playlist successfully",
+		"message": "Playlist songs updated successfully",
 	})
 }
 

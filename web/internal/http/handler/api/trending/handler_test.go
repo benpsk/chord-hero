@@ -72,6 +72,7 @@ func TestHandler_Albums(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, artistID, albumID, songID, languageID int
+	var writerID int
 	err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID)
 	if err != nil {
 		t.Fatalf("failed to insert languages: %v", err)
@@ -83,6 +84,10 @@ func TestHandler_Albums(t *testing.T) {
 	err = tx.QueryRow(ctx, "insert into artists (name) values ('test artist') returning id").Scan(&artistID)
 	if err != nil {
 		t.Fatalf("failed to insert artists: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into writers (name) values ('test writer') returning id").Scan(&writerID)
+	if err != nil {
+		t.Fatalf("failed to insert writers: %v", err)
 	}
 	err = tx.QueryRow(ctx, "insert into albums (name) values ('test album') returning id").Scan(&albumID)
 	if err != nil {
@@ -96,9 +101,13 @@ func TestHandler_Albums(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to insert album_song: %v", err)
 	}
-	_, err = tx.Exec(ctx, "insert into album_artist (album_id, artist_id) values ($1, $2)", albumID, artistID)
+	_, err = tx.Exec(ctx, "insert into artist_song (artist_id, song_id) values ($1, $2)", artistID, songID)
 	if err != nil {
-		t.Fatalf("failed to insert album_artist: %v", err)
+		t.Fatalf("failed to insert artist_song: %v", err)
+	}
+	_, err = tx.Exec(ctx, "insert into song_writer (writer_id, song_id) values ($1, $2)", writerID, songID)
+	if err != nil {
+		t.Fatalf("failed to insert song_writer: %v", err)
 	}
 	_, err = tx.Exec(ctx, "insert into plays (song_id, user_id, created_at) values ($1, $2, now())", songID, userID)
 	if err != nil {
@@ -127,6 +136,17 @@ func TestHandler_Albums(t *testing.T) {
 	}
 	if len(res.Data) != 1 {
 		t.Fatalf("data length not match")
+	}
+
+	album := res.Data[0]
+	if album.Total == 0 {
+		t.Fatalf("expected total songs to be greater than zero")
+	}
+	if len(album.Artists) != 1 || album.Artists[0].ID != artistID {
+		t.Fatalf("unexpected artists payload: %+v", album.Artists)
+	}
+	if len(album.Writers) != 1 || album.Writers[0].ID != writerID {
+		t.Fatalf("unexpected writers payload: %+v", album.Writers)
 	}
 }
 
@@ -188,4 +208,3 @@ func TestHandler_Artists(t *testing.T) {
 		t.Fatalf("data length not match")
 	}
 }
-

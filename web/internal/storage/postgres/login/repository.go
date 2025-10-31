@@ -26,28 +26,25 @@ func NewRepository(db storage.Querier) *Repository {
 // FindOrCreateUser fetches an existing user or creates one on demand.
 func (r *Repository) FindOrCreateUser(ctx context.Context, email string) (loginsvc.User, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
-
 	var user loginsvc.User
-	err := r.db.QueryRow(ctx, `
-		select id, email, role
-		from users
-		where email = $1
-	`, email).Scan(&user.ID, &user.Email, &user.Role)
+	selectQuery := `
+		SELECT id, email, role, status
+		FROM users
+		WHERE email = $1
+	`
+	err := r.db.QueryRow(ctx, selectQuery, email).Scan(&user.ID, &user.Email, &user.Role, &user.Status)
 	if err == nil {
 		return user, nil
 	}
-
 	if err != pgx.ErrNoRows {
-		return loginsvc.User{}, apperror.NotFound("email not found")
+		return loginsvc.User{}, fmt.Errorf("find user: %w", err)
 	}
-
-	err = r.db.QueryRow(ctx, `
-		insert into users (email, role)
-		values ($1, 'user')
-		on conflict (email) do update
-		set updated_at = now()
-		returning id, email, role
-	`, email).Scan(&user.ID, &user.Email, &user.Role)
+	insertQuery := `
+		INSERT INTO users (email, role, status)
+		VALUES ($1, 'musician', 'active')
+		RETURNING id, email, role, status
+	`
+	err = r.db.QueryRow(ctx, insertQuery, email).Scan(&user.ID, &user.Email, &user.Role, &user.Status)
 	if err != nil {
 		return loginsvc.User{}, fmt.Errorf("insert user: %w", err)
 	}
@@ -84,29 +81,49 @@ func (r *Repository) CreateLoginCode(ctx context.Context, userID int, code strin
 func (r *Repository) ConsumeLoginCode(ctx context.Context, code string, attemptedAt time.Time) (loginsvc.User, bool, error) {
 	code = strings.TrimSpace(code)
 
-	var userID int
-	err := r.db.QueryRow(ctx, `
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return loginsvc.User{}, false, fmt.Errorf("begin consume login code tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	var user loginsvc.User
+	err = tx.QueryRow(ctx, `
+		select u.id, u.email, u.role, u.status
+		from user_login_codes ulc
+		join users u on u.id = ulc.user_id
+		where ulc.code = $1
+		  and ulc.used_at is null
+		  and ulc.expires_at >= $2
+		for update
+	`, code, attemptedAt).Scan(&user.ID, &user.Email, &user.Role, &user.Status)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return loginsvc.User{}, false, apperror.Validation("msg", map[string]string{"code": "invalid code"})
+		}
+		return loginsvc.User{}, false, fmt.Errorf("select login code: %w", err)
+	}
+
+	if !strings.EqualFold(strings.TrimSpace(user.Status), "active") {
+		return loginsvc.User{}, false, apperror.Forbidden("account is not active")
+	}
+
+	tag, err := tx.Exec(ctx, `
 		update user_login_codes
 		set used_at = $3
 		where code = $1
 		  and used_at is null
 		  and expires_at >= $2
-		returning user_id
-	`, code, attemptedAt, attemptedAt).Scan(&userID)
+	`, code, attemptedAt, attemptedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return loginsvc.User{}, false, apperror.Validation("msg", map[string]string{"code": "invalid code"})
-		}
 		return loginsvc.User{}, false, fmt.Errorf("consume login code: %w", err)
 	}
+	if tag.RowsAffected() == 0 {
+		return loginsvc.User{}, false, apperror.Validation("msg", map[string]string{"code": "invalid code"})
+	}
 
-	var user loginsvc.User
-	if err := r.db.QueryRow(ctx, `
-		select id, email, role
-		from users
-		where id = $1
-	`, userID).Scan(&user.ID, &user.Email, &user.Role); err != nil {
-		return loginsvc.User{}, false, fmt.Errorf("select user by id: %w", err)
+	if err := tx.Commit(ctx); err != nil {
+		return loginsvc.User{}, false, fmt.Errorf("commit consume login code tx: %w", err)
 	}
 
 	return user, true, nil
@@ -116,15 +133,32 @@ func (r *Repository) ConsumeLoginCode(ctx context.Context, code string, attempte
 func (r *Repository) FindUserByID(ctx context.Context, userID int) (loginsvc.User, error) {
 	var user loginsvc.User
 	err := r.db.QueryRow(ctx, `
-		select id, email, role
+		select id, email, role, status
 		from users
 		where id = $1
-	`, userID).Scan(&user.ID, &user.Email, &user.Role)
+	`, userID).Scan(&user.ID, &user.Email, &user.Role, &user.Status)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return loginsvc.User{}, apperror.NotFound("user not found")
 		}
 		return loginsvc.User{}, fmt.Errorf("select user by id: %w", err)
 	}
+
 	return user, nil
+}
+
+// UpdateUserStatus modifies the status for the specified user.
+func (r *Repository) UpdateUserStatus(ctx context.Context, userID int, status string) error {
+	cmdTag, err := r.db.Exec(ctx, `
+		update users
+		set status = $1
+		where id = $2
+	`, strings.TrimSpace(status), userID)
+	if err != nil {
+		return fmt.Errorf("update user status: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return apperror.NotFound("user not found")
+	}
+	return nil
 }

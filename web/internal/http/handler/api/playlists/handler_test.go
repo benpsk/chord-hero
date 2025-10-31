@@ -32,7 +32,7 @@ func TestHandler_List(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('abc@mail.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('abc@mail.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed users table: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestHandler_Create_Success(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestHandler_Create_Fail(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID int
-	err := tx.QueryRow(ctx, "INSERT INTO users (email, role) VALUES ('test@test.com', 'user') RETURNING id").Scan(&userID)
+	err := tx.QueryRow(ctx, "INSERT INTO users (email, role) VALUES ('test@test.com', 'musician') RETURNING id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestHandler_List_Validation(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestHandler_UpdateSongs_AddsSongs(t *testing.T) {
 		songIDs    []int
 	)
 
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID); err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
 	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
@@ -398,7 +398,7 @@ func TestHandler_UpdateSongs_RemovesSongs(t *testing.T) {
 		songIDs    []int
 	)
 
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('remove@user.com', 'user') returning id").Scan(&userID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('remove@user.com', 'musician') returning id").Scan(&userID); err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
 	if err := tx.QueryRow(ctx, "insert into languages (name) values ('french') returning id").Scan(&languageID); err != nil {

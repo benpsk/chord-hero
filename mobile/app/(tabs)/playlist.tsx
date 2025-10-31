@@ -344,7 +344,7 @@ export default function PlaylistScreen() {
       }
     }
   }, [
-createPlaylistMutation, draftName, playlistsQuery]);
+    createPlaylistMutation, draftName, playlistsQuery]);
 
   const toggleSongSelection = useCallback((id: number | string) => {
     setSelectedSongIds((prev) => {
@@ -709,6 +709,10 @@ createPlaylistMutation, draftName, playlistsQuery]);
   }, [router]);
 
   const handleFabPress = useCallback(() => {
+    if (!isAuthenticated) {
+      setLoginPromptVisible(true);
+      return;
+    }
     router.push('/song/create');
   }, [router]);
 

@@ -121,8 +121,11 @@ func New(application *app.Application) chi.Router {
 		api.Group(func(protected chi.Router) {
 			protected.Use(authmw.Authenticator(tokenAuth))
 			protected.Post("/me", apiLogin.Me)
+			protected.Delete("/user", apiLogin.Delete)
 			protected.Post("/songs", apiSongs.Create)
 			protected.Put("/songs/{id}", apiSongs.Update)
+			protected.Delete("/songs/{id}", apiSongs.Delete)
+			protected.Post("/songs/{id}/status/{status}", apiSongs.UpdateStatus)
 			protected.Get("/playlists", apiPlaylists.List)
 			protected.Post("/playlists/create", apiPlaylists.Create)
 			protected.Put("/playlists/{id}", apiPlaylists.Update)

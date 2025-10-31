@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -48,41 +49,64 @@ func TestHandler_Request(t *testing.T) {
 	tx, _ := conn.Begin(ctx)
 	defer tx.Rollback(ctx)
 
-	username := "abc@mail.com"
-	requestBody, _ := json.Marshal(map[string]string{"username": username})
-	req, err := http.NewRequest("GET", "/api/login", bytes.NewBuffer(requestBody))
-	if err != nil {
-		t.Fatal(err)
+	if _, err := tx.Exec(ctx, "insert into users (email, status) values ('exisint@mail.com', 'active')"); err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	testCases := []struct {
+		name               string
+		expectedStatusCode int
+		input              map[string]string
+	}{
+		{
+			name:               "new user",
+			expectedStatusCode: http.StatusOK,
+			input:              map[string]string{"username": "abc@mail.com"},
+		},
+		{
+			name:               "existing user",
+			expectedStatusCode: http.StatusOK,
+			input:              map[string]string{"username": "existing@mail.com"},
+		},
 	}
 
 	h := getHandler(tx)
-	rr := httptest.NewRecorder()
-	h.Request(rr, req)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			requestBody, _ := json.Marshal(tc.input)
+			req, err := http.NewRequest("POST", "/api/login", bytes.NewBuffer(requestBody))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-	var res handler.ResponseMessage[map[string]string]
-	decoder := json.NewDecoder(rr.Body)
-	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&res)
-	if err != nil {
-		t.Fatalf("Failed to decode or response format is wrong: %v", err)
-	}
-	if v, ok := res.Data["message"]; !ok {
-		t.Errorf("handler returned unexpected body: %s not found", v)
-	}
+			h.Request(rr, req)
+			if status := rr.Code; status != http.StatusOK {
+				t.Errorf("handler returned wrong status code: got %v want %v",
+					status, http.StatusOK)
+			}
+			var res handler.ResponseMessage[map[string]string]
+			decoder := json.NewDecoder(rr.Body)
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&res)
+			if err != nil {
+				t.Fatalf("Failed to decode or response format is wrong: %v", err)
+			}
+			if v, ok := res.Data["message"]; !ok {
+				t.Errorf("handler returned unexpected body: %s not found", v)
+			}
 
-	var email string
-	tx.QueryRow(ctx, "select email from users where email=$1 limit 1", username).Scan(&email)
-	if email != username {
-		t.Errorf("insert data not match")
-	}
-	var count int
-	tx.QueryRow(ctx, "select count(*) from user_login_codes").Scan(&count)
-	if count == 0 {
-		t.Errorf("insert login code not match")
+			var email string
+			tx.QueryRow(ctx, "select email from users where email=$1 limit 1", tc.input["username"]).Scan(&email)
+			if email != tc.input["username"] {
+				t.Errorf("insert data not match")
+			}
+			var count int
+			tx.QueryRow(ctx, "select count(*) from user_login_codes").Scan(&count)
+			if count == 0 {
+				t.Errorf("insert login code not match")
+			}
+		})
 	}
 }
 
@@ -153,6 +177,59 @@ func TestHandler_Request_Fail(t *testing.T) {
 	}
 }
 
+func TestHandler_Request_InactiveUser(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	username := "inactive@mail.com"
+	if _, err := tx.Exec(ctx, "insert into users (email, role, status) values ($1, 'musician', 'deleted')", username); err != nil {
+		t.Fatalf("failed to seed inactive user: %v", err)
+	}
+
+	var email string
+	var id int
+	var status string
+	err := tx.QueryRow(ctx, "select id, email, status from users limit 1").Scan(&id, &email, &status)
+	if err != nil {
+		t.Fatalf("failed to seed inactive user: %v", err)
+	}
+	log.Println(id, email, status)
+	body, _ := json.Marshal(map[string]string{"username": username})
+	req, err := http.NewRequest("POST", "/api/login", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := getHandler(tx)
+	rr := httptest.NewRecorder()
+	h.Request(rr, req)
+	log.Println(rr.Body.String())
+
+	if status := rr.Code; status != http.StatusForbidden {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusForbidden)
+	}
+
+	var res handler.ErrorResponse[map[string]string]
+	if err := json.NewDecoder(rr.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+	if msg, ok := res.Errors["message"]; !ok || msg == "" {
+		t.Errorf("expected error message for inactive user, got %v", res.Errors)
+	}
+
+	var count int
+	if err := tx.QueryRow(ctx, "select count(*) from user_login_codes").Scan(&count); err != nil {
+		t.Fatalf("failed counting login codes: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected no login code for inactive user, got %d", count)
+	}
+}
+
 func TestHandler_Verify(t *testing.T) {
 	conn := testutil.SetupDB(t)
 	defer conn.Close()
@@ -173,7 +250,7 @@ func TestHandler_Verify(t *testing.T) {
 		expiresAt: time.Now().Add(time.Minute * 5),
 	}
 
-	tx.QueryRow(ctx, "insert into users (email, role) values($1, $2) returning id", input.username, "user").Scan(&input.userId)
+	tx.QueryRow(ctx, "insert into users (email, role, status) values($1, $2, 'active') returning id", input.username, "musician").Scan(&input.userId)
 	if input.userId == 0 {
 		t.Errorf("insert user :%v", input.userId)
 	}
@@ -237,7 +314,7 @@ func TestHandler_Verify_Fail(t *testing.T) {
 		code:      "123456",
 		expiresAt: time.Now(),
 	}
-	tx.QueryRow(ctx, "insert into users (email, role) values($1, $2) returning id", input.username, "user").Scan(&input.userId)
+	tx.QueryRow(ctx, "insert into users (email, role, status) values($1, $2, 'active') returning id", input.username, "musician").Scan(&input.userId)
 	if input.userId == 0 {
 		t.Errorf("insert user :%v", input.userId)
 	}
@@ -302,6 +379,60 @@ func TestHandler_Verify_Fail(t *testing.T) {
 	}
 }
 
+func TestHandler_Verify_InactiveUser(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	input := struct {
+		userID    int
+		username  string
+		code      string
+		expiresAt time.Time
+	}{
+		username:  "suspended@mail.com",
+		code:      "222333",
+		expiresAt: time.Now().Add(5 * time.Minute),
+	}
+
+	if err := tx.QueryRow(ctx, "insert into users (email, role, status) values ($1, 'musician', 'deleted') returning id", input.username).Scan(&input.userID); err != nil {
+		t.Fatalf("failed to seed inactive user: %v", err)
+	}
+	if _, err := tx.Exec(ctx, "insert into user_login_codes (user_id, code, expires_at) values ($1, $2, $3)", input.userID, input.code, input.expiresAt); err != nil {
+		t.Fatalf("failed to seed login code: %v", err)
+	}
+
+	body, _ := json.Marshal(map[string]string{"code": input.code})
+	req, _ := http.NewRequest("POST", "/api/code", bytes.NewBuffer(body))
+
+	h := getHandler(tx)
+	rr := httptest.NewRecorder()
+	h.Verify(rr, req)
+
+	if status := rr.Code; status != http.StatusForbidden {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusForbidden)
+	}
+
+	var res handler.ErrorResponse[map[string]string]
+	if err := json.NewDecoder(rr.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+	if msg, ok := res.Errors["message"]; !ok || msg == "" {
+		t.Errorf("expected error message for inactive user, got %v", res.Errors)
+	}
+
+	var usedAt *time.Time
+	if err := tx.QueryRow(ctx, "select used_at from user_login_codes where user_id = $1", input.userID).Scan(&usedAt); err != nil {
+		t.Fatalf("failed to fetch login code usage: %v", err)
+	}
+	if usedAt != nil {
+		t.Errorf("expected login code to remain unused, got %v", usedAt)
+	}
+}
+
 func TestHandler_Me(t *testing.T) {
 	conn := testutil.SetupDB(t)
 	defer conn.Close()
@@ -312,7 +443,7 @@ func TestHandler_Me(t *testing.T) {
 
 	username := "test@test.com"
 	var userID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ($1, 'user') returning id", username).Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role, status) values ($1, 'musician', 'active') returning id", username).Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
@@ -356,7 +487,7 @@ func TestHandler_Me_Fail(t *testing.T) {
 
 	username := "test@test.com"
 	var userID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ($1, 'user') returning id", username).Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role, status) values ($1, 'musician', 'active') returning id", username).Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to seed user: %v", err)
 	}
@@ -384,5 +515,84 @@ func TestHandler_Me_Fail(t *testing.T) {
 	v, ok := res.Errors["message"]
 	if !ok {
 		t.Errorf("handler returned unexpected body: %s not found", v)
+	}
+}
+
+func TestHandler_Delete_Success(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID int
+	if err := tx.QueryRow(ctx, "insert into users (email, role, status) values ('delete@test.com', 'musician', 'active') returning id").Scan(&userID); err != nil {
+		t.Fatalf("failed to seed user: %v", err)
+	}
+
+	h := getHandler(tx)
+	r, accessToken := testutil.AuthToken(t, userID)
+	r.Delete("/api/user", h.Delete)
+
+	req, err := http.NewRequest("DELETE", "/api/user", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Fatalf("unexpected status code: got %d want %d", status, http.StatusOK)
+	}
+
+	var response handler.ResponseMessage[map[string]string]
+	decoder := json.NewDecoder(rr.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if response.Data["message"] != "Account deleted successfully" {
+		t.Fatalf("unexpected response message: %s", response.Data["message"])
+	}
+
+	var status string
+	if err := tx.QueryRow(ctx, "select status from users where id = $1", userID).Scan(&status); err != nil {
+		t.Fatalf("failed to fetch user: %v", err)
+	}
+	if status != "deleted" {
+		t.Fatalf("expected user status to be deleted, got %s", status)
+	}
+}
+
+func TestHandler_Delete_Unauthorized(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var userID int
+	if err := tx.QueryRow(ctx, "insert into users (email, role, status) values ('unauth-delete@test.com', 'musician', 'active') returning id").Scan(&userID); err != nil {
+		t.Fatalf("failed to seed user: %v", err)
+	}
+
+	h := getHandler(tx)
+	r, _ := testutil.AuthToken(t, userID)
+	r.Delete("/api/user", h.Delete)
+
+	req, err := http.NewRequest("DELETE", "/api/user", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusUnauthorized {
+		t.Fatalf("unexpected status code: got %d want %d", status, http.StatusUnauthorized)
 	}
 }

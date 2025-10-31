@@ -13,8 +13,9 @@ $$ language 'plpgsql';
 
 create table if not exists users (
     id serial primary key,
-    email varchar(100) unique not null,
-    role varchar(50) not null check (role in ('admin', 'user', 'editor')),
+    email varchar(100) not null,
+    role varchar(50) not null check (role in ('admin', 'editor', 'contributor', 'musician')) default 'musician',
+    status varchar(50) not null check (status in ('active', 'deleted', 'banned')) default 'active',
     created_at timestamp not null default now(),
     updated_at timestamp not null default now()
 );

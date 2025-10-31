@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
 	"net/mail"
 	"strconv"
@@ -27,6 +28,7 @@ type Service interface {
 	VerifyCode(ctx context.Context, code any) (VerifyResult, error)
 	TokenAuth() *jwtauth.JWTAuth
 	CurrentUser(ctx context.Context, userID int) (User, error)
+	DeleteAccount(ctx context.Context, userID int) error
 }
 
 // Repository abstracts persistence needs for OTP login.
@@ -35,6 +37,7 @@ type Repository interface {
 	CreateLoginCode(ctx context.Context, userID int, code string, expiresAt time.Time) error
 	ConsumeLoginCode(ctx context.Context, code string, attemptedAt time.Time) (User, bool, error)
 	FindUserByID(ctx context.Context, userID int) (User, error)
+	UpdateUserStatus(ctx context.Context, userID int, status string) error
 }
 
 // Mailer dispatches OTP codes to users.
@@ -52,9 +55,10 @@ type Config struct {
 
 // User mirrors the data required from persistence.
 type User struct {
-	ID    int
-	Email string
-	Role  string
+	ID     int
+	Email  string
+	Role   string
+	Status string
 }
 
 type service struct {
@@ -120,6 +124,10 @@ func (s *service) RequestOTP(ctx context.Context, email string) error {
 	user, err := s.repo.FindOrCreateUser(ctx, email)
 	if err != nil {
 		return apperror.NotFound("user not found")
+	}
+	log.Println(user)
+	if !isActiveStatus(user.Status) {
+		return apperror.Forbidden("account is not active")
 	}
 
 	code, err := s.generateCode()
@@ -221,6 +229,9 @@ func (s *service) VerifyCode(ctx context.Context, otp any) (VerifyResult, error)
 		ve["code"] = "Code is invalid."
 		return VerifyResult{}, apperror.Validation("msg", ve)
 	}
+	if !isActiveStatus(user.Status) {
+		return VerifyResult{}, apperror.Forbidden("account is not active")
+	}
 
 	claims := map[string]any{
 		"sub":   strconv.Itoa(user.ID),
@@ -259,7 +270,15 @@ func (s *service) CurrentUser(ctx context.Context, userID int) (User, error) {
 	if userID <= 0 {
 		return User{}, apperror.Unauthorized("Unauthorized")
 	}
-	return s.repo.FindUserByID(ctx, userID) 
+	return s.repo.FindUserByID(ctx, userID)
+}
+
+// DeleteAccount updates the current user's status to deleted.
+func (s *service) DeleteAccount(ctx context.Context, userID int) error {
+	if userID <= 0 {
+		return apperror.Unauthorized("Unauthorized")
+	}
+	return s.repo.UpdateUserStatus(ctx, userID, "deleted")
 }
 
 func isDigits(value string) bool {
@@ -269,4 +288,9 @@ func isDigits(value string) bool {
 		}
 	}
 	return true
+}
+
+func isActiveStatus(status string) bool {
+	log.Println(status)
+	return strings.EqualFold(strings.TrimSpace(status), "active")
 }

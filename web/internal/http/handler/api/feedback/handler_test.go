@@ -34,7 +34,7 @@ func TestHandler_Create_Success(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users table: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestHandler_Create_Fail(t *testing.T) {
 
 	h := getHandler(tx)
 	var userID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("Failed to insert users: %v", err)
 	}

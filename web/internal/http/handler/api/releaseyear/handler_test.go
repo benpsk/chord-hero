@@ -31,7 +31,7 @@ func TestHandler_List(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, albumID, songID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}

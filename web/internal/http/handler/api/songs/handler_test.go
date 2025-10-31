@@ -32,7 +32,7 @@ func TestHandler_List(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, levelID, songID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestHandler_List_Filters(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, levelID, levelID2, albumID, artistID, writerID, playlistID, songID1, songID2 int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
@@ -321,7 +321,7 @@ func TestHandler_List_Trending(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, levelID, otherLevelID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('trend@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('trend@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
@@ -425,7 +425,7 @@ func TestHandler_List_IncludesPlaylistIDs(t *testing.T) {
 		playlistID   int
 	)
 
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('playlist@user.com', 'user') returning id").Scan(&userID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('playlist@user.com', 'musician') returning id").Scan(&userID); err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
 	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
@@ -506,10 +506,10 @@ func TestHandler_List_IncludesPlaylistIDsWithoutUserFilter(t *testing.T) {
 		playlistID  int
 	)
 
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('playlist-no-filter@user.com', 'user') returning id").Scan(&userID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('playlist-no-filter@user.com', 'musician') returning id").Scan(&userID); err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('playlist-no-filter@other.com', 'user') returning id").Scan(&otherUserID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('playlist-no-filter@other.com', 'musician') returning id").Scan(&otherUserID); err != nil {
 		t.Fatalf("failed to insert other user: %v", err)
 	}
 	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
@@ -570,6 +570,96 @@ func TestHandler_List_IncludesPlaylistIDsWithoutUserFilter(t *testing.T) {
 	}
 }
 
+func TestHandler_List_IncludesCreatorMasking(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var (
+		activeUserID  int
+		deletedUserID int
+		languageID    int
+		activeSongID  int
+		deletedSongID int
+		activeEmail   = "active@mail.com"
+		inactiveEmail = "inactive@example.com"
+	)
+
+	if err := tx.QueryRow(ctx, "insert into users (email, role, status) values ($1, 'musician', 'active') returning id", activeEmail).Scan(&activeUserID); err != nil {
+		t.Fatalf("failed to insert active user: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into users (email, role, status) values ($1, 'musician', 'deleted') returning id", inactiveEmail).Scan(&deletedUserID); err != nil {
+		t.Fatalf("failed to insert deleted user: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
+		t.Fatalf("failed to insert language: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into songs (title, created_by, language_id) values ('active song', $1, $2) returning id", activeUserID, languageID).Scan(&activeSongID); err != nil {
+		t.Fatalf("failed to insert active song: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into songs (title, created_by, language_id) values ('deleted song', $1, $2) returning id", deletedUserID, languageID).Scan(&deletedSongID); err != nil {
+		t.Fatalf("failed to insert deleted song: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, activeUserID)
+	h := getHandler(tx)
+	r.Get("/api/songs", h.List)
+
+	req, err := http.NewRequest("GET", "/api/songs", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Fatalf("unexpected status code: got %d want %d", status, http.StatusOK)
+	}
+
+	var res handler.PageResponse[songsvc.Song]
+	decoder := json.NewDecoder(rr.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(res.Data) != 2 {
+		t.Fatalf("unexpected result length: got %d want %d", len(res.Data), 2)
+	}
+
+	found := make(map[int]songsvc.Song, len(res.Data))
+	for _, song := range res.Data {
+		found[song.ID] = song
+	}
+
+	activeSong, ok := found[activeSongID]
+	if !ok {
+		t.Fatalf("active song missing from response")
+	}
+	if activeSong.Created == nil || activeSong.Created.ID != activeUserID {
+		t.Fatalf("expected creator information for active song")
+	}
+	if got := activeSong.Created.Email; got != activeEmail {
+		t.Fatalf("unexpected email for active creator: got %s want %s", got, activeEmail)
+	}
+
+	deletedSong, ok := found[deletedSongID]
+	if !ok {
+		t.Fatalf("deleted song missing from response")
+	}
+	if deletedSong.Created == nil || deletedSong.Created.ID != deletedUserID {
+		t.Fatalf("expected creator information for deleted song")
+	}
+	if got := deletedSong.Created.Email; got != "****@example.com" {
+		t.Fatalf("unexpected email for deleted creator: got %s want %s", got, "****@example.com")
+	}
+}
+
 func TestHandler_Create_Success(t *testing.T) {
 	conn := testutil.SetupDB(t)
 	defer conn.Close()
@@ -579,7 +669,7 @@ func TestHandler_Create_Success(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, levelID, artistID, writerID, albumID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
@@ -657,7 +747,7 @@ func TestHandler_Create_Fail(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, levelID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
@@ -747,7 +837,7 @@ func TestHandler_Update_Success(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, levelID, songID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
@@ -805,7 +895,7 @@ func TestHandler_Update_Fail(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, levelID, songID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
@@ -860,6 +950,285 @@ func TestHandler_Update_Fail(t *testing.T) {
 	}
 }
 
+func TestHandler_Delete_Success(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var (
+		userID     int
+		languageID int
+		songID     int
+	)
+
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('delete-success@user.com', 'musician') returning id").Scan(&userID); err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
+		t.Fatalf("failed to insert language: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into songs (title, created_by, language_id) values ('delete me', $1, $2) returning id", userID, languageID).Scan(&songID); err != nil {
+		t.Fatalf("failed to insert song: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, userID)
+	h := getHandler(tx)
+	r.Delete("/api/songs/{id}", h.Delete)
+
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("/api/songs/%d", songID), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Fatalf("unexpected status code: got %d want %d", status, http.StatusOK)
+	}
+
+	var remaining int
+	if err := tx.QueryRow(ctx, "select count(1) from songs where id = $1", songID).Scan(&remaining); err != nil {
+		t.Fatalf("failed to verify song removal: %v", err)
+	}
+	if remaining != 0 {
+		t.Fatalf("expected song to be deleted, found %d rows", remaining)
+	}
+}
+
+func TestHandler_Delete_Fail(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var (
+		ownerID     int
+		otherUserID int
+		languageID  int
+		ownedSongID int
+	)
+
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('delete-owner@user.com', 'musician') returning id").Scan(&ownerID); err != nil {
+		t.Fatalf("failed to insert owner: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('delete-other@user.com', 'musician') returning id").Scan(&otherUserID); err != nil {
+		t.Fatalf("failed to insert other user: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
+		t.Fatalf("failed to insert language: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into songs (title, created_by, language_id) values ('keep me', $1, $2) returning id", ownerID, languageID).Scan(&ownedSongID); err != nil {
+		t.Fatalf("failed to insert song: %v", err)
+	}
+
+	r, ownerToken := testutil.AuthToken(t, ownerID)
+	h := getHandler(tx)
+	r.Delete("/api/songs/{id}", h.Delete)
+
+	_, otherToken := testutil.AuthToken(t, otherUserID)
+
+	testCases := []struct {
+		name               string
+		targetID           string
+		authorizationToken *string
+		expectedStatus     int
+	}{
+		{
+			name:               "unauthorized",
+			targetID:           fmt.Sprintf("%d", ownedSongID),
+			authorizationToken: nil,
+			expectedStatus:     http.StatusUnauthorized,
+		},
+		{
+			name:               "invalid id",
+			targetID:           "abc",
+			authorizationToken: &ownerToken,
+			expectedStatus:     http.StatusBadRequest,
+		},
+		{
+			name:               "not owner",
+			targetID:           fmt.Sprintf("%d", ownedSongID),
+			authorizationToken: &otherToken,
+			expectedStatus:     http.StatusNotFound,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("DELETE", fmt.Sprintf("/api/songs/%s", tc.targetID), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.authorizationToken != nil {
+				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", *tc.authorizationToken))
+			}
+
+			rr := httptest.NewRecorder()
+			r.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tc.expectedStatus {
+				t.Fatalf("unexpected status: got %d want %d", status, tc.expectedStatus)
+			}
+		})
+	}
+}
+
+func TestHandler_UpdateStatus_Success(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var (
+		userID     int
+		languageID int
+		levelID    int
+		songID     int
+	)
+
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('status-success@user.com', 'musician') returning id").Scan(&userID); err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
+		t.Fatalf("failed to insert language: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID); err != nil {
+		t.Fatalf("failed to insert level: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into songs (title, created_by, language_id, level_id, status) values ('status song', $1, $2, $3, 'created') returning id", userID, languageID, levelID).Scan(&songID); err != nil {
+		t.Fatalf("failed to insert song: %v", err)
+	}
+
+	r, accessToken := testutil.AuthToken(t, userID)
+	h := getHandler(tx)
+	r.Post("/api/songs/{id}/status/{status}", h.UpdateStatus)
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("/api/songs/%d/status/pending", songID), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Fatalf("unexpected status code: got %d want %d", status, http.StatusOK)
+	}
+
+	var updatedStatus string
+	if err := tx.QueryRow(ctx, "select status from songs where id = $1", songID).Scan(&updatedStatus); err != nil {
+		t.Fatalf("failed to fetch updated status: %v", err)
+	}
+	if updatedStatus != "pending" {
+		t.Fatalf("expected status to be pending, got %s", updatedStatus)
+	}
+}
+
+func TestHandler_UpdateStatus_Fail(t *testing.T) {
+	conn := testutil.SetupDB(t)
+	defer conn.Close()
+
+	ctx := context.Background()
+	tx, _ := conn.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	var (
+		ownerID     int
+		otherUserID int
+		languageID  int
+		levelID     int
+		songID      int
+	)
+
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('status-owner@user.com', 'musician') returning id").Scan(&ownerID); err != nil {
+		t.Fatalf("failed to insert owner: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('status-other@user.com', 'musician') returning id").Scan(&otherUserID); err != nil {
+		t.Fatalf("failed to insert other user: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
+		t.Fatalf("failed to insert language: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into levels (name) values ('beginner') returning id").Scan(&levelID); err != nil {
+		t.Fatalf("failed to insert level: %v", err)
+	}
+	if err := tx.QueryRow(ctx, "insert into songs (title, created_by, language_id, level_id, status) values ('status song', $1, $2, $3, 'created') returning id", ownerID, languageID, levelID).Scan(&songID); err != nil {
+		t.Fatalf("failed to insert song: %v", err)
+	}
+
+	r, ownerToken := testutil.AuthToken(t, ownerID)
+	h := getHandler(tx)
+	r.Post("/api/songs/{id}/status/{status}", h.UpdateStatus)
+
+	_, otherToken := testutil.AuthToken(t, otherUserID)
+
+	testCases := []struct {
+		name           string
+		targetID       string
+		status         string
+		token          *string
+		expectedStatus int
+	}{
+		{
+			name:           "unauthorized",
+			targetID:       fmt.Sprintf("%d", songID),
+			status:         "pending",
+			token:          nil,
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "invalid id",
+			targetID:       "abc",
+			status:         "pending",
+			token:          &ownerToken,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "invalid status",
+			targetID:       fmt.Sprintf("%d", songID),
+			status:         "approved",
+			token:          &ownerToken,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "not owner",
+			targetID:       fmt.Sprintf("%d", songID),
+			status:         "pending",
+			token:          &otherToken,
+			expectedStatus: http.StatusNotFound,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("POST", fmt.Sprintf("/api/songs/%s/status/%s", tc.targetID, tc.status), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.token != nil {
+				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", *tc.token))
+			}
+
+			rr := httptest.NewRecorder()
+			r.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tc.expectedStatus {
+				t.Fatalf("unexpected status: got %d want %d", status, tc.expectedStatus)
+			}
+		})
+	}
+}
+
 func TestHandler_SyncPlaylists_ReplacesState(t *testing.T) {
 	conn := testutil.SetupDB(t)
 	defer conn.Close()
@@ -878,10 +1247,10 @@ func TestHandler_SyncPlaylists_ReplacesState(t *testing.T) {
 		otherPlayID   int
 	)
 
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('sync@user.com', 'user') returning id").Scan(&userID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('sync@user.com', 'musician') returning id").Scan(&userID); err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('other@user.com', 'user') returning id").Scan(&otherUserID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('other@user.com', 'musician') returning id").Scan(&otherUserID); err != nil {
 		t.Fatalf("failed to insert other user: %v", err)
 	}
 	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
@@ -984,10 +1353,10 @@ func TestHandler_SyncPlaylists_Validation(t *testing.T) {
 		otherPlayID int
 	)
 
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('sync-val@user.com', 'user') returning id").Scan(&userID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('sync-val@user.com', 'musician') returning id").Scan(&userID); err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('sync-val-other@user.com', 'user') returning id").Scan(&otherUserID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('sync-val-other@user.com', 'musician') returning id").Scan(&otherUserID); err != nil {
 		t.Fatalf("failed to insert other user: %v", err)
 	}
 	if err := tx.QueryRow(ctx, "insert into languages (name) values ('spanish') returning id").Scan(&languageID); err != nil {
@@ -1079,7 +1448,7 @@ func TestHandler_AssignLevel_Success(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, levelID, songID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
@@ -1129,7 +1498,7 @@ func TestHandler_AssignLevel_Fail(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	var userID, langID, levelID, songID int
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}

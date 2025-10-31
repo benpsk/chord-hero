@@ -47,7 +47,7 @@ func TestHandler_List(t *testing.T) {
 	if err := tx.QueryRow(ctx, "insert into writers (name) values ('test writer') returning id").Scan(&writerID); err != nil {
 		t.Fatalf("failed to insert writer: %v", err)
 	}
-	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID); err != nil {
+	if err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID); err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
 	if err := tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&languageID); err != nil {
@@ -179,7 +179,7 @@ func TestHandler_List_Filters(t *testing.T) {
 
 	var userID, playlistID, songID, languageID int
 
-	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'user') returning id").Scan(&userID)
+	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("Failed to insert user: %v", err)
 	}

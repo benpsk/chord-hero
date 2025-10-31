@@ -77,7 +77,7 @@ func TestHandler_Albums(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to insert languages: %v", err)
 	}
-	err = tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'user') returning id").Scan(&userID)
+	err = tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestHandler_Artists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to insert languages: %v", err)
 	}
-	err = tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'user') returning id").Scan(&userID)
+	err = tx.QueryRow(ctx, "insert into users (email, role) values ('test@test.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}

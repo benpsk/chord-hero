@@ -64,7 +64,11 @@
       "albums": [
         {"id": 1, "name": "Whatever", "release_year": 2000}
       ],
-      "playlist_ids": [1,2,3]
+      "playlist_ids": [1,2,3],
+      "created": {
+        "id": 1,
+        "email": "john@mail.com"
+      },
     }
   ],
   "page": 1,
@@ -97,6 +101,11 @@
   "artist_ids": [1],
   "writer_ids": [4]
 }
+
+-- DELETE /api/songs/{id}
+
+-- POST /api/songs/{id}/status/{created|pending}
+  -- update song status => 
 
 -- GET /api/albums
   -- ?search="album_name"
@@ -347,3 +356,5 @@
 {
   "playlist_ids": [1,2,3]
 }
+
+-- DELETE /api/user

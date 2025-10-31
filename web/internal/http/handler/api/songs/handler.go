@@ -255,6 +255,63 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Delete removes a song owned by the authenticated user.
+func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, authErr := util.CurrentUserID(r)
+	if authErr != nil {
+		handler.Error(w, authErr)
+		return
+	}
+
+	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
+	songID, err := strconv.Atoi(rawID)
+	if err != nil || songID <= 0 {
+		handler.Error(w, apperror.BadRequest("Invalid song id"))
+		return
+	}
+
+	params := songsvc.DeleteParams{UserID: &userID}
+	if err := h.svc.Delete(r.Context(), songID, params); err != nil {
+		handler.Error(w, err)
+		return
+	}
+
+	handler.Success(w, http.StatusOK, map[string]any{
+		"message": "Song deleted successfully",
+	})
+}
+
+// UpdateStatus updates the workflow status for a song owned by the authenticated user.
+func (h Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
+	userID, authErr := util.CurrentUserID(r)
+	if authErr != nil {
+		handler.Error(w, authErr)
+		return
+	}
+
+	rawID := strings.TrimSpace(chi.URLParam(r, "id"))
+	songID, err := strconv.Atoi(rawID)
+	if err != nil || songID <= 0 {
+		handler.Error(w, apperror.BadRequest("Invalid song id"))
+		return
+	}
+
+	statusParam := strings.TrimSpace(chi.URLParam(r, "status"))
+	if statusParam == "" {
+		handler.Error(w, apperror.BadRequest("Invalid status"))
+		return
+	}
+
+	if err := h.svc.UpdateStatus(r.Context(), songID, statusParam, userID); err != nil {
+		handler.Error(w, err)
+		return
+	}
+
+	handler.Success(w, http.StatusOK, map[string]any{
+		"message": "Song status updated successfully",
+	})
+}
+
 // AssignLevel associates a level with the specified song.
 func (h Handler) AssignLevel(w http.ResponseWriter, r *http.Request) {
 	songIDValue := chi.URLParam(r, "song_id")

@@ -30,8 +30,8 @@ func TestHandler_List(t *testing.T) {
 	defer tx.Rollback(ctx)
 
 	_, err := tx.Exec(ctx, `insert into users (email, role) values 
-			('test@user.com', 'user'), ('tt@user.com', 'user'), ('jeff@user.com', 'user'),
-		('jaff@user.com', 'user'), ('abc@user.com', 'user')`)
+			('test@user.com', 'musician'), ('tt@user.com', 'musician'), ('jeff@user.com', 'musician'),
+		('jaff@user.com', 'musician'), ('abc@user.com', 'musician')`)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}

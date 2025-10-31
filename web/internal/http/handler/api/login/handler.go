@@ -76,3 +76,21 @@ func (h Handler) Me(w http.ResponseWriter, r *http.Request) {
 		"role":     user.Role,
 	})
 }
+
+// Delete marks the authenticated user's account as deleted.
+func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, err := util.CurrentUserID(r)
+	if err != nil {
+		handler.Error(w, err)
+		return
+	}
+
+	if err := h.svc.DeleteAccount(r.Context(), userID); err != nil {
+		handler.Error(w, err)
+		return
+	}
+
+	handler.Success(w, http.StatusOK, map[string]string{
+		"message": "Account deleted successfully",
+	})
+}

@@ -15,9 +15,10 @@ type Service interface {
 	Get(ctx context.Context, id int) (Song, error)
 	Create(ctx context.Context, params CreateParams) (int, error)
 	Update(ctx context.Context, id int, params UpdateParams) error
-	Delete(ctx context.Context, id int) error
+	Delete(ctx context.Context, id int, params DeleteParams) error
 	AssignLevel(ctx context.Context, songID, levelID, userID int) error
 	SyncPlaylists(ctx context.Context, songID, userID int, playlistIDs []int) error
+	UpdateStatus(ctx context.Context, id int, status string, userID int) error
 }
 
 // ListParams captures filtering options accepted by the list endpoint.
@@ -61,6 +62,11 @@ type UpdateParams struct {
 	UserID int
 }
 
+// DeleteParams captures optional constraints for deleting a song.
+type DeleteParams struct {
+	UserID *int
+}
+
 // ListResult represents a paginated song collection.
 type ListResult struct {
 	Data    []Song `json:"data"`
@@ -79,6 +85,7 @@ type Song struct {
 	ReleaseYear *int     `json:"release_year"`
 	Language    Language `json:"language"`
 	Status      string   `json:"status"`
+	Created     *Creator `json:"created,omitempty"`
 	Artists     []Person `json:"artists"`
 	Writers     []Person `json:"writers"`
 	Albums      []Album  `json:"albums"`
@@ -109,15 +116,22 @@ type Language struct {
 	Name string `json:"name"`
 }
 
+// Creator captures metadata about the user who created a song.
+type Creator struct {
+	ID    int    `json:"id"`
+	Email string `json:"email"`
+}
+
 // Repository encapsulates storage for songs.
 type Repository interface {
 	List(ctx context.Context, params ListParams) (ListResult, error)
 	Create(ctx context.Context, params CreateParams) (int, error)
 	Get(ctx context.Context, id int) (Song, error)
 	Update(ctx context.Context, id int, params UpdateParams) error
-	Delete(ctx context.Context, id int) error
+	Delete(ctx context.Context, id int, params DeleteParams) error
 	AssignLevel(ctx context.Context, songID, levelID, userID int) error
 	SyncPlaylists(ctx context.Context, songID, userID int, playlistIDs []int) error
+	UpdateStatus(ctx context.Context, id int, status string, userID int) error
 }
 
 type service struct {
@@ -171,11 +185,14 @@ func (s *service) Update(ctx context.Context, id int, params UpdateParams) error
 }
 
 // Delete removes a song record.
-func (s *service) Delete(ctx context.Context, id int) error {
+func (s *service) Delete(ctx context.Context, id int, params DeleteParams) error {
 	if id <= 0 {
 		return apperror.NotFound("song not found")
 	}
-	return s.repo.Delete(ctx, id)
+	if params.UserID != nil && *params.UserID <= 0 {
+		return apperror.Unauthorized("unauthorized user")
+	}
+	return s.repo.Delete(ctx, id, params)
 }
 
 // AssignLevel updates the associated level for a song.
@@ -213,6 +230,24 @@ func (s *service) SyncPlaylists(ctx context.Context, songID, userID int, playlis
 	filtered := uniquePositive(playlistIDs)
 
 	return s.repo.SyncPlaylists(ctx, songID, userID, filtered)
+}
+
+// UpdateStatus changes the workflow status for the specified song.
+func (s *service) UpdateStatus(ctx context.Context, id int, status string, userID int) error {
+	if id <= 0 {
+		return apperror.NotFound("song not found")
+	}
+
+	if userID <= 0 {
+		return apperror.Unauthorized("unauthorized user")
+	}
+
+	normalised := strings.ToLower(strings.TrimSpace(status))
+	if normalised != "created" && normalised != "pending" {
+		return apperror.BadRequest("invalid status option")
+	}
+
+	return s.repo.UpdateStatus(ctx, id, normalised, userID)
 }
 
 func normaliseMutation(params *MutationParams) error {

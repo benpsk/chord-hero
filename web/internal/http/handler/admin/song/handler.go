@@ -316,7 +316,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
 			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
-			Languages:      markSelected(lookups.languages, []string{payload.Values.LanguageID}),
+			Languages:   markSelected(lookups.languages, []string{payload.Values.LanguageID}),
 			CurrentUser: user.Username,
 		}
 		templ.Handler(components.AdminSongEditPage(props)).ServeHTTP(w, r)
@@ -374,7 +374,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	searchTerm := strings.TrimSpace(r.FormValue("q"))
 
-	if err := h.songs.Delete(r.Context(), songID); err != nil && !errors.Is(err, apperror.NotFound("song not found")) {
+	if err := h.songs.Delete(r.Context(), songID, songsvc.DeleteParams{}); err != nil && !errors.Is(err, apperror.NotFound("song not found")) {
 		http.Error(w, "failed to delete song", http.StatusInternalServerError)
 		return
 	}

@@ -86,7 +86,7 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		args = append(args, *params.LevelID)
 	}
 
-	joins := make([]string, 0)
+	joins := []string{"left join users cu on cu.id = s.created_by"}
 	withClause := ""
 	orderClause := "order by s.id desc"
 
@@ -146,9 +146,12 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
             s.key,
             s.lyric,
             s.release_year,
-						s.status,
-						la.id language_id,
-						la.name language_name
+            s.status,
+            la.id language_id,
+            la.name language_name,
+            s.created_by,
+            cu.email,
+            cu.status
         from songs s
         left join levels l on l.id = s.level_id
         left join languages la on la.id = s.language_id
@@ -177,20 +180,23 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 
 	for rows.Next() {
 		var (
-			id           int
-			title        string
-			levelName    sql.NullString
-			levelID      sql.NullInt32
-			songKey      sql.NullString
-			lyric        sql.NullString
-			releaseYear  sql.NullInt32
-			status       string
-			languageID   int
-			languageName string
+			id            int
+			title         string
+			levelName     sql.NullString
+			levelID       sql.NullInt32
+			songKey       sql.NullString
+			lyric         sql.NullString
+			releaseYear   sql.NullInt32
+			status        string
+			languageID    int
+			languageName  string
+			createdBy     sql.NullInt32
+			creatorEmail  sql.NullString
+			creatorStatus sql.NullString
 		)
 
 		if err := rows.Scan(&id, &title, &levelName, &levelID, &songKey, &lyric, &releaseYear, &status,
-			&languageID, &languageName); err != nil {
+			&languageID, &languageName, &createdBy, &creatorEmail, &creatorStatus); err != nil {
 			return result, fmt.Errorf("scan song: %w", err)
 		}
 
@@ -228,6 +234,26 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		if releaseYear.Valid {
 			value := int(releaseYear.Int32)
 			song.ReleaseYear = &value
+		}
+		if createdBy.Valid {
+			creator := songsvc.Creator{
+				ID: int(createdBy.Int32),
+			}
+			email := ""
+			if creatorEmail.Valid {
+				email = strings.TrimSpace(creatorEmail.String)
+			}
+			status := ""
+			if creatorStatus.Valid {
+				status = creatorStatus.String
+			}
+			if email != "" {
+				if !isActiveStatus(status) {
+					email = maskEmail(email)
+				}
+				creator.Email = email
+			}
+			song.Created = &creator
 		}
 		songIndex[id] = len(songs)
 		songs = append(songs, song)
@@ -517,14 +543,47 @@ func (r *Repository) Update(ctx context.Context, id int, params songsvc.UpdatePa
 }
 
 // Delete removes a song and cascades related records via FK constraints.
-func (r *Repository) Delete(ctx context.Context, id int) error {
-	cmdTag, err := r.db.Exec(ctx, `delete from songs where id = $1`, id)
+func (r *Repository) Delete(ctx context.Context, id int, params songsvc.DeleteParams) error {
+	var (
+		cmdTag pgconn.CommandTag
+		err    error
+	)
+
+	if params.UserID != nil {
+		cmdTag, err = r.db.Exec(ctx, `
+			delete from songs
+			where id = $1 and created_by = $2
+		`, id, *params.UserID)
+	} else {
+		cmdTag, err = r.db.Exec(ctx, `
+			delete from songs
+			where id = $1
+		`, id)
+	}
 	if err != nil {
 		return fmt.Errorf("delete song: %w", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return apperror.NotFound("song not found")
 	}
+	return nil
+}
+
+// UpdateStatus changes the workflow status for a song owned by the supplied user.
+func (r *Repository) UpdateStatus(ctx context.Context, id int, status string, userID int) error {
+	cmdTag, err := r.db.Exec(ctx, `
+		update songs
+		set status = $1
+		where id = $2 and created_by = $3
+	`, status, id, userID)
+	if err != nil {
+		return fmt.Errorf("update song status: %w", err)
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return apperror.NotFound("song not found")
+	}
+
 	return nil
 }
 
@@ -644,6 +703,22 @@ func (r *Repository) SyncPlaylists(ctx context.Context, songID, userID int, play
 	}
 
 	return nil
+}
+
+func isActiveStatus(status string) bool {
+	return strings.EqualFold(strings.TrimSpace(status), "active")
+}
+
+func maskEmail(email string) string {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return "****"
+	}
+	parts := strings.SplitN(email, "@", 2)
+	if len(parts) != 2 || strings.TrimSpace(parts[1]) == "" {
+		return "****"
+	}
+	return "****@" + strings.TrimSpace(parts[1])
 }
 
 func (r *Repository) attachArtists(ctx context.Context, songIDs []int32, songIndex map[int]int, songs *[]songsvc.Song) error {

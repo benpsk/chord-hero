@@ -27,11 +27,6 @@ values
     ('Zomi'),
     ('Mizo');
 
-insert into users (email, role)
-values
-    ('alice@example.com', 'user'),
-    ('ben@example.com', 'editor');
-
 insert into artists (name)
 values
     ('Layphyu'),
@@ -59,16 +54,11 @@ values
     ('Album 01', 9, 2016),
     ('Album 02', 11, 2019);
 
-insert into playlists (name, user_id)
-values
-    ('User playlist 01', 1),
-    ('User Playlist 02', 2);
-
 insert into trending_songs (name, level_id, description)
 values
-    ('Top 10', (select id from levels where name = 'easy'), 'Easy songs curated for weekly sets'),
-    ('Midweek Focus', (select id from levels where name = 'medium'), 'Moderate arrangements trending with teams'),
-    ('Advanced Picks', (select id from levels where name = 'hard'), 'Challenging selections loved by seasoned players');
+    ('Top 10', (select id from levels where name = 'easy'), 'Easy songs for this weekly '),
+    ('Midweek Focus', (select id from levels where name = 'medium'), 'Moderate arrangements teams'),
+    ('Advanced Picks', (select id from levels where name = 'hard'), 'Challenging selections by players');
 
 insert into chords (name)
 values

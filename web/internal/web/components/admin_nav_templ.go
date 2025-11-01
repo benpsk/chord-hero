@@ -8,9 +8,7 @@ package components
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "time"
-
-func Footer(now time.Time) templ.Component {
+func AdminNav(activeNav string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -31,20 +29,7 @@ func Footer(now time.Time) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<footer class=\"border-t border-base-300 bg-base-100\"><div class=\"mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-sm text-base-content/60\"><span>© ")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(now.Year())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/footer.templ`, Line: 8, Col: 27}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " Lyric. All rights reserved.</span><div class=\"flex items-center gap-4\"><a class=\"link\" href=\"/\">Home</a> <a class=\"link\" href=\"/songs\">Search</a> <a class=\"link\" href=\"/health\">Health</a></div></div></footer>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<header class=\"bg-base-100/80 sticky top-0 z-10 backdrop-blur\"><div class=\"navbar mx-auto max-w-6xl px-6\"><div class=\"navbar-start\"><a href=\"/admin/songs\" class=\"text-xl font-semibold\">Lyric</a></div><div class=\"navbar-end hidden space-x-2 lg:flex\"><ul class=\"menu menu-horizontal space-x-2\"><li><a href=\"/admin/songs\" class=\"font-medium\" hx-boost=\"true\">Songs</a></li><li><a href=\"/admin/users\" class=\"font-medium\" hx-boost=\"true\">Users</a></li></ul></div></div></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

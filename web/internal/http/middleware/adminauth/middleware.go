@@ -17,7 +17,7 @@ type Middleware struct {
 func (m Middleware) WithUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if claims, err := m.Sessions.Validate(r); err == nil {
-			ctx := adminctx.WithUser(r.Context(), adminctx.User{ID: claims.ID, Username: claims.Username})
+			ctx := adminctx.WithUser(r.Context(), adminctx.User{ID: claims.ID, Username: claims.Username, Role: claims.Role})
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		} else if err == adminsession.ErrInvalidSession {
@@ -40,7 +40,7 @@ func (m Middleware) Require(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := adminctx.WithUser(r.Context(), adminctx.User{ID: claims.ID, Username: claims.Username})
+		ctx := adminctx.WithUser(r.Context(), adminctx.User{ID: claims.ID, Username: claims.Username, Role: claims.Role})
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

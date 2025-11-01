@@ -10,10 +10,10 @@ import (
 	"github.com/lyricapp/lyric/web/internal/web/data"
 )
 
-// Handler renders the search surface using templ components.
+// Handler renders the songs surface using templ components.
 type Handler struct{}
 
-// New constructs a handler backed by the search component.
+// New constructs a handler backed by the songs component.
 func New() *Handler {
 	return &Handler{}
 }
@@ -22,19 +22,19 @@ func New() *Handler {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	query := strings.TrimSpace(queryValues.Get("query"))
-	activeTab := components.ParseSearchTab(queryValues.Get("tab"))
-	selectedLanguages := components.NormalizeSearchLanguages(queryValues["language"])
+	activeTab := components.ParseSongsTab(queryValues.Get("tab"))
+	selectedLanguages := components.NormalizeSongsLanguages(queryValues["language"])
 
 	tracks := filterTracks(query, selectedLanguages)
 	albums := filterAlbums(query)
 	artists := filterArtists(query)
 
-	props := components.BuildSearchProps(query, activeTab, selectedLanguages, tracks, albums, artists)
-	props.ClearQueryURL = components.SearchURL(activeTab, "", selectedLanguages)
-	props.ClearLanguagesURL = components.SearchURL(activeTab, query, nil)
-	props.ResetURL = "/search"
+	props := components.BuildSongsProps(query, activeTab, selectedLanguages, tracks, albums, artists)
+	props.ClearQueryURL = components.SongsURL(activeTab, "", selectedLanguages)
+	props.ClearLanguagesURL = components.SongsURL(activeTab, query, nil)
+	props.ResetURL = "/songs"
 
-	templ.Handler(components.Search(props)).ServeHTTP(w, r)
+	templ.Handler(components.Songs(props)).ServeHTTP(w, r)
 }
 
 func filterTracks(query string, languages []data.FilterLanguage) []data.SearchTrack {

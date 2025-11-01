@@ -61,7 +61,7 @@ func Home() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, ", Ashley Scott</h1><p class=\"max-w-xl text-base-content/70 text-lg leading-relaxed\">Pick up where you left off with this week's charts, insights, and trending arrangements tailored for your team.</p><div class=\"flex flex-wrap gap-3\"><a class=\"btn btn-primary\" href=\"/search\">Browse songs</a> <a class=\"btn btn-outline\" href=\"#weekly-charts\">View weekly charts</a></div></div></section><section id=\"weekly-charts\" class=\"space-y-5\"><div class=\"flex flex-wrap items-center justify-between gap-4\"><div><h2 class=\"text-2xl font-semibold\">Weekly charts</h2><p class=\"text-sm text-base-content/70\">Curated sets refreshed every Monday morning.</p></div><a class=\"btn btn-link btn-sm\" href=\"#saved\">View saved</a></div><div class=\"grid gap-5 sm:grid-cols-2 xl:grid-cols-3\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, ", Ashley Scott</h1><p class=\"max-w-xl text-base-content/70 text-lg leading-relaxed\">Pick up where you left off with this week's charts, insights, and trending arrangements tailored for your team.</p><div class=\"flex flex-wrap gap-3\"><a class=\"btn btn-primary\" href=\"/songs\">Browse songs</a> <a class=\"btn btn-outline\" href=\"#weekly-charts\">View weekly charts</a></div></div></section><section id=\"weekly-charts\" class=\"space-y-5\"><div class=\"flex flex-wrap items-center justify-between gap-4\"><div><h2 class=\"text-2xl font-semibold\">Weekly charts</h2><p class=\"text-sm text-base-content/70\">Curated sets refreshed every Monday morning.</p></div><a class=\"btn btn-link btn-sm\" href=\"#saved\">View saved</a></div><div class=\"grid gap-5 sm:grid-cols-2 xl:grid-cols-3\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -230,7 +230,7 @@ func Home() templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div></section><section class=\"space-y-5\"><div class=\"flex flex-wrap items-center justify-between gap-4\"><div><h2 class=\"text-2xl font-semibold\">Popular artists</h2><p class=\"text-sm text-base-content/70\">Tap through to explore harmonies and arrangements.</p></div><a class=\"btn btn-sm btn-outline\" href=\"/search\">Search artists</a></div><div class=\"grid grid-cols-1 gap-5 md:grid-cols-3\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div></section><section class=\"space-y-5\"><div class=\"flex flex-wrap items-center justify-between gap-4\"><div><h2 class=\"text-2xl font-semibold\">Popular artists</h2><p class=\"text-sm text-base-content/70\">Tap through to explore harmonies and arrangements.</p></div><a class=\"btn btn-sm btn-outline\" href=\"/songs\">Search artists</a></div><div class=\"grid grid-cols-1 gap-5 md:grid-cols-3\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -240,9 +240,9 @@ func Home() templ.Component {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var15 templ.SafeURL
-				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs("/search?tab=artists&query=" + artist.Name)
+				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs("/songs?tab=artists&query=" + artist.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/home.templ`, Line: 111, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/home.templ`, Line: 111, Col: 57}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {

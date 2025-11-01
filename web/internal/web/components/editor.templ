@@ -8,9 +8,8 @@ templ EditorPage() {
 		Description: fmt.Sprintf("View chords and lyrics for %s with overlay, inline, and lyric modes.", "ok"),
 		Path:        fmt.Sprintf("/songs/%s", "1"),
 		Canonical:   fmt.Sprintf("https://lyric.app/songs/%s", "1"),
-		ActiveNav:   "search",
-		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8",
-		OGImage:     "/static/opengraph/search.png",
+ActiveNav:   "songs",
+		OGImage:     "/static/opengraph/songs.png",
 	}) {
 		<div class="w-full max-w-4xl p-8 bg-white rounded-lg shadow-lg">
 			<h1 class="text-3xl font-bold mb-2">Templ Text Editor</h1>

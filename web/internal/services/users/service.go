@@ -2,41 +2,42 @@ package users
 
 import (
 	"context"
-	"strings"
-
-	"github.com/lyricapp/lyric/web/internal/apperror"
 )
 
-// Service exposes user directory search capabilities.
+// Service exposes user related functionality.
 type Service interface {
+	List(ctx context.Context) ([]User, error)
 	SearchByEmail(ctx context.Context, email string) ([]User, error)
 }
 
-// Repository abstracts user persistence operations.
-type Repository interface {
-	SearchByEmail(ctx context.Context, email string) ([]User, error)
-}
-
-// User represents a simplified user record for API consumers.
+// User represents a user entry.
 type User struct {
 	ID    int    `json:"id"`
 	Email string `json:"email"`
+	Role  string `json:"role"`
+}
+
+// Repository abstracts persistence for users.
+type Repository interface {
+	List(ctx context.Context) ([]User, error)
+	SearchByEmail(ctx context.Context, email string) ([]User, error)
 }
 
 type service struct {
 	repo Repository
 }
 
-// NewService wires the repository into a domain service.
+// NewService constructs a user service using the supplied repository.
 func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-// SearchByEmail returns a list of users matching the provided email fragment.
+// List returns all available users without pagination.
+func (s *service) List(ctx context.Context) ([]User, error) {
+	return s.repo.List(ctx)
+}
+
+// SearchByEmail returns all available users without pagination.
 func (s *service) SearchByEmail(ctx context.Context, email string) ([]User, error) {
-	query := strings.TrimSpace(email)
-	if query == "" {
-		return nil, apperror.BadRequest("email is required")
-	}
-	return s.repo.SearchByEmail(ctx, query)
+	return s.repo.SearchByEmail(ctx, email)
 }

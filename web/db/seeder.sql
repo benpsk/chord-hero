@@ -54,6 +54,7 @@ values
     ('Album 01', 9, 2016),
     ('Album 02', 11, 2019);
 
+
 insert into trending_songs (name, level_id, description)
 values
     ('Top 10', (select id from levels where name = 'easy'), 'Easy songs for this weekly '),
@@ -74,7 +75,4 @@ values
     (3, 1, '[0, 0, 0, 2, 3, 2]'::jsonb, '[null, null, null, 1, 3, 2]'::jsonb);
 
 
-insert into admin_users (username, password_hash)
-values
-    ('admin', '$2y$10$G6oDPlZ0CH/d4ddQmDqFbeF.5P8wZmUmZG5xXrZMaV6FwzpvRXkU6');
 commit;

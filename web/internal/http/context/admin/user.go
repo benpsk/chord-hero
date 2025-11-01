@@ -8,6 +8,7 @@ type userKey struct{}
 type User struct {
 	ID       int
 	Username string
+	Role     string
 }
 
 // WithUser stores the admin user on the provided context.

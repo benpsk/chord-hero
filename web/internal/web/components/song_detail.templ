@@ -11,10 +11,9 @@ templ SongDetail(props SongDetailProps) {
 		Description: fmt.Sprintf("View chords and lyrics for %s with overlay, inline, and lyric modes.", props.Song.Title),
 		Path:        fmt.Sprintf("/songs/%s", props.Song.ID),
 		Canonical:   fmt.Sprintf("https://lyric.app/songs/%s", props.Song.ID),
-		ActiveNav:   "search",
-		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8",
-		OGImage:     "/static/opengraph/search.png",
-		SchemaJSON:  WebPageSchema(props.Song.Title, fmt.Sprintf("Chords and lyrics for %s", props.Song.Title), fmt.Sprintf("https://lyric.app/songs/%s", props.Song.ID)),
+		        ActiveNav:   "songs",
+		        MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8",
+		        OGImage:     "/static/opengraph/songs.png",		SchemaJSON:  WebPageSchema(props.Song.Title, fmt.Sprintf("Chords and lyrics for %s", props.Song.Title), fmt.Sprintf("https://lyric.app/songs/%s", props.Song.ID)),
 	}) {
 		<section class="grid gap-6 rounded-box bg-base-100 p-6 shadow-sm">
 			<div class="space-y-2">

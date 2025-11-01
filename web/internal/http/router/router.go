@@ -12,6 +12,7 @@ import (
 	"github.com/lyricapp/lyric/web/internal/app"
 	adminloginhandler "github.com/lyricapp/lyric/web/internal/http/handler/admin/login"
 	adminsonghandler "github.com/lyricapp/lyric/web/internal/http/handler/admin/song"
+	adminuserhandler "github.com/lyricapp/lyric/web/internal/http/handler/admin/users"
 	albumsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/albums"
 	artistsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/artists"
 	chordsapi "github.com/lyricapp/lyric/web/internal/http/handler/api/chords"
@@ -29,7 +30,7 @@ import (
 	healthhandler "github.com/lyricapp/lyric/web/internal/http/handler/health"
 	homehandler "github.com/lyricapp/lyric/web/internal/http/handler/home"
 	libraryhandler "github.com/lyricapp/lyric/web/internal/http/handler/library"
-	searchhandler "github.com/lyricapp/lyric/web/internal/http/handler/search"
+	searchhandler "github.com/lyricapp/lyric/web/internal/http/handler/songs/search"
 	songspagehandler "github.com/lyricapp/lyric/web/internal/http/handler/songs"
 	adminmw "github.com/lyricapp/lyric/web/internal/http/middleware/adminauth"
 	authmw "github.com/lyricapp/lyric/web/internal/http/middleware/auth"
@@ -69,8 +70,8 @@ func New(application *app.Application) chi.Router {
 	charts := chartshandler.New()
 	r.Handle("/charts/{id}", charts)
 
-	search := searchhandler.New()
-	r.Handle("/search", search)
+	songsSearchHandler := searchhandler.New()
+	r.Handle("/songs", songsSearchHandler)
 
 	library := libraryhandler.New()
 	r.Handle("/library", library)
@@ -78,19 +79,22 @@ func New(application *app.Application) chi.Router {
 	songs := songspagehandler.New()
 	r.Handle("/songs/{id}", songs)
 
-	adminLogin := adminloginhandler.New(application.Services.AdminAuth, application.AdminSessions)
-	adminSong := adminsonghandler.New(application.Services.Songs, application.Services.Albums, application.Services.Artists, application.Services.Writers, application.Services.Levels)
+	adminLogin := adminloginhandler.New(application.Services.Login, application.AdminSessions)
+	adminSong := adminsonghandler.New(application.Services.Songs, application.Services.Albums, application.Services.Artists, application.Services.Writers, application.Services.Levels, application.Services.Languages)
+	adminUser := adminuserhandler.New(application.Services.Users)
 	adminMiddleware := adminmw.Middleware{Sessions: application.AdminSessions, LoginPath: "/admin/login"}
 
 	r.Route("/admin", func(admin chi.Router) {
 		admin.Use(adminMiddleware.WithUser)
 
 		admin.Get("/login", adminLogin.Show)
-		admin.Post("/login", adminLogin.Submit)
+		admin.Post("/login", adminLogin.Request)
+		admin.Post("/verify", adminLogin.Verify)
 
 		admin.Group(func(protected chi.Router) {
 			protected.Use(adminMiddleware.Require)
 			protected.Get("/songs", adminSong.Index)
+			protected.Get("/users", adminUser.Index)
 			protected.Get("/songs/create", adminSong.Show)
 			protected.Post("/songs/create", adminSong.Create)
 			protected.Get("/songs/{id}/edit", adminSong.Edit)

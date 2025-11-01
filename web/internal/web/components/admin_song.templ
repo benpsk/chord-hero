@@ -3,12 +3,12 @@ package components
 import "fmt"
 
 templ AdminSongListPage(props AdminSongListProps) {
-	@Layout(PageMeta{
+	@AdminLayout(PageMeta{
 		Title:       "Songs · Admin",
 		Description: "Browse and manage songs in the catalogue.",
 		Path:        "/admin/songs",
 		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
-		ActiveNav:   "",
+		ActiveNav:   "songs",
 		NoIndex:     true,
 	}) {
 		<section class="space-y-8">
@@ -74,12 +74,14 @@ templ AdminSongListPage(props AdminSongListProps) {
 									<td class="align-top text-right">
 										<div class="flex justify-end gap-2">
 											<a href={ fmt.Sprintf("/admin/songs/%d/edit", song.ID) } class="btn btn-ghost btn-xs">Edit</a>
+											if props.CurrentUserRole == "admin" {
 											<form method="post" action={ fmt.Sprintf("/admin/songs/%d/delete", song.ID) } class="inline">
 												if props.SearchTerm != "" {
 													<input type="hidden" name="q" value={ props.SearchTerm }/>
 												}
 												<button type="submit" class="btn btn-error btn-xs" onclick="return confirm('Delete this song?');">Delete</button>
 											</form>
+											}
 										</div>
 									</td>
 								</tr>
@@ -93,12 +95,12 @@ templ AdminSongListPage(props AdminSongListProps) {
 }
 
 templ AdminSongCreatePage(props AdminSongCreateProps) {
-	@Layout(PageMeta{
+	@AdminLayout(PageMeta{
 		Title:       "Create Song",
 		Description: "Add a new song to the catalogue.",
 		Path:        "/admin/songs/create",
 		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
-		ActiveNav:   "",
+		ActiveNav:   "songs",
 		NoIndex:     true,
 	}) {
 		<section class="space-y-8">
@@ -126,12 +128,12 @@ templ AdminSongCreatePage(props AdminSongCreateProps) {
 }
 
 templ AdminSongEditPage(props AdminSongEditProps) {
-	@Layout(PageMeta{
+	@AdminLayout(PageMeta{
 		Title:       "Edit Song",
 		Description: "Update the selected song details.",
 		Path:        fmt.Sprintf("/admin/songs/%d/edit", props.SongID),
 		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
-		ActiveNav:   "",
+		ActiveNav:   "songs",
 		NoIndex:     true,
 	}) {
 		<section class="space-y-8">

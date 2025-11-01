@@ -7,14 +7,20 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/a-h/templ"
 )
 
-const defaultBaseURL = "https://lyric.app"
-const defaultOGImage = "https://lyric.app/static/opengraph/default.png"
+var defaultBaseURL = func() string {
+	if url := os.Getenv("WEB_URL"); url != "" {
+		return url
+	}
+	return "https://lyric.app"
+}()
+const defaultOGImage = "/static/opengraph/default.png"
 
 // PageMeta captures metadata rendered in the shared layout.
 type PageMeta struct {
@@ -138,8 +144,8 @@ func WebPageSchema(name, description, url string) string {
 	return pageSchema(name, description, url, "WebPage")
 }
 
-// SearchResultsSchema builds a JSON-LD fragment for search pages.
-func SearchResultsSchema(name, description, url string) string {
+// SongsResultsSchema builds a JSON-LD fragment for songs pages.
+func SongsResultsSchema(name, description, url string) string {
 	return pageSchema(name, description, url, "SearchResultsPage")
 }
 

@@ -2,7 +2,7 @@ package components
 
 // AdminLoginProps drives the admin login template.
 type AdminLoginProps struct {
-	Username string
+	Email    string
 	Error    string
 	Redirect string
 }

@@ -1,0 +1,48 @@
+package components
+
+import "github.com/lyricapp/lyric/web/internal/services/users"
+import "fmt"
+
+type AdminUserListProps struct {
+	Users       []users.User
+	CurrentUser string
+}
+
+templ AdminUserListPage(props AdminUserListProps) {
+	@AdminLayout(PageMeta{
+		Title:       "Users · Admin",
+		Description: "Browse and manage users.",
+		Path:        "/admin/users",
+		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
+		ActiveNav:   "users",
+		NoIndex:     true,
+	}) {
+		<section class="space-y-8">
+			@AdminHeader(AdminHeaderProps{
+				Title:       "Users",
+				Description: "Browse and manage users",
+				CurrentUser: props.CurrentUser,
+			})
+			<div class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow">
+				<table class="table">
+					<thead>
+						<tr class="text-base-content/70">
+							<th>ID</th>
+							<th>Email</th>
+							<th>Role</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, user := range props.Users {
+							<tr class="hover">
+								<td>{ fmt.Sprintf("%d", user.ID) }</td>
+								<td>{ user.Email }</td>
+								<td>{ user.Role }</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+	}
+}

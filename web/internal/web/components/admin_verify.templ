@@ -1,8 +1,8 @@
 package components
 
-templ AdminLoginPage(props AdminLoginProps) {
+templ AdminVerifyPage(props AdminVerifyProps) {
 	@Layout(PageMeta{
-		Title:       "Admin Login",
+		Title:       "Admin Verification",
 		Description: "Sign in to manage lyrics and songs.",
 		Path:        "/admin/login",
 		MainClass:   "mx-auto flex min-h-[60vh] w-full max-w-lg flex-1 flex-col justify-center px-6 py-12",
@@ -11,32 +11,32 @@ templ AdminLoginPage(props AdminLoginProps) {
 	}) {
 		<div class="rounded-box border border-base-300 bg-base-100 p-8 shadow">
 			<div class="mb-6 space-y-1 text-center">
-				<h1 class="text-3xl font-semibold">Admin sign in</h1>
-				<p class="text-base-content/70">Use your admin credentials to access the editor tools.</p>
+				<h1 class="text-3xl font-semibold">Check your email</h1>
+				<p class="text-base-content/70">We've sent a code to { props.Email }.</p>
 			</div>
 			if props.Error != "" {
 				<div class="alert alert-error mb-6">
 					<span>{ props.Error }</span>
 				</div>
 			}
-			<form method="post" action="/admin/login" class="space-y-6">
+			<form method="post" action="/admin/verify" class="space-y-6">
 				if props.Redirect != "" {
 					<input type="hidden" name="redirect" value={ props.Redirect }/>
 				}
+				<input type="hidden" name="email" value={ props.Email }/>
 				<label class="form-control w-full">
 					<div class="label">
-						<span class="label-text">Email</span>
+						<span class="label-text">Verification Code</span>
 					</div>
 					<input
-						type="email"
-						name="email"
-						autocomplete="email"
-						value={ props.Email }
+						type="text"
+						name="code"
+						autocomplete="one-time-code"
 						class="input input-bordered w-full"
 						required
 					/>
 				</label>
-				<button type="submit" class="btn btn-primary w-full mt-4">Send Code</button>
+				<button type="submit" class="btn btn-primary w-full mt-4">Verify</button>
 			</form>
 		</div>
 	}

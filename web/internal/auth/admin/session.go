@@ -30,6 +30,7 @@ type Manager struct {
 type Claims struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
+	Role     string `json:"role"`
 	IssuedAt int64  `json:"iat"`
 }
 

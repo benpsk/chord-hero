@@ -320,11 +320,10 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
             l.name,
             s.level_id,
             s.key,
-            s.language,
             s.lyric,
             s.release_year,
-						la.id language_id,
-						la.name language_name
+			la.id language_id,
+			la.name language_name
         from songs s
         left join levels l on l.id = s.level_id
         left join languages la on la.id = s.language_id
@@ -334,7 +333,6 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
 		levelName   sql.NullString
 		levelID     sql.NullInt32
 		songKey     sql.NullString
-		language    sql.NullString
 		lyric       sql.NullString
 		releaseYear sql.NullInt32
 		song        songsvc.Song
@@ -346,9 +344,10 @@ func (r *Repository) Get(ctx context.Context, id int) (songsvc.Song, error) {
 		&levelName,
 		&levelID,
 		&songKey,
-		&language,
 		&lyric,
 		&releaseYear,
+		&song.Language.ID,
+		&song.Language.Name,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return songsvc.Song{}, apperror.NotFound("song not found")

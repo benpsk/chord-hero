@@ -3,6 +3,7 @@ package song
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	adminctx "github.com/lyricapp/lyric/web/internal/http/context/admin"
 	albumsvc "github.com/lyricapp/lyric/web/internal/services/albums"
 	artistsvc "github.com/lyricapp/lyric/web/internal/services/artists"
+	languagesvc "github.com/lyricapp/lyric/web/internal/services/languages"
 	levelsvc "github.com/lyricapp/lyric/web/internal/services/levels"
 	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 	writersvc "github.com/lyricapp/lyric/web/internal/services/writers"
@@ -23,18 +25,17 @@ import (
 
 // Handler renders and processes the admin song creation form.
 type Handler struct {
-	songs   songsvc.Service
-	albums  albumsvc.Service
-	artists artistsvc.Service
-	writers writersvc.Service
-	levels  levelsvc.Service
+	songs     songsvc.Service
+	albums    albumsvc.Service
+	artists   artistsvc.Service
+	writers   writersvc.Service
+	levels    levelsvc.Service
+	languages languagesvc.Service
 }
 
-var allowedLanguages = map[string]struct{}{"english": {}, "burmese": {}}
-
 // New constructs a song admin handler with the required dependencies.
-func New(songs songsvc.Service, albums albumsvc.Service, artists artistsvc.Service, writers writersvc.Service, levels levelsvc.Service) *Handler {
-	return &Handler{songs: songs, albums: albums, artists: artists, writers: writers, levels: levels}
+func New(songs songsvc.Service, albums albumsvc.Service, artists artistsvc.Service, writers writersvc.Service, levels levelsvc.Service, languages languagesvc.Service) *Handler {
+	return &Handler{songs: songs, albums: albums, artists: artists, writers: writers, levels: levels, languages: languages}
 }
 
 // Index renders the admin song list with optional search.
@@ -76,11 +77,12 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	props := components.AdminSongListProps{
-		SearchTerm:   searchTerm,
-		Total:        list.Total,
-		Songs:        items,
-		CurrentUser:  user.Username,
-		ResultsLabel: resultsLabel,
+		SearchTerm:      searchTerm,
+		Total:           list.Total,
+		Songs:           items,
+		CurrentUser:     user.Username,
+		CurrentUserRole: user.Role,
+		ResultsLabel:    resultsLabel,
 	}
 
 	templ.Handler(components.AdminSongListPage(props)).ServeHTTP(w, r)
@@ -107,7 +109,7 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 		Writers:     lookups.writers,
 		Albums:      lookups.albums,
 		Levels:      lookups.levels,
-		Languages:   buildLanguageOptions(""),
+		Languages:   buildLanguageOptions(lookups.languages, ""),
 		CurrentUser: user.Username,
 	}
 
@@ -144,7 +146,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
 			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
-			Languages:   markSelected(lookups.languages, []string{payload.Values.LanguageID}),
+			Languages:   buildLanguageOptions(lookups.languages, payload.Values.LanguageID),
 			CurrentUser: user.Username,
 		}
 		templ.Handler(components.AdminSongCreatePage(props)).ServeHTTP(w, r)
@@ -160,7 +162,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
 			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
-			Languages:   markSelected(lookups.levels, []string{payload.Values.LanguageID}),
+			Languages:   buildLanguageOptions(lookups.languages, payload.Values.LanguageID),
 			CurrentUser: user.Username,
 		}
 		templ.Handler(components.AdminSongCreatePage(props)).ServeHTTP(w, r)
@@ -207,7 +209,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
 			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
-			Languages:   buildLanguageOptions(payload.Values.LanguageID),
+			Languages:   buildLanguageOptions(lookups.languages, payload.Values.LanguageID),
 			CurrentUser: user.Username,
 		}
 		templ.Handler(components.AdminSongCreatePage(props)).ServeHTTP(w, r)
@@ -254,7 +256,7 @@ func (h *Handler) Edit(w http.ResponseWriter, r *http.Request) {
 		Writers:     markSelected(lookups.writers, values.WriterIDs),
 		Albums:      markSelected(lookups.albums, values.AlbumIDs),
 		Levels:      markSelected(lookups.levels, []string{values.LevelID}),
-		Languages:   markSelected(lookups.languages, []string{values.LanguageID}),
+		Languages:   buildLanguageOptions(lookups.languages, values.LanguageID),
 		CurrentUser: user.Username,
 	}
 
@@ -282,6 +284,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload, parseErr := parseSongForm(r)
+	log.Println(payload)
 	if parseErr != nil {
 		http.Error(w, "invalid form submission", http.StatusBadRequest)
 		return
@@ -299,7 +302,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
 			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
-			Languages:   markSelected(lookups.languages, []string{payload.Values.LanguageID}),
+			Languages:   buildLanguageOptions(lookups.languages, payload.Values.LanguageID),
 			CurrentUser: user.Username,
 		}
 		templ.Handler(components.AdminSongEditPage(props)).ServeHTTP(w, r)
@@ -316,7 +319,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			Writers:     markSelected(lookups.writers, payload.Values.WriterIDs),
 			Albums:      markSelected(lookups.albums, payload.Values.AlbumIDs),
 			Levels:      markSelected(lookups.levels, []string{payload.Values.LevelID}),
-			Languages:   markSelected(lookups.languages, []string{payload.Values.LanguageID}),
+			Languages:   buildLanguageOptions(lookups.languages, payload.Values.LanguageID),
 			CurrentUser: user.Username,
 		}
 		templ.Handler(components.AdminSongEditPage(props)).ServeHTTP(w, r)
@@ -360,8 +363,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete removes a song and redirects back to the listing.
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	if _, ok := adminctx.FromContext(r.Context()); !ok {
+	user, ok := adminctx.FromContext(r.Context())
+	if !ok {
 		http.Redirect(w, r, "/admin/login", http.StatusFound)
+		return
+	}
+
+	if user.Role != "admin" {
+		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -417,7 +426,7 @@ func parseSongForm(r *http.Request) (songFormPayload, error) {
 	payload.Values.Title = strings.TrimSpace(r.FormValue("title"))
 	payload.Values.LevelID = strings.TrimSpace(r.FormValue("level_id"))
 	payload.Values.Key = strings.TrimSpace(r.FormValue("key"))
-	payload.Values.LanguageID = strings.ToLower(strings.TrimSpace(r.FormValue("language_id")))
+	payload.Values.LanguageID = strings.ToLower(strings.TrimSpace(r.FormValue("language")))
 	payload.Values.ReleaseYear = strings.TrimSpace(r.FormValue("release_year"))
 	payload.Values.AlbumIDs = r.Form["album_ids"]
 	payload.Values.ArtistIDs = r.Form["artist_ids"]
@@ -439,11 +448,11 @@ func parseSongForm(r *http.Request) (songFormPayload, error) {
 		}
 	}
 	if payload.Values.LanguageID == "" {
-		payload.FieldErrors["language_id"] = "Language is required."
+		payload.FieldErrors["language"] = "Language is required."
 	} else {
 		languageID, err := strconv.Atoi(payload.Values.LanguageID)
 		if err != nil || languageID <= 0 {
-			payload.FieldErrors["language_id"] = "Choose a valid language."
+			payload.FieldErrors["language"] = "Choose a valid language."
 		} else {
 			payload.LanguageID = languageID
 		}
@@ -481,7 +490,7 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 	writers   []components.AdminSongOption
 	albums    []components.AdminSongOption
 	levels    []components.AdminSongOption
-	languages []components.AdminSongOption
+	languages []languagesvc.Language
 }, error) {
 	ctx := r.Context()
 
@@ -492,7 +501,7 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 			writers   []components.AdminSongOption
 			albums    []components.AdminSongOption
 			levels    []components.AdminSongOption
-			languages []components.AdminSongOption
+			languages []languagesvc.Language
 		}{}, err
 	}
 
@@ -503,7 +512,7 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 			writers   []components.AdminSongOption
 			albums    []components.AdminSongOption
 			levels    []components.AdminSongOption
-			languages []components.AdminSongOption
+			languages []languagesvc.Language
 		}{}, err
 	}
 
@@ -514,7 +523,7 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 			writers   []components.AdminSongOption
 			albums    []components.AdminSongOption
 			levels    []components.AdminSongOption
-			languages []components.AdminSongOption
+			languages []languagesvc.Language
 		}{}, err
 	}
 
@@ -525,7 +534,18 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 			writers   []components.AdminSongOption
 			albums    []components.AdminSongOption
 			levels    []components.AdminSongOption
-			languages []components.AdminSongOption
+			languages []languagesvc.Language
+		}{}, err
+	}
+
+	languagesResult, err := h.languages.List(ctx)
+	if err != nil {
+		return struct {
+			artists   []components.AdminSongOption
+			writers   []components.AdminSongOption
+			albums    []components.AdminSongOption
+			levels    []components.AdminSongOption
+			languages []languagesvc.Language
 		}{}, err
 	}
 
@@ -534,12 +554,13 @@ func (h *Handler) fetchLookups(r *http.Request) (struct {
 		writers   []components.AdminSongOption
 		albums    []components.AdminSongOption
 		levels    []components.AdminSongOption
-		languages []components.AdminSongOption
+		languages []languagesvc.Language
 	}{
-		artists: make([]components.AdminSongOption, 0, len(artistsResult.Data)),
-		writers: make([]components.AdminSongOption, 0, len(writersResult.Data)),
-		albums:  make([]components.AdminSongOption, 0, len(albumsResult.Data)),
-		levels:  make([]components.AdminSongOption, 0, len(levelsResult)),
+		artists:   make([]components.AdminSongOption, 0, len(artistsResult.Data)),
+		writers:   make([]components.AdminSongOption, 0, len(writersResult.Data)),
+		albums:    make([]components.AdminSongOption, 0, len(albumsResult.Data)),
+		levels:    make([]components.AdminSongOption, 0, len(levelsResult)),
+		languages: languagesResult,
 	}
 
 	for _, artist := range artistsResult.Data {
@@ -686,16 +707,16 @@ func formatLevelLabel(value string) string {
 	return strings.ToUpper(lower[:1]) + lower[1:]
 }
 
-func buildLanguageOptions(selected string) []components.AdminSongOption {
-	languages := []components.AdminSongOption{
-		{Value: "english", Label: "English"},
-		{Value: "burmese", Label: "Burmese"},
+func buildLanguageOptions(languages []languagesvc.Language, selected string) []components.AdminSongOption {
+	options := make([]components.AdminSongOption, 0, len(languages))
+	for _, lang := range languages {
+		options = append(options, components.AdminSongOption{
+			Value:    strconv.Itoa(lang.ID),
+			Label:    lang.Name,
+			Selected: selected == strconv.Itoa(lang.ID),
+		})
 	}
-	selected = strings.ToLower(strings.TrimSpace(selected))
-	for i, option := range languages {
-		languages[i].Selected = option.Value == selected
-	}
-	return languages
+	return options
 }
 
 func joinNames(people []songsvc.Person) string {

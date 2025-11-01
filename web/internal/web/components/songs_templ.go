@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func Search(props SearchProps) templ.Component {
+func Songs(props SongsProps) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -46,14 +46,14 @@ func Search(props SearchProps) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"space-y-2\"><h1 class=\"text-4xl font-bold\">Search</h1><p class=\"text-base-content/70 text-lg\">Find tracks, artists, and albums for your next set.</p></section><section class=\"space-y-6 rounded-box bg-base-100 p-6 shadow-sm\"><form method=\"get\" class=\"space-y-3\"><div class=\"join w-full\"><span class=\"join-item btn btn-ghost btn-square\" aria-hidden=\"true\">🔍</span> <input id=\"search-input\" name=\"query\" type=\"search\" placeholder=\"Search songs, artists, or albums\" class=\"input join-item input-bordered w-full\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"space-y-2\"><h1 class=\"text-4xl font-bold\">Songs</h1><p class=\"text-base-content/70 text-lg\">Find tracks, artists, and albums for your next set.</p></section><section class=\"space-y-6 rounded-box bg-base-100 p-6 shadow-sm\"><form method=\"get\" class=\"space-y-3\"><div class=\"join w-full\"><span class=\"join-item btn btn-ghost btn-square\" aria-hidden=\"true\">🔍</span> <input id=\"search-input\" name=\"query\" type=\"search\" placeholder=\"Search songs, artists, or albums\" class=\"input join-item input-bordered w-full\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(props.Query)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 27, Col: 169}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 27, Col: 169}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -66,7 +66,7 @@ func Search(props SearchProps) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(string(props.ActiveTab))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 30, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 30, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -84,7 +84,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(string(lang))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 32, Col: 62}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 32, Col: 62}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -107,7 +107,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var6 templ.SafeURL
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(props.ResetURL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 36, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 36, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -130,7 +130,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(string(props.ActiveTab))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 45, Col: 70}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 45, Col: 70}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -148,7 +148,7 @@ func Search(props SearchProps) templ.Component {
 					var templ_7745c5c3_Var8 string
 					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(props.Query)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 47, Col: 61}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 47, Col: 61}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 					if templ_7745c5c3_Err != nil {
@@ -167,7 +167,7 @@ func Search(props SearchProps) templ.Component {
 					var templ_7745c5c3_Var9 string
 					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(string(lang))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 50, Col: 65}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 50, Col: 65}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
@@ -178,7 +178,7 @@ func Search(props SearchProps) templ.Component {
 						return templ_7745c5c3_Err
 					}
 				}
-				var templ_7745c5c3_Var10 = []any{searchLanguageButtonClass(option.Active)}
+				var templ_7745c5c3_Var10 = []any{songsLanguageButtonClass(option.Active)}
 				templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var10...)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -190,7 +190,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var10).String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 1, Col: 0}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 1, Col: 0}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
@@ -203,7 +203,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var12 string
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", option.Active))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 52, Col: 127}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 52, Col: 126}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
@@ -216,7 +216,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(option.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 52, Col: 144}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 52, Col: 143}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -244,7 +244,7 @@ func Search(props SearchProps) templ.Component {
 					var templ_7745c5c3_Var14 string
 					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(props.Query)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 64, Col: 61}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 64, Col: 61}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 					if templ_7745c5c3_Err != nil {
@@ -263,7 +263,7 @@ func Search(props SearchProps) templ.Component {
 					var templ_7745c5c3_Var15 string
 					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(string(lang))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 67, Col: 65}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 67, Col: 65}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 					if templ_7745c5c3_Err != nil {
@@ -281,7 +281,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var16 string
 				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(string(tab.Key))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 69, Col: 62}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 69, Col: 62}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 				if templ_7745c5c3_Err != nil {
@@ -291,7 +291,7 @@ func Search(props SearchProps) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var17 = []any{searchTabButtonClass(tab.Active)}
+				var templ_7745c5c3_Var17 = []any{songsTabButtonClass(tab.Active)}
 				templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var17...)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -303,7 +303,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var18 string
 				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var17).String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 1, Col: 0}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 1, Col: 0}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 				if templ_7745c5c3_Err != nil {
@@ -316,7 +316,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var19 string
 				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", tab.Active))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 70, Col: 128}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 70, Col: 127}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
@@ -329,7 +329,7 @@ func Search(props SearchProps) templ.Component {
 				var templ_7745c5c3_Var20 string
 				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(tab.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 70, Col: 142}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 70, Col: 141}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 				if templ_7745c5c3_Err != nil {
@@ -347,7 +347,7 @@ func Search(props SearchProps) templ.Component {
 			var templ_7745c5c3_Var21 string
 			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d result%s", props.ActiveCount, pluralSuffix(props.ActiveCount)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 74, Col: 126}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 74, Col: 126}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {
@@ -360,7 +360,7 @@ func Search(props SearchProps) templ.Component {
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(props.ActiveTabLabel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 78, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 78, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -380,7 +380,7 @@ func Search(props SearchProps) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if props.ActiveTab == SearchTabTracks {
+			if props.ActiveTab == SongsTabTracks {
 				if len(props.Tracks) > 0 {
 					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<div class=\"space-y-3\" role=\"tabpanel\">")
 					if templ_7745c5c3_Err != nil {
@@ -394,7 +394,7 @@ func Search(props SearchProps) templ.Component {
 						var templ_7745c5c3_Var23 templ.SafeURL
 						templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinURLErrs(fmt.Sprintf("/songs/%s", track.ID))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 87, Col: 300}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 87, Col: 300}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 						if templ_7745c5c3_Err != nil {
@@ -407,7 +407,7 @@ func Search(props SearchProps) templ.Component {
 						var templ_7745c5c3_Var24 string
 						templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(track.Title)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 89, Col: 78}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 89, Col: 78}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 						if templ_7745c5c3_Err != nil {
@@ -425,7 +425,7 @@ func Search(props SearchProps) templ.Component {
 							var templ_7745c5c3_Var25 string
 							templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(track.Artist)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 92, Col: 77}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 92, Col: 77}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 							if templ_7745c5c3_Err != nil {
@@ -444,7 +444,7 @@ func Search(props SearchProps) templ.Component {
 							var templ_7745c5c3_Var26 string
 							templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(track.Composer)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 96, Col: 79}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 96, Col: 79}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 							if templ_7745c5c3_Err != nil {
@@ -467,7 +467,7 @@ func Search(props SearchProps) templ.Component {
 							var templ_7745c5c3_Var27 string
 							templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(track.Key)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 101, Col: 56}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 101, Col: 56}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 							if templ_7745c5c3_Err != nil {
@@ -491,7 +491,7 @@ func Search(props SearchProps) templ.Component {
 							var templ_7745c5c3_Var28 string
 							templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(track.Level)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 106, Col: 58}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 106, Col: 58}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 							if templ_7745c5c3_Err != nil {
@@ -515,7 +515,7 @@ func Search(props SearchProps) templ.Component {
 							var templ_7745c5c3_Var29 string
 							templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(track.Language)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 111, Col: 61}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 111, Col: 61}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 							if templ_7745c5c3_Err != nil {
@@ -536,7 +536,7 @@ func Search(props SearchProps) templ.Component {
 						return templ_7745c5c3_Err
 					}
 				}
-			} else if props.ActiveTab == SearchTabAlbums {
+			} else if props.ActiveTab == SongsTabAlbums {
 				if len(props.Albums) > 0 {
 					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "<div class=\"space-y-3\" role=\"tabpanel\">")
 					if templ_7745c5c3_Err != nil {
@@ -548,9 +548,9 @@ func Search(props SearchProps) templ.Component {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var30 templ.SafeURL
-						templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinURLErrs(SearchURL(SearchTabTracks, album.Title, props.SelectedLanguages))
+						templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinURLErrs(SongsURL(SongsTabTracks, album.Title, props.SelectedLanguages))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 122, Col: 330}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 122, Col: 328}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 						if templ_7745c5c3_Err != nil {
@@ -563,7 +563,7 @@ func Search(props SearchProps) templ.Component {
 						var templ_7745c5c3_Var31 string
 						templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(album.Title)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 124, Col: 78}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 124, Col: 78}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 						if templ_7745c5c3_Err != nil {
@@ -581,7 +581,7 @@ func Search(props SearchProps) templ.Component {
 							var templ_7745c5c3_Var32 string
 							templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(album.Artist)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 127, Col: 77}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 127, Col: 77}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 							if templ_7745c5c3_Err != nil {
@@ -599,7 +599,7 @@ func Search(props SearchProps) templ.Component {
 						var templ_7745c5c3_Var33 string
 						templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d track%s", album.TrackCount, pluralSuffix(album.TrackCount)))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 131, Col: 121}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 131, Col: 121}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 						if templ_7745c5c3_Err != nil {
@@ -627,9 +627,9 @@ func Search(props SearchProps) templ.Component {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var34 templ.SafeURL
-						templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinURLErrs(SearchURL(SearchTabTracks, artist.Name, props.SelectedLanguages))
+						templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinURLErrs(SongsURL(SongsTabTracks, artist.Name, props.SelectedLanguages))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 141, Col: 330}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 141, Col: 328}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 						if templ_7745c5c3_Err != nil {
@@ -642,7 +642,7 @@ func Search(props SearchProps) templ.Component {
 						var templ_7745c5c3_Var35 string
 						templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(artist.Name)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 143, Col: 78}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 143, Col: 78}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 						if templ_7745c5c3_Err != nil {
@@ -655,7 +655,7 @@ func Search(props SearchProps) templ.Component {
 						var templ_7745c5c3_Var36 string
 						templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d song%s", artist.SongCount, pluralSuffix(artist.SongCount)))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/search.templ`, Line: 146, Col: 92}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/components/songs.templ`, Line: 146, Col: 92}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 						if templ_7745c5c3_Err != nil {
@@ -685,14 +685,14 @@ func Search(props SearchProps) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = Layout(PageMeta{
-			Title:       "Lyric · Search",
+			Title:       "Lyric · Songs",
 			Description: "Search worship tracks, albums, and artists to build your next set list in seconds.",
-			Path:        "/search",
-			Canonical:   "https://lyric.app/search",
-			ActiveNav:   "search",
+			Path:        "/songs",
+			Canonical:   "https://lyric.app/songs",
+			ActiveNav:   "songs",
 			MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
-			OGImage:     "/static/opengraph/search.png",
-			SchemaJSON:  SearchResultsSchema("Lyric Search", "Search worship charts, albums, and artists curated for your team.", "https://lyric.app/search"),
+			OGImage:     "/static/opengraph/songs.png",
+			SchemaJSON:  SongsResultsSchema("Lyric Songs", "Search worship charts, albums, and artists curated for your team.", "https://lyric.app/songs"),
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

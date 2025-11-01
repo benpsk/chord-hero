@@ -7,51 +7,51 @@ import (
 	"github.com/lyricapp/lyric/web/internal/web/data"
 )
 
-// SearchTab enumerates the available search result groupings.
-type SearchTab string
+// SongsTab enumerates the available song result groupings.
+type SongsTab string
 
 const (
-	SearchTabTracks  SearchTab = "tracks"
-	SearchTabAlbums  SearchTab = "albums"
-	SearchTabArtists SearchTab = "artists"
+	SongsTabTracks  SongsTab = "tracks"
+	SongsTabAlbums  SongsTab = "albums"
+	SongsTabArtists SongsTab = "artists"
 )
 
-// ParseSearchTab converts a raw query parameter into a known tab value.
-func ParseSearchTab(raw string) SearchTab {
+// ParseSongsTab converts a raw query parameter into a known tab value.
+func ParseSongsTab(raw string) SongsTab {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case string(SearchTabAlbums):
-		return SearchTabAlbums
-	case string(SearchTabArtists):
-		return SearchTabArtists
+	case string(SongsTabAlbums):
+		return SongsTabAlbums
+	case string(SongsTabArtists):
+		return SongsTabArtists
 	default:
-		return SearchTabTracks
+		return SongsTabTracks
 	}
 }
 
-// SearchTabOption describes a selectable tab, including counts for display.
-type SearchTabOption struct {
-	Key    SearchTab
+// SongsTabOption describes a selectable tab, including counts for display.
+type SongsTabOption struct {
+	Key    SongsTab
 	Label  string
 	Count  int
 	Active bool
 }
 
-// SearchLanguageOption models a toggleable language filter button.
-type SearchLanguageOption struct {
+// SongsLanguageOption models a toggleable language filter button.
+type SongsLanguageOption struct {
 	Label           string
 	Value           data.FilterLanguage
 	Active          bool
 	SubmitLanguages []data.FilterLanguage
 }
 
-// SearchProps contains the data required to render the search page.
-type SearchProps struct {
+// SongsProps contains the data required to render the songs page.
+type SongsProps struct {
 	Query             string
-	ActiveTab         SearchTab
+	ActiveTab         SongsTab
 	ActiveTabLabel    string
-	Tabs              []SearchTabOption
+	Tabs              []SongsTabOption
 	SelectedLanguages []data.FilterLanguage
-	LanguageOptions   []SearchLanguageOption
+	LanguageOptions   []SongsLanguageOption
 	Tracks            []data.SearchTrack
 	Albums            []data.SearchAlbum
 	Artists           []data.SearchArtist
@@ -63,17 +63,17 @@ type SearchProps struct {
 	ResetURL          string
 }
 
-// BuildSearchProps assembles the view model for the search template.
-func BuildSearchProps(query string, activeTab SearchTab, selected []data.FilterLanguage, tracks []data.SearchTrack, albums []data.SearchAlbum, artists []data.SearchArtist) SearchProps {
+// BuildSongsProps assembles the view model for the songs template.
+func BuildSongsProps(query string, activeTab SongsTab, selected []data.FilterLanguage, tracks []data.SearchTrack, albums []data.SearchAlbum, artists []data.SearchArtist) SongsProps {
 	selectedSet := make(map[data.FilterLanguage]struct{}, len(selected))
 	for _, lang := range selected {
 		selectedSet[lang] = struct{}{}
 	}
 
-	tabs := []SearchTabOption{
-		{Key: SearchTabTracks, Label: "Tracks", Count: len(tracks), Active: activeTab == SearchTabTracks},
-		{Key: SearchTabAlbums, Label: "Albums", Count: len(albums), Active: activeTab == SearchTabAlbums},
-		{Key: SearchTabArtists, Label: "Artists", Count: len(artists), Active: activeTab == SearchTabArtists},
+	tabs := []SongsTabOption{
+		{Key: SongsTabTracks, Label: "Tracks", Count: len(tracks), Active: activeTab == SongsTabTracks},
+		{Key: SongsTabAlbums, Label: "Albums", Count: len(albums), Active: activeTab == SongsTabAlbums},
+		{Key: SongsTabArtists, Label: "Artists", Count: len(artists), Active: activeTab == SongsTabArtists},
 	}
 
 	var activeLabel string
@@ -84,7 +84,7 @@ func BuildSearchProps(query string, activeTab SearchTab, selected []data.FilterL
 		}
 	}
 
-	languageOptions := make([]SearchLanguageOption, 0, len(data.FilterLanguages))
+	languageOptions := make([]SongsLanguageOption, 0, len(data.FilterLanguages))
 	for _, lang := range data.FilterLanguages {
 		_, isSelected := selectedSet[lang]
 		var submit []data.FilterLanguage
@@ -93,7 +93,7 @@ func BuildSearchProps(query string, activeTab SearchTab, selected []data.FilterL
 		} else {
 			submit = languagesAfterAdding(selectedSet, lang)
 		}
-		languageOptions = append(languageOptions, SearchLanguageOption{
+		languageOptions = append(languageOptions, SongsLanguageOption{
 			Label:           string(lang),
 			Value:           lang,
 			Active:          isSelected,
@@ -101,7 +101,7 @@ func BuildSearchProps(query string, activeTab SearchTab, selected []data.FilterL
 		})
 	}
 
-	props := SearchProps{
+	props := SongsProps{
 		Query:             query,
 		ActiveTab:         activeTab,
 		ActiveTabLabel:    activeLabel,
@@ -155,19 +155,19 @@ func languagesAfterRemoving(selected map[data.FilterLanguage]struct{}, target da
 	return result
 }
 
-func activeResultCount(tab SearchTab, trackCount, albumCount, artistCount int) int {
+func activeResultCount(tab SongsTab, trackCount, albumCount, artistCount int) int {
 	switch tab {
-	case SearchTabAlbums:
+	case SongsTabAlbums:
 		return albumCount
-	case SearchTabArtists:
+	case SongsTabArtists:
 		return artistCount
 	default:
 		return trackCount
 	}
 }
 
-// NormalizeSearchLanguages validates and orders the language filters from query values.
-func NormalizeSearchLanguages(raw []string) []data.FilterLanguage {
+// NormalizeSongsLanguages validates and orders the language filters from query values.
+func NormalizeSongsLanguages(raw []string) []data.FilterLanguage {
 	if len(raw) == 0 {
 		return nil
 	}
@@ -184,14 +184,14 @@ func NormalizeSearchLanguages(raw []string) []data.FilterLanguage {
 	return orderedLanguages(set)
 }
 
-func searchLanguageButtonClass(active bool) string {
+func songsLanguageButtonClass(active bool) string {
 	if active {
 		return "badge badge-primary cursor-pointer px-4 py-3 text-sm"
 	}
 	return "badge badge-outline cursor-pointer px-4 py-3 text-sm"
 }
 
-func searchTabButtonClass(active bool) string {
+func songsTabButtonClass(active bool) string {
 	base := "tab tab-lifted px-4 py-2"
 	if active {
 		return base + " tab-active"
@@ -206,8 +206,8 @@ func pluralSuffix(count int) string {
 	return "s"
 }
 
-// SearchURL constructs a canonical search path with the provided parameters.
-func SearchURL(tab SearchTab, query string, languages []data.FilterLanguage) string {
+// SongsURL constructs a canonical songs path with the provided parameters.
+func SongsURL(tab SongsTab, query string, languages []data.FilterLanguage) string {
 	params := url.Values{}
 	if strings.TrimSpace(query) != "" {
 		params.Set("query", query)
@@ -220,7 +220,7 @@ func SearchURL(tab SearchTab, query string, languages []data.FilterLanguage) str
 	}
 	encoded := params.Encode()
 	if encoded == "" {
-		return "/search"
+		return "/songs"
 	}
-	return "/search?" + encoded
+	return "/songs?" + encoded
 }

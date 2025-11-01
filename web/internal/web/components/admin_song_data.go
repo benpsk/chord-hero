@@ -33,11 +33,12 @@ type AdminSongEditProps struct {
 
 // AdminSongListProps contains information for the admin song index.
 type AdminSongListProps struct {
-	SearchTerm   string
-	Total        int
-	Songs        []AdminSongListItem
-	CurrentUser  string
-	ResultsLabel string
+	SearchTerm      string
+	Total           int
+	Songs           []AdminSongListItem
+	CurrentUser     string
+	CurrentUserRole string
+	ResultsLabel    string
 }
 
 // AdminSongListItem represents a single row in the admin song list.

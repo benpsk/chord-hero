@@ -54,9 +54,8 @@ func EditorPage() templ.Component {
 			Description: fmt.Sprintf("View chords and lyrics for %s with overlay, inline, and lyric modes.", "ok"),
 			Path:        fmt.Sprintf("/songs/%s", "1"),
 			Canonical:   fmt.Sprintf("https://lyric.app/songs/%s", "1"),
-			ActiveNav:   "search",
-			MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8",
-			OGImage:     "/static/opengraph/search.png",
+			ActiveNav:   "songs",
+			OGImage:     "/static/opengraph/songs.png",
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

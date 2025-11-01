@@ -5,19 +5,19 @@ import (
 	"strings"
 )
 
-templ Search(props SearchProps) {
+templ Songs(props SongsProps) {
 	@Layout(PageMeta{
-		Title:       "Lyric · Search",
+		Title:       "Lyric · Songs",
 		Description: "Search worship tracks, albums, and artists to build your next set list in seconds.",
-		Path:        "/search",
-		Canonical:   "https://lyric.app/search",
-		ActiveNav:   "search",
+		Path:        "/songs",
+		Canonical:   "https://lyric.app/songs",
+		ActiveNav:   "songs",
 		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
-		OGImage:     "/static/opengraph/search.png",
-		SchemaJSON:  SearchResultsSchema("Lyric Search", "Search worship charts, albums, and artists curated for your team.", "https://lyric.app/search"),
+		OGImage:     "/static/opengraph/songs.png",
+		SchemaJSON:  SongsResultsSchema("Lyric Songs", "Search worship charts, albums, and artists curated for your team.", "https://lyric.app/songs"),
 	}) {
 		<section class="space-y-2">
-			<h1 class="text-4xl font-bold">Search</h1>
+			<h1 class="text-4xl font-bold">Songs</h1>
 			<p class="text-base-content/70 text-lg">Find tracks, artists, and albums for your next set.</p>
 		</section>
 		<section class="space-y-6 rounded-box bg-base-100 p-6 shadow-sm">
@@ -49,7 +49,7 @@ templ Search(props SearchProps) {
 							for _, lang := range option.SubmitLanguages {
 								<input type="hidden" name="language" value={ string(lang) }/>
 							}
-							<button type="submit" class={ searchLanguageButtonClass(option.Active) } aria-pressed={ fmt.Sprintf("%t", option.Active) }>{ option.Label }</button>
+							<button type="submit" class={ songsLanguageButtonClass(option.Active) } aria-pressed={ fmt.Sprintf("%t", option.Active) }>{ option.Label }</button>
 						</form>
 					}
 				</div>
@@ -67,7 +67,7 @@ templ Search(props SearchProps) {
 								<input type="hidden" name="language" value={ string(lang) }/>
 							}
 							<input type="hidden" name="tab" value={ string(tab.Key) }/>
-							<button type="submit" class={ searchTabButtonClass(tab.Active) } role="tab" aria-selected={ fmt.Sprintf("%t", tab.Active) }>{ tab.Label }</button>
+							<button type="submit" class={ songsTabButtonClass(tab.Active) } role="tab" aria-selected={ fmt.Sprintf("%t", tab.Active) }>{ tab.Label }</button>
 						</form>
 					}
 				</div>
@@ -80,7 +80,7 @@ templ Search(props SearchProps) {
 						<span class="badge badge-outline">Filters active</span>
 					}
 				</div>
-				if props.ActiveTab == SearchTabTracks {
+				if props.ActiveTab == SongsTabTracks {
 					if len(props.Tracks) > 0 {
 						<div class="space-y-3" role="tabpanel">
 							for _, track := range props.Tracks {
@@ -115,11 +115,11 @@ templ Search(props SearchProps) {
 							}
 						</div>
 					}
-				} else if props.ActiveTab == SearchTabAlbums {
+				} else if props.ActiveTab == SongsTabAlbums {
 					if len(props.Albums) > 0 {
 						<div class="space-y-3" role="tabpanel">
 							for _, album := range props.Albums {
-								<a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ SearchURL(SearchTabTracks, album.Title, props.SelectedLanguages) }>
+								<a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ SongsURL(SongsTabTracks, album.Title, props.SelectedLanguages) }>
 									<span class="min-w-0 flex flex-1 items-center gap-3">
 										<span class="truncate font-semibold text-base-content">{ album.Title }</span>
 										if strings.TrimSpace(album.Artist) != "" {
@@ -138,7 +138,7 @@ templ Search(props SearchProps) {
 					if len(props.Artists) > 0 {
 						<div class="space-y-3" role="tabpanel">
 							for _, artist := range props.Artists {
-								<a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ SearchURL(SearchTabTracks, artist.Name, props.SelectedLanguages) }>
+								<a class="group flex w-full items-center justify-between gap-4 rounded-box border border-base-300 bg-base-100 px-5 py-4 transition hover:-translate-y-[1px] hover:border-primary/40 hover:bg-base-200/40 focus-visible:ring focus-visible:ring-primary/40" href={ SongsURL(SongsTabTracks, artist.Name, props.SelectedLanguages) }>
 									<span class="min-w-0 flex flex-1 items-center gap-3">
 										<span class="truncate font-semibold text-base-content">{ artist.Name }</span>
 									</span>

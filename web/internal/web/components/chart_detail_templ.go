@@ -310,11 +310,11 @@ func ChartDetail(props ChartDetailProps) templ.Component {
 			Title:       fmt.Sprintf("Lyric · %s", props.Detail.Heading),
 			Description: fmt.Sprintf("Browse the %s chart with keys, difficulty, and filters by language.", strings.ToLower(props.Detail.CardSubtitle)),
 			Path:        fmt.Sprintf("/charts/%s", props.Detail.ID),
-			Canonical:   fmt.Sprintf("https://lyric.app/charts/%s", props.Detail.ID),
+			Canonical:   fmt.Sprintf("%s/charts/%s", defaultBaseURL, props.Detail.ID),
 			ActiveNav:   "home",
 			MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 py-10",
 			OGImage:     "/static/opengraph/home.png",
-			SchemaJSON:  WebPageSchema(props.Detail.Heading, fmt.Sprintf("Explore %s charts with arrangement filters.", props.Detail.Heading), fmt.Sprintf("https://lyric.app/charts/%s", props.Detail.ID)),
+			SchemaJSON:  WebPageSchema(props.Detail.Heading, fmt.Sprintf("Explore %s charts with arrangement filters.", props.Detail.Heading), fmt.Sprintf("%s/charts/%s", defaultBaseURL, props.Detail.ID)),
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

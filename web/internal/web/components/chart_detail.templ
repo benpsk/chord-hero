@@ -10,11 +10,11 @@ templ ChartDetail(props ChartDetailProps) {
     Title:       fmt.Sprintf("Lyric · %s", props.Detail.Heading),
     Description: fmt.Sprintf("Browse the %s chart with keys, difficulty, and filters by language.", strings.ToLower(props.Detail.CardSubtitle)),
     Path:        fmt.Sprintf("/charts/%s", props.Detail.ID),
-    Canonical:   fmt.Sprintf("https://lyric.app/charts/%s", props.Detail.ID),
+    Canonical:   fmt.Sprintf("%s/charts/%s", defaultBaseURL, props.Detail.ID),
     ActiveNav:   "home",
     MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 py-10",
     OGImage:     "/static/opengraph/home.png",
-    SchemaJSON:  WebPageSchema(props.Detail.Heading, fmt.Sprintf("Explore %s charts with arrangement filters.", props.Detail.Heading), fmt.Sprintf("https://lyric.app/charts/%s", props.Detail.ID)),
+    SchemaJSON:  WebPageSchema(props.Detail.Heading, fmt.Sprintf("Explore %s charts with arrangement filters.", props.Detail.Heading), fmt.Sprintf("%s/charts/%s", defaultBaseURL, props.Detail.ID)),
   }) {
           <section class="grid gap-8 rounded-box bg-base-100 p-8 shadow-sm sm:grid-cols-[auto,1fr]">
             <div class="rounded-box bg-gradient-to-br from-primary/10 via-primary/5 to-primary/0 p-6 text-center">

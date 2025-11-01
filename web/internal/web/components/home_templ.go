@@ -302,11 +302,11 @@ func Home() templ.Component {
 			Title:       "Lyric · Home",
 			Description: "Discover weekly worship charts, rehearsal insights, and trending albums tailored for your worship team.",
 			Path:        "/",
-			Canonical:   "https://lyric.app/",
+			Canonical:   defaultBaseURL,
 			ActiveNav:   "home",
 			MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
 			OGImage:     "/static/opengraph/home.png",
-			SchemaJSON:  WebPageSchema("Lyric Home", "Discover weekly worship charts, rehearsal insights, and trending music to equip your team.", "https://lyric.app/"),
+			SchemaJSON:  WebPageSchema("Lyric Home", "Discover weekly worship charts, rehearsal insights, and trending music to equip your team.", defaultBaseURL),
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

@@ -10,12 +10,10 @@ templ Songs(props SongsProps) {
 		Title:       "Lyric · Songs",
 		Description: "Search worship tracks, albums, and artists to build your next set list in seconds.",
 		Path:        "/songs",
-		Canonical:   "https://lyric.app/songs",
-		ActiveNav:   "songs",
+		    Canonical:   defaultBaseURL + "/songs",		ActiveNav:   "songs",
 		MainClass:   "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12",
 		OGImage:     "/static/opengraph/songs.png",
-		SchemaJSON:  SongsResultsSchema("Lyric Songs", "Search worship charts, albums, and artists curated for your team.", "https://lyric.app/songs"),
-	}) {
+		    SchemaJSON:  SongsResultsSchema("Lyric Songs", "Search worship charts, albums, and artists curated for your team.", defaultBaseURL + "/songs"),	}) {
 		<section class="space-y-2">
 			<h1 class="text-4xl font-bold">Songs</h1>
 			<p class="text-base-content/70 text-lg">Find tracks, artists, and albums for your next set.</p>

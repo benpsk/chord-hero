@@ -7,8 +7,7 @@ templ EditorPage() {
 		Title:       "titie",
 		Description: fmt.Sprintf("View chords and lyrics for %s with overlay, inline, and lyric modes.", "ok"),
 		Path:        fmt.Sprintf("/songs/%s", "1"),
-		Canonical:   fmt.Sprintf("https://lyric.app/songs/%s", "1"),
-ActiveNav:   "songs",
+		    Canonical:   fmt.Sprintf("%s/songs/%s", defaultBaseURL, "1"),ActiveNav:   "songs",
 		OGImage:     "/static/opengraph/songs.png",
 	}) {
 		<div class="w-full max-w-4xl p-8 bg-white rounded-lg shadow-lg">

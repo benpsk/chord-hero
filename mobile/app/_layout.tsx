@@ -34,13 +34,20 @@ function RootLayoutContent() {
     <PaperProvider theme={paperTheme}>
       <ThemeProvider value={navTheme}>
         <QueryClientProvider client={queryClient}>
-          <Stack>
+          <Stack 
+            screenOptions={{
+              headerTitleStyle:{
+                fontSize: 18
+              }
+            }}
+          >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="chart/[id]" options={{ title: "Chart" }} />
             <Stack.Screen name="profile/chord-library" options={{ title: 'Chord Library' }} />
             <Stack.Screen name="profile/request-chord" options={{ title: 'Request Chord' }} />
-            <Stack.Screen name="song/[id]" options={{ title: 'Song' }} />
+            <Stack.Screen name="song/[id]/index" options={{ title: 'Song' }} />
+            <Stack.Screen name="song/[id]/edit" options={{ title: 'Edit Song' }} />
             <Stack.Screen name="playlist" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
             <Stack.Screen name="song/create" options={{ title: 'Add Track' }} />

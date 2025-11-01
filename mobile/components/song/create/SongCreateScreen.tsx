@@ -1,18 +1,21 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, HelperText, Surface, Text, TextInput, useTheme } from 'react-native-paper';
+import { Button, HelperText, Snackbar, Text, TextInput, useTheme } from 'react-native-paper';
 
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useLevels } from '@/hooks/useLevels';
 import { useLanguages } from '@/hooks/useLanguages';
 import { useCreateSongMutation } from '@/hooks/useCreateSong';
 import { ApiError } from '@/lib/api';
+import { ChordProView } from '@/components/ChordProView';
+import { toDisplayLines } from '@/lib/chord';
 
 import { EntityMultiSelect } from './EntityMultiSelect';
 import { SingleSelectMenu } from './SingleSelectMenu';
 import type { NamedOption } from './types';
 import type { CreateSongPayload } from '@/hooks/useCreateSong';
+import type { SongRecord } from '@/hooks/useSongsSearch';
 import { MD3Theme } from 'react-native-paper/lib/typescript/types';
 
 function toNamedOption(id: number, name: string | null | undefined, fallbackLabel: string): NamedOption {
@@ -46,9 +49,60 @@ function normalizeFieldErrors(errors?: Record<string, unknown>): Record<string, 
   }, {});
 }
 
-export function SongCreateScreen() {
+function mapToNamedOptions(
+  items: { id: number; name: string | null | undefined }[] | undefined,
+  fallbackLabel: string
+): NamedOption[] {
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((item) => item && typeof item.id === 'number')
+    .map((item) => toNamedOption(item.id, item.name, fallbackLabel));
+}
+
+const SAMPLE_LYRIC_TEMPLATE = ['@a:', 'intro: [G] [D] [C] [F]', '@l:', '[G]Amazing Grace [D]How'].join('\n');
+
+type SongFormSubmitResult = { message?: string };
+type SongFormMode = 'create' | 'edit';
+
+type SongCreateScreenProps = {
+  mode?: SongFormMode;
+  initialSong?: SongRecord | null;
+  onSubmit?: (payload: CreateSongPayload) => Promise<SongFormSubmitResult | void>;
+  isSubmittingOverride?: boolean;
+  submitLabel?: string;
+  resetOnSuccess?: boolean;
+};
+
+export function SongCreateScreen({
+  mode = 'create',
+  initialSong = null,
+  onSubmit,
+  isSubmittingOverride,
+  submitLabel,
+  resetOnSuccess,
+}: SongCreateScreenProps = {}) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const isEditMode = mode === 'edit';
+  const initialLyric = initialSong?.lyric ?? '';
+  const initialLevelOption = initialSong?.level?.id
+    ? toNamedOption(initialSong.level.id, initialSong.level.name, 'Level')
+    : null;
+  const initialLanguageOption = initialSong?.language?.id
+    ? toNamedOption(initialSong.language.id, initialSong.language.name, 'Language')
+    : null;
+  const initialAlbumsOptions = useMemo(
+    () => mapToNamedOptions(initialSong?.albums, 'Album'),
+    [initialSong?.albums]
+  );
+  const initialArtistsOptions = useMemo(
+    () => mapToNamedOptions(initialSong?.artists, 'Artist'),
+    [initialSong?.artists]
+  );
+  const initialWritersOptions = useMemo(
+    () => mapToNamedOptions(initialSong?.writers, 'Writer'),
+    [initialSong?.writers]
+  );
 
   const { isAuthenticated, isChecking } = useRequireAuth();
   const queriesEnabled = isAuthenticated && !isChecking;
@@ -56,24 +110,34 @@ export function SongCreateScreen() {
   const levelsQuery = useLevels(queriesEnabled);
   const languagesQuery = useLanguages(queriesEnabled);
 
-  const [title, setTitle] = useState('');
-  const [songKey, setSongKey] = useState('');
-  const [releaseYear, setReleaseYear] = useState('');
-  const [lyric, setLyric] = useState('');
+  const [title, setTitle] = useState(initialSong?.title ?? '');
+  const [songKey, setSongKey] = useState(initialSong?.key ?? '');
+  const [releaseYear, setReleaseYear] = useState(
+    initialSong?.release_year != null ? String(initialSong.release_year) : ''
+  );
+  const [lyric, setLyric] = useState(initialLyric);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [previewLines, setPreviewLines] = useState<string[]>(() =>
+    toDisplayLines(initialLyric || SAMPLE_LYRIC_TEMPLATE)
+  );
+  const [isPreviewVisible, setPreviewVisible] = useState(false);
 
-  const [selectedLevel, setSelectedLevel] = useState<NamedOption | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState<NamedOption | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<NamedOption | null>(initialLevelOption);
+  const [selectedLanguage, setSelectedLanguage] = useState<NamedOption | null>(initialLanguageOption);
 
-  const [selectedAlbums, setSelectedAlbums] = useState<NamedOption[]>([]);
-  const [selectedArtists, setSelectedArtists] = useState<NamedOption[]>([]);
-  const [selectedWriters, setSelectedWriters] = useState<NamedOption[]>([]);
+  const [selectedAlbums, setSelectedAlbums] = useState<NamedOption[]>(initialAlbumsOptions);
+  const [selectedArtists, setSelectedArtists] = useState<NamedOption[]>(initialArtistsOptions);
+  const [selectedWriters, setSelectedWriters] = useState<NamedOption[]>(initialWritersOptions);
+
+  const hasAppliedInitialSong = useRef(false);
 
   const clearFormFeedback = useCallback(() => {
     setSubmitError(null);
     setSubmitSuccess(null);
+    setSnackbarMessage(null);
   }, []);
 
   const clearFieldError = useCallback((field: string) => {
@@ -86,6 +150,53 @@ export function SongCreateScreen() {
       return next;
     });
   }, []);
+
+  const applySongToState = useCallback(
+    (song: SongRecord | null | undefined) => {
+      if (!song) {
+        setTitle('');
+        setSongKey('');
+        setReleaseYear('');
+        setLyric('');
+        setSelectedAlbums([]);
+        setSelectedArtists([]);
+        setSelectedWriters([]);
+        setSelectedLevel(null);
+        setSelectedLanguage(null);
+        setPreviewLines(toDisplayLines(SAMPLE_LYRIC_TEMPLATE));
+        setPreviewVisible(false);
+        return;
+      }
+
+      setTitle(song.title ?? '');
+      setSongKey(song.key ?? '');
+      setReleaseYear(
+        song.release_year != null ? String(song.release_year) : ''
+      );
+      const lyricValue = song.lyric ?? '';
+      setLyric(lyricValue);
+      setSelectedAlbums(mapToNamedOptions(song.albums, 'Album'));
+      setSelectedArtists(mapToNamedOptions(song.artists, 'Artist'));
+      setSelectedWriters(mapToNamedOptions(song.writers, 'Writer'));
+      setSelectedLevel(
+        song.level?.id ? toNamedOption(song.level.id, song.level.name, 'Level') : null
+      );
+      setSelectedLanguage(
+        song.language?.id ? toNamedOption(song.language.id, song.language.name, 'Language') : null
+      );
+      setPreviewLines(toDisplayLines(lyricValue || SAMPLE_LYRIC_TEMPLATE));
+      setPreviewVisible(false);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!initialSong || hasAppliedInitialSong.current) {
+      return;
+    }
+    applySongToState(initialSong);
+    hasAppliedInitialSong.current = true;
+  }, [applySongToState, initialSong]);
 
   const levelOptions = useMemo<NamedOption[]>(() => {
     const result = levelsQuery.data?.data ?? [];
@@ -105,6 +216,10 @@ export function SongCreateScreen() {
     if (!selectedLevel && levelOptions.length > 0) {
       setSelectedLevel(levelOptions[0]);
       clearFieldError('level_id');
+    } else if (
+      selectedLevel && !levelOptions.some((option) => option.id === selectedLevel.id)
+    ) {
+      setSelectedLevel(levelOptions[0] ?? null);
     }
   }, [clearFieldError, levelOptions, selectedLevel]);
 
@@ -112,20 +227,16 @@ export function SongCreateScreen() {
     if (!selectedLanguage && languageOptions.length > 0) {
       setSelectedLanguage(languageOptions[0]);
       clearFieldError('language');
+    } else if (
+      selectedLanguage && !languageOptions.some((option) => option.id === selectedLanguage.id)
+    ) {
+      setSelectedLanguage(languageOptions[0] ?? null);
     }
   }, [clearFieldError, languageOptions, selectedLanguage]);
 
   const resetFormState = useCallback(() => {
-    setTitle('');
-    setSongKey('');
-    setReleaseYear('');
-    setLyric('');
-    setSelectedAlbums([]);
-    setSelectedArtists([]);
-    setSelectedWriters([]);
-    setSelectedLevel(null);
-    setSelectedLanguage(null);
-  }, []);
+    applySongToState(initialSong);
+  }, [applySongToState, initialSong]);
 
   const resetForm = useCallback(() => {
     resetFormState();
@@ -135,7 +246,21 @@ export function SongCreateScreen() {
   }, [resetFormState]);
 
   const createSongMutation = useCreateSongMutation();
-  const isSubmitting = createSongMutation.isPending;
+  const submitHandler = useCallback(
+    (payload: CreateSongPayload) =>
+      onSubmit ? onSubmit(payload) : createSongMutation.mutateAsync(payload),
+    [createSongMutation, onSubmit]
+  );
+  const isSubmitting = isSubmittingOverride ?? (onSubmit ? false : createSongMutation.isPending);
+  const shouldResetOnSuccess = resetOnSuccess ?? !isEditMode;
+  const submitButtonLabel = submitLabel ?? (isEditMode ? 'Save changes' : 'Create song');
+
+  const handlePreview = useCallback(() => {
+    clearFormFeedback();
+    const previewSource = lyric.trim() ? lyric : SAMPLE_LYRIC_TEMPLATE;
+    setPreviewLines(toDisplayLines(previewSource));
+    setPreviewVisible(true);
+  }, [clearFormFeedback, lyric]);
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) {
@@ -174,23 +299,42 @@ export function SongCreateScreen() {
     setFieldErrors({});
 
     try {
-      const response = await createSongMutation.mutateAsync(payload);
-      resetFormState();
-      setSubmitSuccess(
-        response?.message ?? 'Song submitted successfully. We will review it shortly.'
-      );
+      const result = await submitHandler(payload);
+      if (shouldResetOnSuccess) {
+        resetFormState();
+      } else {
+        setTitle(trimmedTitle);
+        setSongKey(trimmedKey);
+        setReleaseYear(releaseYearValue);
+        setLyric(trimmedLyric);
+        setPreviewLines(toDisplayLines(trimmedLyric || SAMPLE_LYRIC_TEMPLATE));
+      }
+      const messageFromResult =
+        result && typeof result === 'object' && 'message' in result && typeof (result as SongFormSubmitResult).message === 'string'
+          ? (result as SongFormSubmitResult).message
+          : undefined;
+      const fallbackMessage = isEditMode
+        ? 'Song updated successfully.'
+        : 'Song submitted successfully. We will review it shortly.';
+      const successText = messageFromResult && messageFromResult.trim().length > 0 ? messageFromResult : fallbackMessage;
+      setSubmitSuccess(successText);
+      setSnackbarMessage(successText);
     } catch (error) {
       if (error instanceof ApiError) {
         const normalized = normalizeFieldErrors(error.errors as Record<string, unknown> | undefined);
         setFieldErrors(normalized);
         setSubmitError(error.message);
       } else {
-        setSubmitError('Unable to create the song right now. Please try again.');
+        setSubmitError(
+          isEditMode
+            ? 'Unable to update the song right now. Please try again.'
+            : 'Unable to create the song right now. Please try again.'
+        );
       }
     }
   }, [
     clearFormFeedback,
-    createSongMutation,
+    isEditMode,
     isSubmitting,
     releaseYear,
     resetFormState,
@@ -199,7 +343,9 @@ export function SongCreateScreen() {
     selectedLanguage,
     selectedLevel,
     selectedWriters,
+    shouldResetOnSuccess,
     songKey,
+    submitHandler,
     title,
     lyric,
   ]);
@@ -212,15 +358,15 @@ export function SongCreateScreen() {
     levelsQuery.isError && levelsQuery.error instanceof ApiError
       ? levelsQuery.error.message
       : levelsQuery.isError
-      ? 'Unable to load levels.'
-      : null;
+        ? 'Unable to load levels.'
+        : null;
 
   const languageErrorMessage =
     languagesQuery.isError && languagesQuery.error instanceof ApiError
       ? languagesQuery.error.message
       : languagesQuery.isError
-      ? 'Unable to load languages.'
-      : null;
+        ? 'Unable to load languages.'
+        : null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -235,15 +381,8 @@ export function SongCreateScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
         >
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Add a new track</Text>
-            <Text style={styles.sectionSubtitle}>
-              Capture the essential details for your custom song. Title, key, level, language,
-              contributing artists, writers, and lyrics are required.
-            </Text>
-          </View>
-
-          <Surface elevation={1} style={styles.formCard}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Basic details</Text>
             <View style={styles.fieldGroup}>
               <TextInput
                 label="Title"
@@ -324,9 +463,10 @@ export function SongCreateScreen() {
                 </HelperText>
               ) : null}
             </View>
-          </Surface>
+          </View>
 
-          <Surface elevation={1} style={styles.formCard}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Associations</Text>
             <View style={styles.fieldGroup}>
               <EntityMultiSelect
                 endpoint="/api/albums"
@@ -376,9 +516,10 @@ export function SongCreateScreen() {
                 onClearFormFeedback={clearFormFeedback}
               />
             </View>
-          </Surface>
+          </View>
 
-          <Surface elevation={1} style={styles.formCard}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Lyrics</Text>
             <View style={styles.fieldGroup}>
               <TextInput
                 label="Lyrics"
@@ -389,32 +530,63 @@ export function SongCreateScreen() {
                   clearFormFeedback();
                   clearFieldError('lyric');
                 }}
-                placeholder="Start typing the chord & lyric sheet..."
                 multiline
-                numberOfLines={10}
+                numberOfLines={14}
                 textAlignVertical="top"
                 style={styles.lyricsInput}
+                placeholder={SAMPLE_LYRIC_TEMPLATE}
               />
               {fieldErrors.lyric ? (
                 <HelperText type="error" visible>
                   {fieldErrors.lyric}
                 </HelperText>
               ) : null}
+              <View style={styles.guideContainer}>
+                <Text style={styles.guideTitle}>Quick Guide</Text>
+                <Text style={styles.guideItem}>- Chord only start with @a:</Text>
+                <Text style={styles.guideItem}>- Chord + lyric start with @l:</Text>
+              </View>
             </View>
+          </View>
 
+          <View style={styles.section}>
             <View style={styles.buttonRow}>
-              <Button mode="outlined" onPress={resetForm} disabled={isSubmitting}>
-                Discard
+              <Button
+                mode="contained-tonal"
+                compact
+                disabled={isSubmitting}
+                onPress={resetForm}
+                style={styles.actionButton}
+                contentStyle={styles.actionButtonContent}
+              >
+                Reset
+              </Button>
+              <Button
+                mode="contained-tonal"
+                compact
+                disabled={isSubmitting}
+                onPress={handlePreview}
+                style={styles.actionButton}
+                contentStyle={styles.actionButtonContent}
+              >
+                Preview
               </Button>
               <Button
                 mode="contained"
-                onPress={handleSubmit}
+                compact
                 loading={isSubmitting}
                 disabled={
-                  isSubmitting || !selectedLevel || !selectedLanguage || levelsQuery.isLoading || languagesQuery.isLoading
+                  isSubmitting ||
+                  !selectedLevel ||
+                  !selectedLanguage ||
+                  levelsQuery.isLoading ||
+                  languagesQuery.isLoading
                 }
+                onPress={handleSubmit}
+                style={[styles.actionButton, styles.actionButtonPrimary]}
+                contentStyle={styles.actionButtonContent}
               >
-                Create song
+                {submitButtonLabel}
               </Button>
             </View>
             {submitError ? (
@@ -422,13 +594,47 @@ export function SongCreateScreen() {
                 {submitError}
               </HelperText>
             ) : null}
-            {submitSuccess ? (
-              <HelperText type="info" visible>
-                {submitSuccess}
-              </HelperText>
-            ) : null}
-          </Surface>
+          </View>
+
+          {isPreviewVisible ? (
+            <View style={[styles.section, styles.previewSection]}>
+              <View style={styles.previewHeader}>
+                <Text style={styles.previewTitle}>Preview</Text>
+                <Text style={styles.previewCaption}>See how your chord sheet will render.</Text>
+              </View>
+              {previewLines.some((line) => line.trim().length > 0) ? (
+                <ChordProView
+                  lines={previewLines}
+                  chordColor={theme.colors.primary}
+                  lyricColor={theme.colors.onSurface}
+                  mode="over"
+                />
+              ) : (
+                <Text style={styles.previewEmpty}>Nothing to preview yet.</Text>
+              )}
+            </View>
+          ) : null}
         </ScrollView>
+
+        <Snackbar
+          visible={typeof snackbarMessage === 'string' && snackbarMessage.length > 0}
+          onDismiss={() => setSnackbarMessage(null)}
+          duration={4000}
+          action={{
+            label: 'Dismiss',
+            onPress: () => setSnackbarMessage(null),
+            textColor: theme.colors.onPrimary,
+          }}
+          style={styles.snackbar}
+          theme={{
+            colors: {
+              inverseSurface: theme.colors.primary,
+              inverseOnSurface: theme.colors.onPrimary,
+            },
+          }}
+        >
+          {snackbarMessage}
+        </Snackbar>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -447,44 +653,89 @@ const createStyles = (theme: MD3Theme) =>
       flex: 1,
     },
     content: {
-      paddingHorizontal: 24,
-      paddingVertical: 24,
-      paddingBottom: 160,
-      gap: 24,
-    },
-    sectionHeader: {
-      gap: 6,
-    },
-    sectionTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-    },
-    sectionSubtitle: {
-      color: theme.colors.onSurfaceVariant,
-    },
-    formCard: {
-      borderRadius: 24,
-      padding: 20,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      paddingBottom: 140,
       gap: 20,
     },
+    section: {
+      gap: 12,
+      paddingBottom: 20,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.outlineVariant,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+      color: theme.colors.onSurfaceVariant,
+    },
     fieldGroup: {
-      gap: 16,
+      gap: 12,
     },
     inlineRow: {
       flexDirection: 'row',
-      gap: 12,
+      gap: 10,
       flexWrap: 'wrap',
     },
     inlineField: {
       flex: 1,
     },
     lyricsInput: {
-      minHeight: 220,
+      minHeight: 180,
+    },
+    guideContainer: {
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: 10,
+      padding: 10,
+      gap: 4,
+    },
+    guideTitle: {
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    guideItem: {
+      color: theme.colors.onSurfaceVariant,
+    },
+    previewSection: {
+      borderBottomWidth: 0,
+      paddingBottom: 0,
+      gap: 16,
+    },
+    previewHeader: {
+      gap: 4,
+    },
+    previewTitle: {
+      fontWeight: '600',
+      color: theme.colors.onSurface,
+    },
+    previewCaption: {
+      color: theme.colors.onSurfaceVariant,
+    },
+    previewEmpty: {
+      color: theme.colors.onSurfaceVariant,
     },
     buttonRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       justifyContent: 'flex-end',
-      gap: 12,
+      gap: 6,
+      alignItems: 'center',
+    },
+    actionButton: {
+      marginHorizontal: 0,
+      borderRadius: 12,
+    },
+    actionButtonPrimary: {
+      shadowColor: 'transparent',
+    },
+    actionButtonContent: {
+      paddingHorizontal: 14,
+    },
+    snackbar: {
+      marginHorizontal: 16,
+      backgroundColor: theme.colors.primary,
     },
   });
 

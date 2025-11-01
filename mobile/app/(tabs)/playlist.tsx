@@ -714,7 +714,7 @@ export default function PlaylistScreen() {
       return;
     }
     router.push('/song/create');
-  }, [router]);
+  }, [router, isAuthenticated]);
 
   const selectedCount = selectedSongIds.size;
   const currentPlaylistName = createdPlaylist?.name ?? draftName.trim();

@@ -80,6 +80,7 @@ type Song struct {
 	ID          int      `json:"id"`
 	Title       string   `json:"title"`
 	Level       *Level   `json:"level,omitempty"`
+	UserLevelID *int     `json:"user_level_id"`
 	Key         *string  `json:"key,omitempty"`
 	Lyric       *string  `json:"lyric,omitempty"`
 	ReleaseYear *int     `json:"release_year"`

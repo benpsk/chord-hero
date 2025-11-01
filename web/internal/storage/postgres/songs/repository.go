@@ -90,6 +90,11 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 	withClause := ""
 	orderClause := "order by s.id desc"
 
+	authUserID := 0
+	if params.AuthenticatedUserID != nil && *params.AuthenticatedUserID > 0 {
+		authUserID = *params.AuthenticatedUserID
+	}
+
 	if params.IsTrending && params.LevelID != nil {
 		withClause = `
         with play_counts as (
@@ -134,8 +139,16 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		return result, nil
 	}
 
-	limitPlaceholder := fmt.Sprintf("$%d", argPos+1)
-	offsetPlaceholder := fmt.Sprintf("$%d", argPos+2)
+	listArgs := append([]any{}, args...)
+	userLevelSelect := "NULL"
+	if authUserID > 0 {
+		userPlaceholder := fmt.Sprintf("$%d", len(listArgs)+1)
+		userLevelSelect = fmt.Sprintf("(select ls.level_id from level_song ls where ls.song_id = s.id and ls.user_id = %s limit 1)", userPlaceholder)
+		listArgs = append(listArgs, authUserID)
+	}
+
+	limitPlaceholder := fmt.Sprintf("$%d", len(listArgs)+1)
+	offsetPlaceholder := fmt.Sprintf("$%d", len(listArgs)+2)
 
 	listQuery := fmt.Sprintf(`
         select
@@ -151,7 +164,8 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
             la.name language_name,
             s.created_by,
             cu.email,
-            cu.status
+            cu.status,
+            %s as user_level_id
         from songs s
         left join levels l on l.id = s.level_id
         left join languages la on la.id = s.language_id
@@ -159,13 +173,12 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
         %s
         %s
         limit %s offset %s
-    `, joinClause, whereClause, orderClause, limitPlaceholder, offsetPlaceholder)
+    `, userLevelSelect, joinClause, whereClause, orderClause, limitPlaceholder, offsetPlaceholder)
 
 	if withClause != "" {
 		listQuery = withClause + "\n" + listQuery
 	}
 
-	listArgs := append([]any{}, args...)
 	listArgs = append(listArgs, params.PerPage, offset(params.Page, params.PerPage))
 
 	rows, err := r.db.Query(ctx, listQuery, listArgs...)
@@ -193,10 +206,11 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 			createdBy     sql.NullInt32
 			creatorEmail  sql.NullString
 			creatorStatus sql.NullString
+			userLevelID   sql.NullInt32
 		)
 
 		if err := rows.Scan(&id, &title, &levelName, &levelID, &songKey, &lyric, &releaseYear, &status,
-			&languageID, &languageName, &createdBy, &creatorEmail, &creatorStatus); err != nil {
+			&languageID, &languageName, &createdBy, &creatorEmail, &creatorStatus, &userLevelID); err != nil {
 			return result, fmt.Errorf("scan song: %w", err)
 		}
 
@@ -234,6 +248,10 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		if releaseYear.Valid {
 			value := int(releaseYear.Int32)
 			song.ReleaseYear = &value
+		}
+		if userLevelID.Valid {
+			value := int(userLevelID.Int32)
+			song.UserLevelID = &value
 		}
 		if createdBy.Valid {
 			creator := songsvc.Creator{

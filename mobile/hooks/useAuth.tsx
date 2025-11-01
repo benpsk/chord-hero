@@ -15,6 +15,7 @@ import { apiPost, setAuthToken, ApiError } from '@/lib/api';
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 
 type AuthUser = {
+  id?: number;
   username: string
   role: string
   [key: string]: unknown;

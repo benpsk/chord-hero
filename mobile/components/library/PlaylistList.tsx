@@ -123,6 +123,7 @@ export function PlaylistList({
                   </Text>
                 </View>
                 <Menu
+                  key={String(activeMenuId === playlist.id)}
                   visible={activeMenuId === playlist.id}
                   onDismiss={() => setActiveMenuId(null)}
                   anchor={

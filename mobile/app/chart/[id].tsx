@@ -373,6 +373,7 @@ export default function ChartDetailScreen() {
         <Animated.View style={styles.filterRow} entering={FadeInUp.delay(120).duration(320)}>
           <View style={styles.menuAnchor}>
             <Menu
+              key={String(menuVisible)}
               visible={menuVisible}
               onDismiss={closeMenu}
               anchorPosition="bottom"
@@ -407,7 +408,7 @@ export default function ChartDetailScreen() {
                   />
                 );
               })}
-              <Menu.Item onPress={() => { clearFilters(); closeMenu(); }} title="Clear languages" leadingIcon="close" />
+              <Menu.Item onPress={() => { clearFilters(); closeMenu(); }} title="Clear" leadingIcon="close" />
             </Menu>
           </View>
         </Animated.View>

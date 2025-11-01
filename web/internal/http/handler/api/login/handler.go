@@ -71,7 +71,8 @@ func (h Handler) Me(w http.ResponseWriter, r *http.Request) {
 		handler.Error(w, err)
 		return
 	}
-	handler.Success(w, http.StatusOK, map[string]string{
+	handler.Success(w, http.StatusOK, map[string]any{
+		"id":       user.ID,
 		"username": user.Email,
 		"role":     user.Role,
 	})

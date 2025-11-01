@@ -51,6 +51,7 @@ export function SearchFilterBar({
   return (
     <View style={[styles.container, style]}>
       <Menu
+        key={String(menuVisible)}
         visible={menuVisible}
         onDismiss={() => setMenuVisible(false)}
         anchorPosition="bottom"

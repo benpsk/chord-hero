@@ -5,11 +5,13 @@ import { apiGet } from '@/lib/api';
 export type SongRecord = {
   id: number;
   title: string;
+  status?: string | null;
   level?: { id: number; name: string | null } | null;
   key?: string | null;
   language: { id: number; name: string };
   lyric: string;
   release_year?: number | null;
+  created?: { id: number; email: string } | null;
   artists?: Array<{ id: number; name: string | null }>;
   writers?: Array<{ id: number; name: string | null }>;
   albums?: Array<{ id: number; name: string | null; release_year?: number | null }>;

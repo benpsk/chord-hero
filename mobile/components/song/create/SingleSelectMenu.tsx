@@ -1,15 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
   HelperText,
+  MD3Theme,
   Menu,
   TextInput,
-  TouchableRipple,
   useTheme,
 } from 'react-native-paper';
-import type { Theme } from 'react-native-paper';
 
 import type { NamedOption } from './types';
+
 
 type SingleSelectMenuProps = {
   label: string;
@@ -56,17 +56,26 @@ export function SingleSelectMenu({
     setVisible(false);
   };
 
+  const handleOpen = () => {
+    if (disabled || options.length === 0) {
+      return;
+    }
+    setVisible(true);
+  };
+
   return (
     <View style={styles.wrapper}>
       <Menu
+        key={String(visible)}
         visible={visible}
         onDismiss={() => setVisible(false)}
         anchor={
-          <TouchableRipple
-            style={styles.touchable}
-            onPress={() => setVisible(true)}
-            borderless
+          <Pressable
+            style={({ pressed }) => [styles.touchable, pressed && styles.touchablePressed]}
+            onPress={handleOpen}
             disabled={disabled || options.length === 0}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: disabled || options.length === 0 }}
           >
             <View pointerEvents="none">
               <TextInput
@@ -78,7 +87,7 @@ export function SingleSelectMenu({
                 right={<TextInput.Icon icon={icon} />}
               />
             </View>
-          </TouchableRipple>
+          </Pressable>
         }
       >
         {options.map((option) => (
@@ -96,12 +105,16 @@ export function SingleSelectMenu({
   );
 }
 
-const createStyles = (_theme: Theme) =>
+const createStyles = (_theme: MD3Theme) =>
   StyleSheet.create({
     wrapper: {
       flex: 1,
     },
     touchable: {
       borderRadius: 8,
+      overflow: 'hidden',
+    },
+    touchablePressed: {
+      opacity: 0.92,
     },
   });

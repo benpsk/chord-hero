@@ -49,6 +49,7 @@
         "id": 1,
         "name": "Burmese"
       },
+      "user_level_id": 1,
       "lyric": "Intro: [G]... \n Amazing...",
       "release_year": null,
       "level": {
@@ -358,3 +359,7 @@
 }
 
 -- DELETE /api/user
+
+-- POST /api/songs/{song_id}/status/{created|deleted}
+
+

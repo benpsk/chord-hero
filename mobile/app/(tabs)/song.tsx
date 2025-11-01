@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { StyleSheet, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,8 +12,8 @@ import { Stat, type SearchStatItem } from '@/components/search/Stat';
 import { SearchEmptyState } from '@/components/search/SearchEmptyState';
 import { PlaylistSelectionModal } from '@/components/search/PlaylistSelectionModal';
 import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog';
-import { type FilterLanguage } from '@/constants/home';
-import { SongRecord, useSongsSearch } from '@/hooks/useSongsSearch';
+import { SongRecord, useSongsSearch, type UseSongsSearchParams } from '@/hooks/useSongsSearch';
+import { useLanguages } from '@/hooks/useLanguages';
 import { AlbumRecord, useAlbumsSearch } from '@/hooks/useAlbumsSearch';
 import { ArtistRecord, useArtistsSearch } from '@/hooks/useArtistsSearch';
 import { useWritersSearch, WriterRecord } from '@/hooks/useWritersSearch';
@@ -41,11 +41,11 @@ function extractPageData<T>(page: unknown): T[] {
   }
   return [];
 }
-export default function SearchScreen() {
+export default function SongScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const [query, setQuery] = useState('');
-  const [selectedLanguages, setSelectedLanguages] = useState<FilterLanguage[]>([]);
+  const [selectedLanguageIds, setSelectedLanguageIds] = useState<number[]>([]);
   const [bookmarkedItems, setBookmarkedItems] = useState<Set<string>>(new Set());
   const [trackPlaylistMap, setTrackPlaylistMap] = useState<Record<string, string[]>>({});
   const [isPlaylistModalVisible, setPlaylistModalVisible] = useState(false);
@@ -58,20 +58,66 @@ export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const trimmedQuery = query.trim();
+  const [debouncedQuery, setDebouncedQuery] = useState(trimmedQuery);
+  const languagesQuery = useLanguages(true);
+  const availableLanguages = languagesQuery.data?.data ?? [];
+  const hasLanguageFilter = selectedLanguageIds.length > 0;
+
+  const handleToggleLanguage = useCallback((id: number) => {
+    setSelectedLanguageIds((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
+    );
+  }, []);
+
+  const handleClearLanguages = useCallback(() => {
+    setSelectedLanguageIds([]);
+  }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedQuery(trimmedQuery);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [trimmedQuery]);
+
+  const songsSearchParams = useMemo<UseSongsSearchParams | undefined>(() => {
+    const params: UseSongsSearchParams = {};
+    if (debouncedQuery) {
+      params.search = debouncedQuery;
+    }
+    if (hasLanguageFilter) {
+      params.languageIds = selectedLanguageIds;
+    }
+    if (!debouncedQuery && !hasLanguageFilter) {
+      return undefined;
+    }
+    return params;
+  }, [debouncedQuery, hasLanguageFilter, selectedLanguageIds]);
+
+  const myTracksSearchParams = useMemo<UseSongsSearchParams>(() => {
+    const params: UseSongsSearchParams = { userId: 1 };
+    if (debouncedQuery) {
+      params.search = debouncedQuery;
+    }
+    if (hasLanguageFilter) {
+      params.languageIds = selectedLanguageIds;
+    }
+    return params;
+  }, [debouncedQuery, hasLanguageFilter, selectedLanguageIds]);
 
   const {
     data: songsPages,
     fetchNextPage: fetchNextSongs,
     hasNextPage: hasNextSongs,
     isFetchingNextPage: isFetchingNextSongs,
-  } = useSongsSearch(trimmedQuery ? { search: trimmedQuery } : undefined);
+  } = useSongsSearch(songsSearchParams);
   const {
     data: myTracksPages,
     fetchNextPage: fetchNextMyTracks,
     hasNextPage: hasNextMyTracks,
     isFetchingNextPage: isFetchingNextMyTracks,
   } = useSongsSearch(
-    trimmedQuery ? { search: trimmedQuery, userId: 1 } : { userId: 1 },
+    myTracksSearchParams,
     { enabled: activeTab === 'myTracks' }
   );
   const {
@@ -79,25 +125,25 @@ export default function SearchScreen() {
     fetchNextPage: fetchNextAlbums,
     hasNextPage: hasNextAlbums,
     isFetchingNextPage: isFetchingNextAlbums,
-  } = useAlbumsSearch(trimmedQuery ? { search: trimmedQuery } : undefined);
+  } = useAlbumsSearch(debouncedQuery ? { search: debouncedQuery } : undefined);
   const {
     data: artistsPages,
     fetchNextPage: fetchNextArtists,
     hasNextPage: hasNextArtists,
     isFetchingNextPage: isFetchingNextArtists,
-  } = useArtistsSearch(trimmedQuery ? { search: trimmedQuery } : undefined);
+  } = useArtistsSearch(debouncedQuery ? { search: debouncedQuery } : undefined);
   const {
     data: writersPages,
     fetchNextPage: fetchNextWriters,
     hasNextPage: hasNextWriters,
     isFetchingNextPage: isFetchingNextWriters,
-  } = useWritersSearch(trimmedQuery ? { search: trimmedQuery } : undefined);
+  } = useWritersSearch(debouncedQuery ? { search: debouncedQuery } : undefined);
   const {
     data: releaseYearsPages,
     fetchNextPage: fetchNextReleaseYears,
     hasNextPage: hasNextReleaseYears,
     isFetchingNextPage: isFetchingNextReleaseYears,
-  } = useReleaseYearsSearch(trimmedQuery ? { search: trimmedQuery } : undefined);
+  } = useReleaseYearsSearch(debouncedQuery ? { search: debouncedQuery } : undefined);
   const playlistsQuery = usePlaylists(isAuthenticated);
   const queryClient = useQueryClient();
 
@@ -331,7 +377,7 @@ export default function SearchScreen() {
 
   const handleTrackPress = useCallback(
     (track: SongRecord) => {
-      router.push({ pathname: '/song/[id]', params: { id: track.id, item: JSON.stringify(track)} });
+      router.push({ pathname: '/song/[id]', params: { id: track.id, item: JSON.stringify(track) } });
     },
     [router]
   );
@@ -603,8 +649,10 @@ export default function SearchScreen() {
         <ListHeader
           query={query}
           setQuery={setQuery}
-          selectedLanguages={selectedLanguages}
-          setSelectedLanguages={setSelectedLanguages}
+          languages={availableLanguages}
+          selectedLanguageIds={selectedLanguageIds}
+          onToggleLanguage={handleToggleLanguage}
+          onClearLanguages={handleClearLanguages}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           activeResultsCount={listData.length}

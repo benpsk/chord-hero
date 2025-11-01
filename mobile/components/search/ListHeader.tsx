@@ -3,13 +3,14 @@ import { Text } from "react-native-paper";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SearchFilterBar } from "./SearchFilterBar";
 import { SearchTabBar } from "./SearchTabBar";
-import { type FilterLanguage } from '@/constants/home';
 
 type ListHeaderProps = {
   query: string;
   setQuery: (q: string) => void;
-  selectedLanguages: FilterLanguage[];
-  setSelectedLanguages: (langs: [] | ((prev: FilterLanguage[]) => FilterLanguage[])) => void;
+  languages: { id: number; name: string | null }[];
+  selectedLanguageIds: number[];
+  onToggleLanguage: (id: number) => void;
+  onClearLanguages: () => void;
   activeTab: SearchTabKey;
   setActiveTab: (tab: SearchTabKey) => void;
   activeResultsCount: number;
@@ -28,8 +29,10 @@ const SEARCH_TABS: { key: SearchTabKey; label: string }[] = [
 export default function ListHeader({
   query,
   setQuery,
-  selectedLanguages,
-  setSelectedLanguages,
+  languages,
+  selectedLanguageIds,
+  onToggleLanguage,
+  onClearLanguages,
   activeTab,
   setActiveTab,
   activeResultsCount,
@@ -40,13 +43,10 @@ export default function ListHeader({
         <SearchFilterBar
           query={query}
           onQueryChange={setQuery}
-          selectedLanguages={selectedLanguages}
-          onToggleLanguage={(lang) =>
-            setSelectedLanguages((prev) =>
-              prev.includes(lang) ? prev.filter((item) => item !== lang) : [...prev, lang]
-            )
-          }
-          onClearLanguages={() => setSelectedLanguages([])}
+          languages={languages}
+          selectedLanguageIds={selectedLanguageIds}
+          onToggleLanguage={onToggleLanguage}
+          onClearLanguages={onClearLanguages}
         />
       </Animated.View>
       <Animated.View entering={FadeInUp.delay(100).duration(320)}>

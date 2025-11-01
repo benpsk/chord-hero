@@ -171,12 +171,16 @@ func TestHandler_List_Filters(t *testing.T) {
 	tx, _ := conn.Begin(ctx)
 	defer tx.Rollback(ctx)
 
-	var userID, langID, levelID, levelID2, albumID, artistID, writerID, playlistID, songID1, songID2 int
+	var userID, langID, langID2, levelID, levelID2, albumID, artistID, writerID, playlistID, songID1, songID2 int
 	err := tx.QueryRow(ctx, "insert into users (email, role) values ('test@user.com', 'musician') returning id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("failed to insert users: %v", err)
 	}
 	err = tx.QueryRow(ctx, "insert into languages (name) values ('english') returning id").Scan(&langID)
+	if err != nil {
+		t.Fatalf("failed to insert languages: %v", err)
+	}
+	err = tx.QueryRow(ctx, "insert into languages (name) values ('mizo') returning id").Scan(&langID2)
 	if err != nil {
 		t.Fatalf("failed to insert languages: %v", err)
 	}
@@ -208,7 +212,7 @@ func TestHandler_List_Filters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to insert songs: %v", err)
 	}
-	err = tx.QueryRow(ctx, "insert into songs (title, language_id, level_id) values ('song 2', $1, $2) returning id", langID, levelID2).Scan(&songID2)
+	err = tx.QueryRow(ctx, "insert into songs (title, language_id, level_id) values ('song 2', $1, $2) returning id", langID2, levelID2).Scan(&songID2)
 	if err != nil {
 		t.Fatalf("failed to insert songs: %v", err)
 	}
@@ -272,6 +276,11 @@ func TestHandler_List_Filters(t *testing.T) {
 		{
 			name:          "filter by user",
 			queryParams:   "user_id=100", // does not matter cuz will replace with current user
+			expectedCount: 1,
+		},
+		{
+			name:          "filter by language_ids",
+			queryParams:   fmt.Sprintf("language_ids=%d", langID),
 			expectedCount: 1,
 		},
 	}

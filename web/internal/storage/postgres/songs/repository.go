@@ -86,6 +86,12 @@ func (r *Repository) List(ctx context.Context, params songsvc.ListParams) (songs
 		args = append(args, *params.LevelID)
 	}
 
+	if len(params.LanguageIDs) > 0 {
+		placeholder := nextPlaceholder()
+		conditions = append(conditions, fmt.Sprintf("s.language_id = ANY(%s)", placeholder))
+		args = append(args, params.LanguageIDs)
+	}
+
 	joins := []string{"left join users cu on cu.id = s.created_by"}
 	withClause := ""
 	orderClause := "order by s.id desc"

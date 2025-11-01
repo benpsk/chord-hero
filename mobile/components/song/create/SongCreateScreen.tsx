@@ -117,7 +117,6 @@ export function SongCreateScreen({
   );
   const [lyric, setLyric] = useState(initialLyric);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [previewLines, setPreviewLines] = useState<string[]>(() =>
@@ -136,7 +135,6 @@ export function SongCreateScreen({
 
   const clearFormFeedback = useCallback(() => {
     setSubmitError(null);
-    setSubmitSuccess(null);
     setSnackbarMessage(null);
   }, []);
 
@@ -242,7 +240,6 @@ export function SongCreateScreen({
     resetFormState();
     setFieldErrors({});
     setSubmitError(null);
-    setSubmitSuccess(null);
   }, [resetFormState]);
 
   const createSongMutation = useCreateSongMutation();
@@ -317,7 +314,6 @@ export function SongCreateScreen({
         ? 'Song updated successfully.'
         : 'Song submitted successfully. We will review it shortly.';
       const successText = messageFromResult && messageFromResult.trim().length > 0 ? messageFromResult : fallbackMessage;
-      setSubmitSuccess(successText);
       setSnackbarMessage(successText);
     } catch (error) {
       if (error instanceof ApiError) {

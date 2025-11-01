@@ -27,14 +27,16 @@ type ListParams struct {
 	PerPage             int
 	AlbumID             *int
 	ArtistID            *int
+	LanguageID          *int
 	WriterID            *int
 	ReleaseYear         *int
 	PlaylistID          *int
 	Search              string
 	UserID              *int
 	LevelID             *int
-	IsTrending          bool
-	AuthenticatedUserID *int
+    IsTrending          bool
+    AuthenticatedUserID *int
+    LanguageIDs         []int
 }
 
 // MutationParams captures shared song fields used across create and update flows.

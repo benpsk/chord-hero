@@ -32,7 +32,9 @@ import { ControlsSheet } from './ControlsSheet';
 import { ControlsPeek } from './ControlsPeek';
 import { extractKeyFromBody, normalizeKeyValue } from './helpers';
 import { useDeleteSongMutation } from '@/hooks/useDeleteSong';
+import { useLevels } from '@/hooks/useLevels';
 import { useShareSongMutation } from '@/hooks/useShareSong';
+import { useAssignSongLevelMutation } from '@/hooks/useAssignSongLevel';
 import { ApiError } from '@/lib/api';
 
 const MIN_TRANSPOSE = -11;
@@ -53,7 +55,7 @@ export function SongDetailScreen() {
   const { item } = useLocalSearchParams<{ id: string; item: string }>();
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
-  const song: SongRecord = JSON.parse(item);
+  const song: SongRecord = useMemo(() => JSON.parse(item), [item]);
   const theme = useTheme();
   const nav = useNavigation();
   const [transpose, setTranspose] = useState(0);
@@ -64,7 +66,12 @@ export function SongDetailScreen() {
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(false);
   const [autoScrollSpeed, setAutoScrollSpeed] = useState(30);
   const [guideVisible, setGuideVisible] = useState(false);
-  const [guideDifficulty, setGuideDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
+  const [currentUserLevelId, setCurrentUserLevelId] = useState<number | null>(
+    (song as { user_level_id?: number | null })?.user_level_id ?? song?.level?.id ?? null
+  );
+  const [selectedLevelId, setSelectedLevelId] = useState<number | null>(
+    (song as { user_level_id?: number | null })?.user_level_id ?? song?.level?.id ?? null
+  );
   const [controlsOpen, setControlsOpen] = useState(false);
   const [peekVisible, setPeekVisible] = useState(true);
   const [chordModal, setChordModal] = useState<ChordModalState>(null);
@@ -90,7 +97,13 @@ export function SongDetailScreen() {
   const lastTapTimestampRef = useRef(0);
   const deleteSongMutation = useDeleteSongMutation();
   const shareSongMutation = useShareSongMutation();
+  const assignLevelMutation = useAssignSongLevelMutation();
   const queryClient = useQueryClient();
+  const levelsQuery = useLevels(true);
+  const levelOptions = useMemo(
+    () => levelsQuery.data?.data?.map((level) => ({ id: level.id, name: level.name ?? `Level ${level.id}` })) ?? [],
+    [levelsQuery.data?.data]
+  );
   const initialSongStatus = useMemo(() => {
     if (!song || typeof song.status !== 'string') {
       return 'created';
@@ -99,6 +112,9 @@ export function SongDetailScreen() {
     return trimmed === '' ? 'created' : trimmed;
   }, [song]);
   const [currentSongStatus, setCurrentSongStatus] = useState<string>(initialSongStatus);
+
+  const isSongCreated = currentSongStatus === 'created';
+  const targetShareStatus: 'created' | 'pending' = isSongCreated ? 'pending' : 'created';
 
   const hidePeek = useCallback(() => {
     RNAnimated.timing(peekOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start(({ finished }) => {
@@ -124,19 +140,36 @@ export function SongDetailScreen() {
     setGuideVisible(true);
   }, [isAuthenticated]);
 
-  const closeGuide = useCallback(() => {
-    setGuideVisible(false);
-  }, []);
-
-  const handleGuideDifficultyChange = useCallback((value: string) => {
-    if (value === 'easy' || value === 'medium' || value === 'hard') {
-      setGuideDifficulty(value);
+  const handleGuideDismiss = useCallback(() => {
+    if (!assignLevelMutation.isPending) {
+      setSelectedLevelId(currentUserLevelId);
+      setGuideVisible(false);
     }
-  }, []);
+  }, [assignLevelMutation.isPending, currentUserLevelId]);
 
   const handleGuideSubmit = useCallback(() => {
-    setGuideVisible(false);
-  }, []);
+    if (!song) {
+      setGuideVisible(false);
+      return;
+    }
+    if (selectedLevelId == null) {
+      setGuideVisible(false);
+      return;
+    }
+    assignLevelMutation.mutate(
+      { songId: song.id, levelId: selectedLevelId },
+      {
+        onSuccess: () => {
+          setCurrentUserLevelId(selectedLevelId);
+          setGuideVisible(false);
+        },
+        onError: () => {
+          setSelectedLevelId(currentUserLevelId);
+          setGuideVisible(false);
+        },
+      }
+    );
+  }, [assignLevelMutation, currentUserLevelId, selectedLevelId, song]);
 
   const handleChordPress = useCallback(
     (rawName: string) => {
@@ -382,6 +415,22 @@ export function SongDetailScreen() {
   }, [initialSongStatus]);
 
   useEffect(() => {
+    const fallbackLevelId = song?.level?.id ?? null;
+    const userLevelId = (song as { user_level_id?: number | null })?.user_level_id ?? null;
+    setCurrentUserLevelId(userLevelId ?? fallbackLevelId);
+    setSelectedLevelId(userLevelId ?? fallbackLevelId);
+  }, [song]);
+
+  useEffect(() => {
+    if (selectedLevelId == null) {
+      const fallback = currentUserLevelId ?? (levelOptions.length > 0 ? levelOptions[0].id : null);
+      if (fallback != null) {
+        setSelectedLevelId(fallback);
+      }
+    }
+  }, [currentUserLevelId, levelOptions, selectedLevelId]);
+
+  useEffect(() => {
     autoScrollSpeedRef.current = autoScrollSpeed;
     if (autoScrollEnabledRef.current) {
       clearAutoScrollTimer();
@@ -483,16 +532,39 @@ export function SongDetailScreen() {
   const artistButtons = useMemo(() => song?.artists ?? [], [song?.artists]);
   const writerButtons = useMemo(() => song?.writers ?? [], [song?.writers]);
   const createdEmail = song?.created?.email ?? 'Unknown';
-  const levelLabel = song?.level?.name ?? 'Unassigned';
+  const displayLevelId = selectedLevelId ?? currentUserLevelId;
+
+  const selectedLevelName = useMemo(() => {
+    if (displayLevelId != null) {
+      const match = levelOptions.find((option) => option.id === displayLevelId);
+      if (match) {
+        return match.name ?? `Level ${match.id}`;
+      }
+    }
+    if (song?.level?.name) {
+      return song.level.name;
+    }
+    if (song?.level?.id) {
+      return `Level ${song.level.id}`;
+    }
+    return 'Unassigned';
+  }, [displayLevelId, levelOptions, song?.level?.id, song?.level?.name]);
+
+  const hasLevelChanged = useMemo(() => {
+    if (selectedLevelId == null) {
+      return false;
+    }
+    return selectedLevelId !== currentUserLevelId;
+  }, [currentUserLevelId, selectedLevelId]);
   const languageLabel = song?.language?.name ?? 'Unknown';
   const releaseYearLabel =
     typeof song?.release_year === 'number' && Number.isFinite(song.release_year)
       ? String(song.release_year)
       : 'Unknown';
   const metaSubtitle = useMemo(() => {
-    const parts = [levelLabel, languageLabel, releaseYearLabel].filter((value) => value && value !== 'Unknown');
+    const parts = [selectedLevelName, languageLabel, releaseYearLabel].filter((value) => value && value !== 'Unknown');
     return parts.length > 0 ? parts.join(' · ') : 'Song meta details';
-  }, [languageLabel, levelLabel, releaseYearLabel]);
+  }, [languageLabel, releaseYearLabel, selectedLevelName]);
   const isOwner = useMemo(() => {
     const creatorId = song?.created?.id;
     const currentUserId = (user as { id?: number } | null | undefined)?.id;
@@ -501,8 +573,6 @@ export function SongDetailScreen() {
     }
     return creatorId === currentUserId;
   }, [song?.created, user]);
-  const isSongCreated = currentSongStatus === 'created';
-  const targetShareStatus: 'created' | 'pending' = isSongCreated ? 'pending' : 'created';
   const publishMenuLabel = isSongCreated ? 'Publish' : 'Unpublish';
   useLayoutEffect(() => {
     if (!song) return;
@@ -602,7 +672,7 @@ export function SongDetailScreen() {
   if (!song) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
-        <View style={[styles.center, { backgroundColor: theme.colors.background }]}> 
+        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
           <Text>Song not found.</Text>
         </View>
       </SafeAreaView>
@@ -611,7 +681,7 @@ export function SongDetailScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}> 
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Animated.ScrollView
           ref={(ref) => {
             scrollViewRef.current = ref as unknown as ScrollView | null;
@@ -663,13 +733,19 @@ export function SongDetailScreen() {
 
         <ChordModal data={chordModal} onDismiss={closeChordModal} />
 
-        <GuideModal
-          visible={guideVisible}
-          difficulty={guideDifficulty}
-          onChangeDifficulty={handleGuideDifficultyChange}
-          onSubmit={handleGuideSubmit}
-          onDismiss={closeGuide}
-        />
+        {guideVisible ? (
+          <GuideModal
+            visible={guideVisible}
+            levels={levelOptions}
+            selectedLevelId={selectedLevelId}
+            onSelectLevel={setSelectedLevelId}
+            onSubmit={handleGuideSubmit}
+            onDismiss={handleGuideDismiss}
+            isLoading={levelsQuery.isLoading}
+            isSubmitting={assignLevelMutation.isPending}
+            canSubmit={hasLevelChanged}
+          />
+        ) : null}
 
         <ControlsSheet
           visible={controlsOpen}
@@ -746,7 +822,7 @@ export function SongDetailScreen() {
                       mode="outlined"
                       compact
                       style={styles.chipButton}
-                      onPress={() => {}}
+                      onPress={() => { }}
                     >
                       {artist.name ?? 'Unknown'}
                     </Button>
@@ -769,7 +845,7 @@ export function SongDetailScreen() {
                       mode="outlined"
                       compact
                       style={styles.chipButton}
-                      onPress={() => {}}
+                      onPress={() => { }}
                     >
                       {writer.name ?? 'Unknown'}
                     </Button>
@@ -790,7 +866,7 @@ export function SongDetailScreen() {
             <View style={styles.metaSection}>
               <Text style={[styles.metaLabel, { color: theme.colors.onSurface }]}>Level</Text>
               <Text style={[styles.metaValue, { color: theme.colors.onSurfaceVariant }]}>
-                {levelLabel}
+                {selectedLevelName ?? 'Unassigned'}
               </Text>
             </View>
 

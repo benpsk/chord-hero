@@ -2,13 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import { Chip, Menu, TextInput, useTheme } from 'react-native-paper';
 
-import { FILTER_LANGUAGES, type FilterLanguage } from '@/constants/home';
-
 type SearchFilterBarProps = {
   query: string;
   onQueryChange: (value: string) => void;
-  selectedLanguages: FilterLanguage[];
-  onToggleLanguage: (value: FilterLanguage) => void;
+  languages: { id: number; name: string | null }[];
+  selectedLanguageIds: number[];
+  onToggleLanguage: (id: number) => void;
   onClearLanguages: () => void;
   style?: ViewStyle;
 };
@@ -16,7 +15,8 @@ type SearchFilterBarProps = {
 export function SearchFilterBar({
   query,
   onQueryChange,
-  selectedLanguages,
+  languages,
+  selectedLanguageIds,
   onToggleLanguage,
   onClearLanguages,
   style,
@@ -74,26 +74,31 @@ export function SearchFilterBar({
             dense
           />
         }>
-        {FILTER_LANGUAGES.map((lang) => {
-          const isSelected = selectedLanguages.includes(lang);
+        {languages.map((lang) => {
+          const id = lang.id;
+          const name = lang.name ?? 'Unknown';
+          const isSelected = selectedLanguageIds.includes(id);
           return (
             <Menu.Item
-              key={lang}
-              onPress={() => onToggleLanguage(lang)}
-              title={lang}
+              key={id}
+              onPress={() => onToggleLanguage(id)}
+              title={name}
               leadingIcon={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
             />
           );
         })}
         <Menu.Item onPress={onClearLanguages} title="Clear" leadingIcon="close" />
       </Menu>
-      {selectedLanguages.length > 0 && (
+      {selectedLanguageIds.length > 0 && (
         <View style={styles.filtersRow}>
-          {selectedLanguages.map((lang) => (
-            <Chip key={lang} onClose={() => onToggleLanguage(lang)}>
-              {lang}
-            </Chip>
-          ))}
+          {selectedLanguageIds.map((id) => {
+            const languageName = languages.find((lang) => lang.id === id)?.name ?? 'Unknown';
+            return (
+              <Chip key={id} onClose={() => onToggleLanguage(id)}>
+                {languageName}
+              </Chip>
+            );
+          })}
         </View>
       )}
     </View>

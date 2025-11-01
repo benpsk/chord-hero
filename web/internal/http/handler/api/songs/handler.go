@@ -1,18 +1,18 @@
 package songs
 
 import (
-	"encoding/json"
-	"log"
-	"net/http"
-	"strconv"
-	"strings"
+    "encoding/json"
+    "log"
+    "net/http"
+    "strconv"
+    "strings"
 
-	"github.com/go-chi/chi/v5"
+    "github.com/go-chi/chi/v5"
 
-	"github.com/lyricapp/lyric/web/internal/apperror"
-	"github.com/lyricapp/lyric/web/internal/http/handler"
-	"github.com/lyricapp/lyric/web/internal/http/handler/api/util"
-	songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
+    "github.com/lyricapp/lyric/web/internal/apperror"
+    "github.com/lyricapp/lyric/web/internal/http/handler"
+    "github.com/lyricapp/lyric/web/internal/http/handler/api/util"
+    songsvc "github.com/lyricapp/lyric/web/internal/services/songs"
 )
 
 // Handler exposes song catalogue endpoints.
@@ -132,7 +132,6 @@ func (p songPayload) toMutationParams() (songsvc.MutationParams, error) {
 func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	userID, _ := util.CurrentUserID(r)
-	log.Println(userID)
 	query := r.URL.Query()
 	params := songsvc.ListParams{}
 	validationErrors := map[string]string{}
@@ -152,6 +151,29 @@ func (h Handler) List(w http.ResponseWriter, r *http.Request) {
 	params.PlaylistID = util.ParseOptionalPositiveInt(query.Get("playlist_id"), "playlist_id", validationErrors)
 	params.UserID = util.ParseOptionalPositiveInt(query.Get("user_id"), "user_id", validationErrors)
 	params.LevelID = util.ParseOptionalPositiveInt(query.Get("level_id"), "level_id", validationErrors)
+
+	rawLanguageIDs := strings.TrimSpace(query.Get("language_ids"))
+	log.Println(rawLanguageIDs)
+	if rawLanguageIDs != "" {
+		parts := strings.Split(rawLanguageIDs, ",")
+		languageIDs := make([]int, 0, len(parts))
+		for _, part := range parts {
+			trimmed := strings.TrimSpace(part)
+			if trimmed == "" {
+				continue
+			}
+			value, err := strconv.Atoi(trimmed)
+			if err != nil || value <= 0 {
+				validationErrors["language_ids"] = "language_ids must contain positive integers"
+				languageIDs = nil
+				break
+			}
+			languageIDs = append(languageIDs, value)
+		}
+  if len(languageIDs) > 0 && validationErrors["language_ids"] == "" {
+    params.LanguageIDs = languageIDs
+  }
+	}
 	if strings.TrimSpace(query.Get("is_trending")) == "1" {
 		params.IsTrending = true
 	}

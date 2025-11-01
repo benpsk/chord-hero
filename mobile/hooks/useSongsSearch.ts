@@ -16,6 +16,7 @@ export type SongRecord = {
   writers?: Array<{ id: number; name: string | null }>;
   albums?: Array<{ id: number; name: string | null; release_year?: number | null }>;
   playlist_ids?: number[];
+  user_level_id?: number | null;
 };
 
 type PaginatedResponse<T> = {
@@ -28,6 +29,7 @@ type PaginatedResponse<T> = {
 export type UseSongsSearchParams = {
   search?: string;
   userId?: number;
+  languageIds?: number[];
 };
 
 function buildPath(params: UseSongsSearchParams | undefined, page: number) {
@@ -37,6 +39,12 @@ function buildPath(params: UseSongsSearchParams | undefined, page: number) {
   }
   if (typeof params?.userId === 'number' && Number.isFinite(params.userId)) {
     searchParams.set('user_id', String(params.userId));
+  }
+  if (Array.isArray(params?.languageIds) && params.languageIds.length > 0) {
+    const filtered = params.languageIds.filter((value) => Number.isFinite(value));
+    if (filtered.length > 0) {
+      searchParams.set('language_ids', filtered.join(','));
+    }
   }
   searchParams.set('page', String(page));
   const query = searchParams.toString();
@@ -49,8 +57,12 @@ type UseSongsSearchOptions = {
 
 export function useSongsSearch(params?: UseSongsSearchParams, options?: UseSongsSearchOptions) {
   const enabled = options?.enabled ?? true;
+  const languageKey = Array.isArray(params?.languageIds) && params?.languageIds.length
+    ? params.languageIds.filter((value) => Number.isFinite(value)).join(',')
+    : null;
+
   return useInfiniteQuery({
-    queryKey: ['songs', params?.search ?? '', params?.userId ?? null],
+    queryKey: ['songs', params?.search ?? '', params?.userId ?? null, languageKey],
     initialPageParam: 1,
     enabled,
     queryFn: ({ pageParam }) => apiGet<PaginatedResponse<SongRecord>>(buildPath(params, pageParam)),
